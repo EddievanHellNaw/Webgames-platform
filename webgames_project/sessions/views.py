@@ -176,3 +176,5 @@ def generate_qr_code(data):
     image_png = buffer.getvalue()
     encoded = base64.b64encode(image_png).decode("utf-8")
     return f"data:image/png;base64,{encoded}"
+
+

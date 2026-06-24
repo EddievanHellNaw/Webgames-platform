@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="party-setup">
+  <h1>Party Formation</h1>
+  <p>Session: <strong>{{ session.title }}</strong></p>
+
+  <p>
+    Recommended party size: <strong>3–4 students</strong>.
+  </p>
+
+  <hr>
+
+  <h2>Create Party</h2>
+
+  <form method="post">
+    {% csrf_token %}
+    <input type="hidden" name="action" value="create_party">
+
+    <label for="party_name">Party name</label>
+    <input
+      type="text"
+      id="party_name"
+      name="party_name"
+      placeholder="Example: The Dragon Snacks"
+    >
+
+    <button type="submit">Create Party</button>
+  </form>
+
+  <hr>
+
+  <h2>Unassigned Characters</h2>
+
+  {% if unassigned_characters %}
+    <table>
+      <thead>
+        <tr>
+          <th>Student</th>
+          <th>Character</th>
+          <th>Class</th>
+          <th>Add to Party</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        {% for character in unassigned_characters %}
+          <tr>
+            <td>{{ character.participant.display_name }}</td>
+            <td>{{ character.character_name }}</td>
+            <td>{{ character.character_class.name }}</td>
+            <td>
+              {% if parties %}
+                <form method="post">
+                  {% csrf_token %}
+                  <input type="hidden" name="action" value="add_member">
+                  <input type="hidden" name="character_id" value="{{ character.id }}">
+
+                  <select name="party_id" required>
+                    {% for party in parties %}
+                      <option value="{{ party.id }}">
+                        {{ party.name }} ({{ party.member_count }}/4)
+                      </option>
+                    {% endfor %}
+                  </select>
+
+                  <button type="submit">Add</button>
+                </form>
+              {% else %}
+                Create a party first.
+              {% endif %}
+            </td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>All created characters have been assigned to parties.</p>
+  {% endif %}
+
+  <hr>
+
+  <h2>Current Parties</h2>
+
+  {% for party in parties %}
+    <article class="party-card">
+      <h3>{{ party.name }}</h3>
+
+      <p>
+        Members: <strong>{{ party.member_count }}/4</strong>
+      </p>
+
+      {% if party.current_dm %}
+        <p>
+          Current DM:
+          <strong>{{ party.current_dm.character_name }}</strong>
+        </p>
+      {% else %}
+        <p>No DM selected yet.</p>
+      {% endif %}
+
+      <ul>
+        {% for member in party.members.all %}
+          <li>
+            <strong>{{ member.character.character_name }}</strong>
+            — {{ member.character.character_class.name }}
+            / {{ member.character.participant.display_name }}
+
+            <form method="post" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="set_dm">
+              <input type="hidden" name="member_id" value="{{ member.id }}">
+              <button type="submit">Set as DM</button>
+            </form>
+
+            <form method="post" style="display:inline;">
+              {% csrf_token %}
+              <input type="hidden" name="action" value="remove_member">
+              <input type="hidden" name="member_id" value="{{ member.id }}">
+              <button type="submit">Remove</button>
+            </form>
+          </li>
+        {% empty %}
+          <li>No members yet.</li>
+        {% endfor %}
+      </ul>
+
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="delete_party">
+        <input type="hidden" name="party_id" value="{{ party.id }}">
+        <button type="submit">Delete Party</button>
+      </form>
+    </article>
+  {% empty %}
+    <p>No parties created yet.</p>
+  {% endfor %}
+</section>
+<p>
+  <a href="{% url 'fantasy_roles:teacher_dungeon_setup' session.join_code %}">
+    Continue to Dungeon Selection
+  </a>
+</p>
+{% endblock %}

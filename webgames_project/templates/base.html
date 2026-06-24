@@ -20,6 +20,13 @@
   </header>
 
   <main>
+    {% if messages %}
+  <div class="messages">
+    {% for message in messages %}
+      <p>{{ message }}</p>
+    {% endfor %}
+  </div>
+{% endif %}
     {% block content %}
     {% endblock %}
   </main>

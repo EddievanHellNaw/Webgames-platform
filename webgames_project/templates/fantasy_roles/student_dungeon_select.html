@@ -1,0 +1,137 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="dungeon-selection">
+  <h1>Choose Your Dungeon</h1>
+
+  <p>
+    Party:
+    <strong>{{ membership.party.name }}</strong>
+  </p>
+
+  <p>
+    Character:
+    <strong>{{ character.character_name }}</strong>
+    — {{ character.character_class.name }}
+  </p>
+
+  <p>
+    English practice:
+    <strong>{{ character.get_english_level_display }}</strong>
+  </p>
+
+  {% if membership.party.current_dm %}
+    <p>
+      Current DM:
+      <strong>{{ membership.party.current_dm.character_name }}</strong>
+    </p>
+  {% else %}
+    <p>
+      Your teacher has not selected a DM yet. A DM is needed to choose the dungeon.
+    </p>
+  {% endif %}
+
+  {% if existing_run %}
+    <p>
+      Your party has already chosen:
+      <strong>{{ existing_run.dungeon.name }}</strong>
+    </p>
+
+    <p>
+      <a href="{% url 'fantasy_roles:student_dungeon_detail' session.join_code %}">
+        View selected dungeon
+      </a>
+    </p>
+  {% endif %}
+
+  <hr>
+
+  <div class="dungeon-grid">
+    {% for card in dungeon_cards %}
+      {% with dungeon=card.dungeon vocabulary=card.vocabulary_set %}
+        <article class="dungeon-card">
+          {% if dungeon.image %}
+            <img
+              src="{{ dungeon.image.url }}"
+              alt="{{ dungeon.name }}"
+              style="max-width: 320px;"
+            >
+          {% endif %}
+
+          <h2>{{ dungeon.name }}</h2>
+
+          {% if dungeon.kingdom %}
+            <p>
+              Kingdom:
+              <strong>{{ dungeon.kingdom }}</strong>
+            </p>
+          {% endif %}
+
+          <p>{{ dungeon.description }}</p>
+
+          <ul>
+            <li>
+              <strong>Difficulty:</strong>
+              {{ dungeon.difficulty_rating }}/5
+            </li>
+            <li>
+              <strong>Rooms:</strong>
+              {{ dungeon.room_count }}
+            </li>
+            <li>
+              <strong>Treasure rooms:</strong>
+              {{ dungeon.treasure_room_count }}
+            </li>
+            <li>
+              <strong>Final boss:</strong>
+              {% if dungeon.final_boss_name %}
+                {{ dungeon.final_boss_name }}
+              {% else %}
+                Unknown
+              {% endif %}
+            </li>
+            <li>
+              <strong>Style:</strong>
+              {{ dungeon.get_play_style_display }}
+            </li>
+          </ul>
+
+          <h3>Useful Language for This Dungeon</h3>
+
+          {% if vocabulary %}
+            {% if vocabulary.useful_vocabulary %}
+              <h4>Useful vocabulary</h4>
+              <p>{{ vocabulary.useful_vocabulary|linebreaks }}</p>
+            {% endif %}
+
+            {% if vocabulary.sentence_frames %}
+              <h4>Sentence frames</h4>
+              <p>{{ vocabulary.sentence_frames|linebreaks }}</p>
+            {% endif %}
+          {% else %}
+            <p>
+              No vocabulary set has been added for your current English level yet.
+            </p>
+          {% endif %}
+
+          {% if not existing_run and is_current_dm %}
+            <form method="post">
+              {% csrf_token %}
+              <input type="hidden" name="dungeon_id" value="{{ dungeon.id }}">
+              <button type="submit">
+                Choose {{ dungeon.name }}
+              </button>
+            </form>
+          {% elif not existing_run %}
+            <p>
+              Only the current DM can lock the dungeon choice for the party.
+            </p>
+          {% endif %}
+        </article>
+      {% endwith %}
+    {% empty %}
+      <p>No dungeons are available yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

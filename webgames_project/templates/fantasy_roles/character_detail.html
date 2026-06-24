@@ -56,4 +56,14 @@
     Character ready. Wait for your teacher to continue.
   </p>
 </section>
+<p>
+  <a href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
+    View My Party
+  </a>
+</p>
+<p>
+  <a href="{% url 'fantasy_roles:student_dungeon_select' session.join_code %}">
+    Choose / View Dungeon Options
+  </a>
+</p>
 {% endblock %}

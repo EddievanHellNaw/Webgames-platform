@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="student-party">
+  <h1>Your Party</h1>
+
+  <p>
+    Character:
+    <strong>{{ character.character_name }}</strong>
+    — {{ character.character_class.name }}
+  </p>
+
+  {% if membership %}
+    <h2>{{ membership.party.name }}</h2>
+
+    {% if membership.party.current_dm %}
+      <p>
+        Current DM:
+        <strong>{{ membership.party.current_dm.character_name }}</strong>
+      </p>
+    {% else %}
+      <p>Your teacher has not selected the first DM yet.</p>
+    {% endif %}
+
+    <h3>Party Members</h3>
+
+    <ul>
+      {% for member in membership.party.members.all %}
+        <li>
+          <strong>{{ member.character.character_name }}</strong>
+          — {{ member.character.character_class.name }}
+          / {{ member.character.participant.display_name }}
+
+          {% if membership.party.current_dm_id == member.character.id %}
+            <strong> · DM</strong>
+          {% endif %}
+        </li>
+      {% endfor %}
+    </ul>
+
+    <p>Wait for your teacher to choose the dungeon.</p>
+  {% else %}
+    <h2>Waiting for party assignment...</h2>
+    <p>Your teacher will assign you to an adventuring party soon.</p>
+  {% endif %}
+</section>
+<p>
+  <a href="{% url 'fantasy_roles:student_dungeon_select' session.join_code %}">
+    Choose / View Dungeon Options
+  </a>
+</p>
+{% endblock %}

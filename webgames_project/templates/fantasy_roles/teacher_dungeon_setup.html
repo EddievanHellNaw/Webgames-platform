@@ -1,0 +1,141 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="dungeon-monitor">
+  <h1>Dungeon Choices</h1>
+
+  <p>
+    Session:
+    <strong>{{ session.title }}</strong>
+  </p>
+
+  <p>
+    Monitor which dungeon each party has selected.
+  </p>
+
+  <p>
+    <a href="{% url 'fantasy_roles:teacher_party_setup' session.join_code %}">
+      Back to Party Formation
+    </a>
+  </p>
+
+  <hr>
+
+  {% for party in parties %}
+    <article class="party-dungeon-card">
+      <h2>{{ party.name }}</h2>
+
+      <p>
+        Members:
+        <strong>{{ party.member_count }}/4</strong>
+      </p>
+
+      {% if party.current_dm %}
+        <p>
+          Current DM:
+          <strong>{{ party.current_dm.character_name }}</strong>
+        </p>
+      {% else %}
+        <p>No DM selected yet.</p>
+      {% endif %}
+
+      <h3>Party Members</h3>
+
+      <ul>
+        {% for member in party.members.all %}
+          <li>
+            {{ member.character.character_name }}
+            — {{ member.character.character_class.name }}
+            / {{ member.character.participant.display_name }}
+          </li>
+        {% empty %}
+          <li>No members yet.</li>
+        {% endfor %}
+      </ul>
+
+      <hr>
+
+      {% if party.dungeon_run %}
+        <h3>Selected Dungeon</h3>
+
+        {% if party.dungeon_run.dungeon.image %}
+          <img
+            src="{{ party.dungeon_run.dungeon.image.url }}"
+            alt="{{ party.dungeon_run.dungeon.name }}"
+            style="max-width: 260px;"
+          >
+        {% endif %}
+
+        <p>
+          <strong>{{ party.dungeon_run.dungeon.name }}</strong>
+
+          {% if party.dungeon_run.dungeon.kingdom %}
+            — {{ party.dungeon_run.dungeon.kingdom }}
+          {% endif %}
+        </p>
+
+        <p>
+          Difficulty:
+          <strong>{{ party.dungeon_run.dungeon.difficulty_rating }}/5</strong>
+        </p>
+
+        <p>
+          Style:
+          <strong>{{ party.dungeon_run.dungeon.get_play_style_display }}</strong>
+        </p>
+
+        <p>
+          Final boss:
+          <strong>
+            {% if party.dungeon_run.dungeon.final_boss_name %}
+              {{ party.dungeon_run.dungeon.final_boss_name }}
+            {% else %}
+              Unknown
+            {% endif %}
+          </strong>
+        </p>
+
+        {% if party.dungeon_run.selected_by_character %}
+          <p>
+            Selected by:
+            <strong>{{ party.dungeon_run.selected_by_character.character_name }}</strong>
+          </p>
+        {% endif %}
+
+        {% if party.dungeon_run.current_room %}
+          <p>
+            Current room:
+            <strong>
+              Room {{ party.dungeon_run.current_room.number }}
+              {% if party.dungeon_run.current_room.name %}
+                — {{ party.dungeon_run.current_room.name }}
+              {% endif %}
+            </strong>
+          </p>
+        {% endif %}
+
+        <p>
+          Status:
+          <strong>{{ party.dungeon_run.get_status_display }}</strong>
+        </p>
+      {% else %}
+        <h3>No dungeon selected yet</h3>
+
+        {% if party.current_dm %}
+          <p>
+            Waiting for {{ party.current_dm.character_name }} to choose a dungeon.
+          </p>
+        {% else %}
+          <p>
+            Select a DM first so the party can choose a dungeon.
+          </p>
+        {% endif %}
+      {% endif %}
+    </article>
+
+    <hr>
+  {% empty %}
+    <p>No parties exist yet.</p>
+  {% endfor %}
+</section>
+{% endblock %}

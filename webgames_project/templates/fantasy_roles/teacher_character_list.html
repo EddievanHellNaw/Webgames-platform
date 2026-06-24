@@ -11,6 +11,7 @@
         <th>Student</th>
         <th>Character</th>
         <th>Class</th>
+        <th>Version</th>
         <th>English Level</th>
         <th>Approved</th>
       </tr>
@@ -22,6 +23,7 @@
           <td>{{ character.participant.display_name }}</td>
           <td>{{ character.character_name }}</td>
           <td>{{ character.character_class.name }}</td>
+          <td>{{ character.get_visual_variant_display }}</td>
           <td>{{ character.get_english_level_display }}</td>
           <td>
             {% if character.is_approved %}

@@ -40,6 +40,25 @@
       <li>No students have joined yet.</li>
     {% endfor %}
   </ul>
+  {% if session.game_template.code == "FANTASY_ROLES" %}
+  <p>
+    <a href="{% url 'fantasy_roles:teacher_character_list' session.join_code %}">
+      View Fantasy Roles Characters
+    </a>
+  </p>
+
+  <p>
+    <a href="{% url 'fantasy_roles:teacher_party_setup' session.join_code %}">
+      Form Adventuring Parties
+    </a>
+  </p>
+
+  <p>
+    <a href="{% url 'fantasy_roles:teacher_dungeon_setup' session.join_code %}">
+      Monitor Dungeon Choices
+    </a>
+  </p>
+{% endif %}
 
   {% if session.status == "LOBBY" %}
     <form method="post" action="{% url 'sessions:start_session' session.join_code %}">
