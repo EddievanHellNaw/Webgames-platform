@@ -6,3 +6,4 @@ class ClassroomSessionsConfig(AppConfig):
     name = "sessions"
     label = "game_sessions"
     verbose_name = "Game Sessions"
+
