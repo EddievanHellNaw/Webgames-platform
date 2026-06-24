@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="character-create">
+  <h1>Create Your Character</h1>
+
+  <p>
+    Welcome, <strong>{{ participant.display_name }}</strong>.
+    Choose a class, name your character, and write a short backstory.
+  </p>
+
+  <form method="post">
+    {% csrf_token %}
+
+    <h2>Choose your class</h2>
+
+    {% if form.character_class.errors %}
+      <div class="form-errors">{{ form.character_class.errors }}</div>
+    {% endif %}
+
+    <div class="class-grid">
+      {% for class in character_classes %}
+        <label class="class-card">
+          <input
+            type="radio"
+            name="character_class"
+            value="{{ class.id }}"
+            {% if form.character_class.value|stringformat:"s" == class.id|stringformat:"s" %}checked{% endif %}
+          >
+
+          <div class="class-images">
+        {% if class.female_image %}
+            <div>
+            <img src="{{ class.female_image.url }}" alt="{{ class.name }} female version">
+            <small>Female</small>
+            </div>
+        {% endif %}
+
+        {% if class.male_image %}
+            <div>
+            <img src="{{ class.male_image.url }}" alt="{{ class.name }} male version">
+            <small>Male</small>
+            </div>
+        {% endif %}
+
+        {% if not class.female_image and not class.male_image and class.image %}
+            <img src="{{ class.image.url }}" alt="{{ class.name }}">
+        {% endif %}
+        </div>
+
+          <h3>{{ class.name }}</h3>
+
+          <p>{{ class.description }}</p>
+
+          <ul>
+            <li><strong>Life:</strong> {{ class.max_life }}</li>
+            <li><strong>AP:</strong> {{ class.action_points }}</li>
+            <li><strong>Attack:</strong> {{ class.attack }}</li>
+          </ul>
+
+          <h4>Skills</h4>
+          <ul>
+            {% for skill in class.skills.all %}
+              <li>
+                <strong>{{ skill.name }}</strong>
+                — {{ skill.ap_cost }} AP.
+                {{ skill.description }}
+              </li>
+            {% empty %}
+              <li>No skills added yet.</li>
+            {% endfor %}
+          </ul>
+
+          <h4>Weaknesses</h4>
+          <ul>
+            {% for weakness in class.weaknesses.all %}
+              <li>
+                <strong>{{ weakness.name }}</strong>
+                — {{ weakness.description }}
+              </li>
+            {% empty %}
+              <li>No weaknesses added yet.</li>
+            {% endfor %}
+          </ul>
+        </label>
+      {% empty %}
+        <p>No character classes are available yet. Add them from the Django admin.</p>
+      {% endfor %}
+    </div>
+    <hr>
+
+<h2>Choose your character version</h2>
+
+<div>
+  {{ form.visual_variant }}
+  {{ form.visual_variant.errors }}
+</div>
+
+    <hr>
+
+    <div>
+      {{ form.character_name.label_tag }}
+      {{ form.character_name }}
+      {{ form.character_name.errors }}
+    </div>
+
+    <div>
+      {{ form.english_level.label_tag }}
+      {{ form.english_level }}
+      {{ form.english_level.errors }}
+    </div>
+
+    <div>
+      {{ form.backstory.label_tag }}
+      {{ form.backstory }}
+      {{ form.backstory.errors }}
+    </div>
+
+    <button type="submit">Create Character</button>
+  </form>
+</section>
+{% endblock %}

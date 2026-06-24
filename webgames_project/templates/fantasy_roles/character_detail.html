@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="character-detail">
+  <h1>{{ character.character_name }}</h1>
+
+  <p>
+    Created by <strong>{{ participant.display_name }}</strong>
+  </p>
+
+  <article class="class-card">
+    {% if character.selected_image %}
+  <img
+    src="{{ character.selected_image.url }}"
+    alt="{{ character.character_name }}"
+    >
+    {% endif %}
+
+    <h2>{{ character.character_class.name }}</h2>
+
+    <ul>
+      <li><strong>Class:</strong> {{ character.character_class.name }}</li>
+      <li><strong>Version:</strong> {{ character.get_visual_variant_display }}</li>
+      <li><strong>Life:</strong> {{ character.current_life }}</li>
+      <li><strong>AP:</strong> {{ character.current_action_points }}</li>
+      <li><strong>Attack:</strong> {{ character.character_class.attack }}</li>
+      <li><strong>English Level:</strong> {{ character.get_english_level_display }}</li>
+    </ul>
+
+    <h3>Backstory</h3>
+    <p>{{ character.backstory|linebreaks }}</p>
+
+    <h3>Skills</h3>
+    <ul>
+      {% for skill in character.character_class.skills.all %}
+        <li>
+          <strong>{{ skill.name }}</strong>
+          — {{ skill.ap_cost }} AP.
+          {{ skill.description }}
+        </li>
+      {% endfor %}
+    </ul>
+
+    <h3>Weaknesses</h3>
+    <ul>
+      {% for weakness in character.character_class.weaknesses.all %}
+        <li>
+          <strong>{{ weakness.name }}</strong>
+          — {{ weakness.description }}
+        </li>
+      {% endfor %}
+    </ul>
+  </article>
+
+  <p>
+    Character ready. Wait for your teacher to continue.
+  </p>
+</section>
+{% endblock %}

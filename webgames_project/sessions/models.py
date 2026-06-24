@@ -3,7 +3,7 @@ import uuid
 from django.conf import settings
 from django.db import models
 from games.models import GameTemplate
-
+from django.db.models import Q
 
 class GameSession(models.Model):
     class Status(models.TextChoices):
@@ -61,7 +61,13 @@ class Participant(models.Model):
     is_ready = models.BooleanField(default=False)
 
     class Meta:
-        unique_together = ("session", "student_id")
+        constraints = [
+            models.UniqueConstraint(
+                fields=["session", "student_id"],
+                condition=~Q(student_id=""),
+                name="unique_student_id_per_session_when_provided",
+            )
+        ]
 
     def __str__(self):
         return self.display_name

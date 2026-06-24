@@ -9,7 +9,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.http import JsonResponse
-
+from django.urls import reverse
 from games.models import GameTemplate
 from .models import GameSession, Participant
 
@@ -147,7 +147,7 @@ def get_game_step_url(session):
     if session.game_template.code == GameTemplate.GameCode.FANTASY_ROLES:
         if session.current_step == "character_creation":
             return reverse(
-                "sessions:placeholder_game_started",
+                "fantasy_roles:character_create",
                 args=[session.join_code],
             )
 

@@ -26,7 +26,13 @@
   <hr>
 
   <h2>Joined Students</h2>
-
+{% if session.game_template.code == "FANTASY_ROLES" %}
+  <p>
+    <a href="{% url 'fantasy_roles:teacher_character_list' session.join_code %}">
+      View Fantasy Roles Characters
+    </a>
+  </p>
+{% endif %}
   <ul>
     {% for participant in session.participants.all %}
       <li>{{ participant.display_name }}{% if participant.student_id %} — {{ participant.student_id }}{% endif %}</li>

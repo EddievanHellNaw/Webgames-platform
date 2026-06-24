@@ -30,6 +30,8 @@ ALLOWED_HOSTS = []
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_REDIRECT_URL = "/games/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
 # Application definition
 
 INSTALLED_APPS = [
@@ -41,7 +43,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'accounts',
     'games',
-    'sessions.apps.ClassroomSessionsConfig'
+    'sessions.apps.ClassroomSessionsConfig',
+    'fantasy_roles',
 ]
 
 MIDDLEWARE = [
