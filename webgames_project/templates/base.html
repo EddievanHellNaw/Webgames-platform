@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Webgames Platform</title>
+</head>
+<body>
+  <header>
+    <h1>Webgames Platform</h1>
+
+    {% if user.is_authenticated %}
+      <p>
+        Logged in as {{ user.username }}
+        |
+        <a href="{% url 'logout' %}">Logout</a>
+      </p>
+    {% endif %}
+
+    <hr>
+  </header>
+
+  <main>
+    {% block content %}
+    {% endblock %}
+  </main>
+</body>
+</html>

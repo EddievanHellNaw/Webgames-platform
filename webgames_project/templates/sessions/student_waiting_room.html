@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="waiting-room">
+  <h1>Waiting to start the game...</h1>
+
+  <p>Welcome, <strong>{{ participant.display_name }}</strong>.</p>
+  <p>Your teacher will start the game soon.</p>
+
+  <div class="loader">
+    Please keep this page open.
+  </div>
+</section>
+
+<script>
+  async function checkSessionStatus() {
+    const response = await fetch("{% url 'sessions:session_status' session.join_code %}");
+    const data = await response.json();
+
+    if (data.status === "ACTIVE") {
+      window.location.href = data.redirect_url;
+    }
+  }
+
+  setInterval(checkSessionStatus, 2000);
+</script>
+{% endblock %}

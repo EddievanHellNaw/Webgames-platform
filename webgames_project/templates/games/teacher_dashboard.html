@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="dashboard">
+  <h1>Teacher Dashboard</h1>
+  <p>Choose a game to start a new classroom session.</p>
+
+  <div class="game-grid">
+    {% for game in games %}
+      <article class="game-card">
+        <h2>{{ game.title }}</h2>
+        <p>{{ game.description }}</p>
+
+        <a href="{% url 'sessions:create_session' game.id %}" class="button">
+          Start Session
+        </a>
+      </article>
+    {% empty %}
+      <p>No games are available yet.</p>
+    {% endfor %}
+  </div>
+</section>
+{% endblock %}

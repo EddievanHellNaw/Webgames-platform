@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="lobby">
+  <h1>{{ session.title }}</h1>
+  <p>Status: <strong>{{ session.get_status_display }}</strong></p>
+
+  <div class="qr-box">
+    <h2>Student Access</h2>
+    <p>Students can scan this QR code to join the game.</p>
+
+    <img src="{{ qr_image }}" alt="QR Code for joining the game session">
+
+    <p>
+      Join code:
+      <strong>{{ session.join_code }}</strong>
+    </p>
+
+    <p>
+      Link:
+      <br>
+      <small>{{ join_url }}</small>
+    </p>
+  </div>
+
+  <hr>
+
+  <h2>Joined Students</h2>
+
+  <ul>
+    {% for participant in session.participants.all %}
+      <li>{{ participant.display_name }}{% if participant.student_id %} — {{ participant.student_id }}{% endif %}</li>
+    {% empty %}
+      <li>No students have joined yet.</li>
+    {% endfor %}
+  </ul>
+
+  {% if session.status == "LOBBY" %}
+    <form method="post" action="{% url 'sessions:start_session' session.join_code %}">
+      {% csrf_token %}
+      <button type="submit">Start Game</button>
+    </form>
+  {% else %}
+    <p>The game has started.</p>
+  {% endif %}
+</section>
+{% endblock %}

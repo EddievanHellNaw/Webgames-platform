@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block content %}
+<section class="join-session">
+  <h1>Join Game</h1>
+  <p>You are joining: <strong>{{ session.title }}</strong></p>
+
+  {% if session.status == "LOBBY" %}
+    <form method="post">
+      {% csrf_token %}
+
+      <label for="display_name">Your name</label>
+      <input type="text" name="display_name" id="display_name" required>
+
+      <label for="student_id">Student ID</label>
+      <input type="text" name="student_id" id="student_id">
+
+      <button type="submit">Join</button>
+    </form>
+  {% else %}
+    <p>This game has already started or ended.</p>
+  {% endif %}
+</section>
+{% endblock %}
