@@ -1,0 +1,35 @@
+{% if party_inventory %}
+  <div class="fr-inventory-grid">
+    {% for inventory_item in party_inventory %}
+      <article class="fr-inventory-item">
+        {% if inventory_item.item.image %}
+          <img
+            src="{{ inventory_item.item.image.url }}"
+            alt="{{ inventory_item.item.name }}"
+          >
+        {% else %}
+          <div class="fr-item-placeholder">✦</div>
+        {% endif %}
+
+        <div class="fr-inventory-item-body">
+          <div class="fr-inventory-item-title">
+            <strong>{{ inventory_item.item.name }}</strong>
+            <span>x{{ inventory_item.quantity }}</span>
+          </div>
+
+          <p>{{ inventory_item.item.effect_text }}</p>
+
+          {% if inventory_item.item.is_consumable %}
+            <span class="fr-item-tag">Consumable</span>
+          {% else %}
+            <span class="fr-item-tag">Permanent</span>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="fr-muted-text">
+    The party has no items yet.
+  </p>
+{% endif %}

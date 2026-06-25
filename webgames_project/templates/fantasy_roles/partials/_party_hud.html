@@ -1,0 +1,51 @@
+{% if membership and party_members %}
+  <section class="fr-party-hud">
+    <div class="fr-party-hud__header">
+      <span class="fr-kicker">Adventuring Party</span>
+      <strong>{{ membership.party.name }}</strong>
+    </div>
+
+    <div class="fr-party-row">
+      {% for member in party_members %}
+        {% with member_character=member.character %}
+          <article
+            class="fr-hero-chip {% if member_character.id == character.id %}is-current-player{% endif %} {% if membership.party.current_dm_id == member_character.id %}is-dm{% endif %}"
+          >
+            <div class="fr-hero-name">
+              {{ member_character.character_name }}
+
+              {% if membership.party.current_dm_id == member_character.id %}
+                <span class="fr-dm-badge">DM</span>
+              {% endif %}
+            </div>
+
+            <div class="fr-hero-body">
+              <div class="fr-hero-avatar">
+                {% with portrait=member_character.selected_image %}
+                  {% if portrait %}
+                    <img
+                      src="{{ portrait.url }}"
+                      alt="{{ member_character.character_name }}"
+                    >
+                  {% else %}
+                    <span>{{ member_character.character_name|slice:":1" }}</span>
+                  {% endif %}
+                {% endwith %}
+              </div>
+
+              <div class="fr-hero-stats">
+                <span title="Life">♥ {{ member_character.current_life }}</span>
+                <span title="Attack">⚔ {{ member_character.character_class.attack }}</span>
+                <span title="Action Points">✦ {{ member_character.current_action_points }}</span>
+              </div>
+            </div>
+
+            <div class="fr-hero-class">
+              {{ member_character.character_class.name }}
+            </div>
+          </article>
+        {% endwith %}
+      {% endfor %}
+    </div>
+  </section>
+{% endif %}

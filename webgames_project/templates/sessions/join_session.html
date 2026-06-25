@@ -1,24 +1,97 @@
 {% extends "base.html" %}
 
+{% block title %}Join Session · {{ session.title }}{% endblock %}
+
 {% block content %}
-<section class="join-session">
-  <h1>Join Game</h1>
-  <p>You are joining: <strong>{{ session.title }}</strong></p>
+<section class="fr-join-page">
+  <section class="fr-join-hero">
+    <span class="fr-kicker">Enter the Portal</span>
 
-  {% if session.status == "LOBBY" %}
-    <form method="post">
-      {% csrf_token %}
+    <h1>Join the Game</h1>
 
-      <label for="display_name">Your name</label>
-      <input type="text" name="display_name" id="display_name" required>
+    <p>
+      You are about to join
+      <strong>{{ session.title }}</strong>.
+      Write your name carefully. This is how your teacher and party members
+      will see you during the session.
+    </p>
 
-      <label for="student_id">Student ID</label>
-      <input type="text" name="student_id" id="student_id">
+    <div class="fr-status-row">
+      <span class="fr-status-pill">
+        {{ session.game_template.title }}
+      </span>
 
-      <button type="submit">Join</button>
-    </form>
-  {% else %}
-    <p>This game has already started or ended.</p>
-  {% endif %}
+      <span class="fr-status-pill">
+        Code: {{ session.join_code }}
+      </span>
+
+      <span class="fr-status-pill">
+        {{ session.get_status_display }}
+      </span>
+    </div>
+  </section>
+
+  <section class="fr-join-grid">
+    <article class="fr-form-card fr-join-form-card">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Student Access</span>
+        <strong>Your Information</strong>
+      </div>
+
+      {% if session.status == "LOBBY" %}
+        <form method="post">
+          {% csrf_token %}
+
+          <div>
+            <label for="display_name">Adventurer name</label>
+            <input
+              type="text"
+              id="display_name"
+              name="display_name"
+              placeholder="Example: Eddie"
+              autocomplete="name"
+              required
+            >
+          </div>
+
+          <div>
+            <label for="student_id">Student ID</label>
+            <input
+              type="text"
+              id="student_id"
+              name="student_id"
+              placeholder="Optional"
+              inputmode="numeric"
+            >
+          </div>
+
+          <button class="fr-btn fr-btn-primary" type="submit">
+            Join Session
+          </button>
+        </form>
+      {% else %}
+        <p class="fr-muted-text">
+          This session is no longer accepting new students from the lobby.
+        </p>
+
+        <a class="fr-btn fr-btn-secondary" href="{% url 'games:teacher_dashboard' %}">
+          Return
+        </a>
+      {% endif %}
+    </article>
+
+    <article class="fr-panel fr-join-info-card">
+      <div class="fr-join-emblem">◆</div>
+
+      <span class="fr-kicker">Session Code</span>
+
+      <strong>{{ session.join_code }}</strong>
+
+      <p>
+        Stay on the waiting screen after joining. Your teacher will start the
+        activity when everyone is ready.
+      </p>
+    </article>
+  </section>
 </section>
 {% endblock %}

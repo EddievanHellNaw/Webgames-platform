@@ -1,141 +1,63 @@
 {% extends "base.html" %}
 
+{% block title %}Dungeon Monitor · {{ session.title }}{% endblock %}
+
 {% block content %}
-<section class="dungeon-monitor">
-  <h1>Dungeon Choices</h1>
+<section class="fr-teacher-dungeon-page">
+  <section class="fr-teacher-dungeon-hero">
+    <span class="fr-kicker">Fantasy Roles</span>
 
-  <p>
-    Session:
-    <strong>{{ session.title }}</strong>
-  </p>
+    <h1>Dungeon Monitor</h1>
 
-  <p>
-    Monitor which dungeon each party has selected.
-  </p>
+    <p>
+      Watch each party’s dungeon progress, current room, Dungeon Master, and
+      cleared room count from one screen.
+    </p>
 
-  <p>
-    <a href="{% url 'fantasy_roles:teacher_party_setup' session.join_code %}">
-      Back to Party Formation
-    </a>
-  </p>
+    <div class="fr-status-row">
+      <span class="fr-status-pill">{{ session.title }}</span>
+      <span class="fr-status-pill">{{ session.join_code }}</span>
+      <span class="fr-status-pill">{{ party_cards|length }} Parties</span>
+    </div>
+  </section>
 
-  <hr>
+  <section
+    id="teacher-dungeon-monitor-panel"
+    hx-get="{% url 'fantasy_roles:teacher_dungeon_monitor_panel' session.join_code %}"
+    hx-trigger="load, every 3s"
+    hx-swap="innerHTML"
+  >
+    {% include "fantasy_roles/partials/_teacher_dungeon_monitor_panel.html" %}
+  </section>
 
-  {% for party in parties %}
-    <article class="party-dungeon-card">
-      <h2>{{ party.name }}</h2>
+  <section class="fr-panel fr-teacher-dungeon-actions">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Session Tools</span>
+      <strong>Teacher Actions</strong>
+    </div>
 
-      <p>
-        Members:
-        <strong>{{ party.member_count }}/4</strong>
-      </p>
+    <div class="fr-button-row">
+      <a
+        class="fr-btn"
+        href="{% url 'fantasy_roles:teacher_party_setup' session.join_code %}"
+      >
+        Manage Parties
+      </a>
 
-      {% if party.current_dm %}
-        <p>
-          Current DM:
-          <strong>{{ party.current_dm.character_name }}</strong>
-        </p>
-      {% else %}
-        <p>No DM selected yet.</p>
-      {% endif %}
+      <a
+        class="fr-btn"
+        href="{% url 'fantasy_roles:teacher_character_list' session.join_code %}"
+      >
+        Review Characters
+      </a>
 
-      <h3>Party Members</h3>
-
-      <ul>
-        {% for member in party.members.all %}
-          <li>
-            {{ member.character.character_name }}
-            — {{ member.character.character_class.name }}
-            / {{ member.character.participant.display_name }}
-          </li>
-        {% empty %}
-          <li>No members yet.</li>
-        {% endfor %}
-      </ul>
-
-      <hr>
-
-      {% if party.dungeon_run %}
-        <h3>Selected Dungeon</h3>
-
-        {% if party.dungeon_run.dungeon.image %}
-          <img
-            src="{{ party.dungeon_run.dungeon.image.url }}"
-            alt="{{ party.dungeon_run.dungeon.name }}"
-            style="max-width: 260px;"
-          >
-        {% endif %}
-
-        <p>
-          <strong>{{ party.dungeon_run.dungeon.name }}</strong>
-
-          {% if party.dungeon_run.dungeon.kingdom %}
-            — {{ party.dungeon_run.dungeon.kingdom }}
-          {% endif %}
-        </p>
-
-        <p>
-          Difficulty:
-          <strong>{{ party.dungeon_run.dungeon.difficulty_rating }}/5</strong>
-        </p>
-
-        <p>
-          Style:
-          <strong>{{ party.dungeon_run.dungeon.get_play_style_display }}</strong>
-        </p>
-
-        <p>
-          Final boss:
-          <strong>
-            {% if party.dungeon_run.dungeon.final_boss_name %}
-              {{ party.dungeon_run.dungeon.final_boss_name }}
-            {% else %}
-              Unknown
-            {% endif %}
-          </strong>
-        </p>
-
-        {% if party.dungeon_run.selected_by_character %}
-          <p>
-            Selected by:
-            <strong>{{ party.dungeon_run.selected_by_character.character_name }}</strong>
-          </p>
-        {% endif %}
-
-        {% if party.dungeon_run.current_room %}
-          <p>
-            Current room:
-            <strong>
-              Room {{ party.dungeon_run.current_room.number }}
-              {% if party.dungeon_run.current_room.name %}
-                — {{ party.dungeon_run.current_room.name }}
-              {% endif %}
-            </strong>
-          </p>
-        {% endif %}
-
-        <p>
-          Status:
-          <strong>{{ party.dungeon_run.get_status_display }}</strong>
-        </p>
-      {% else %}
-        <h3>No dungeon selected yet</h3>
-
-        {% if party.current_dm %}
-          <p>
-            Waiting for {{ party.current_dm.character_name }} to choose a dungeon.
-          </p>
-        {% else %}
-          <p>
-            Select a DM first so the party can choose a dungeon.
-          </p>
-        {% endif %}
-      {% endif %}
-    </article>
-
-    <hr>
-  {% empty %}
-    <p>No parties exist yet.</p>
-  {% endfor %}
+      <a
+        class="fr-btn"
+        href="{% url 'sessions:teacher_lobby' session.join_code %}"
+      >
+        Back to Lobby
+      </a>
+    </div>
+  </section>
 </section>
 {% endblock %}

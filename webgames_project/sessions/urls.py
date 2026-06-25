@@ -13,4 +13,9 @@ urlpatterns = [
     path("status/<str:join_code>/", views.session_status, name="session_status"),
 
     path("started/<str:join_code>/", views.placeholder_game_started, name="placeholder_game_started"),
+    path(
+        "lobby/<str:join_code>/participants/",
+        views.teacher_lobby_participants,
+        name="teacher_lobby_participants",
+    ),
 ]

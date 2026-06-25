@@ -1,23 +1,86 @@
 {% extends "base.html" %}
 
+{% block title %}Teacher Dashboard · Webgames{% endblock %}
+
 {% block content %}
-<section class="dashboard">
-  <h1>Teacher Dashboard</h1>
-  <p>Choose a game to start a new classroom session.</p>
+<section class="fr-dashboard">
+  <section class="fr-dashboard-hero">
+    <span class="fr-kicker">Teacher Control Panel</span>
 
-  <div class="game-grid">
-    {% for game in games %}
-      <article class="game-card">
-        <h2>{{ game.title }}</h2>
-        <p>{{ game.description }}</p>
+    <h1>Webgames Dashboard</h1>
 
-        <a href="{% url 'sessions:create_session' game.id %}" class="button">
-          Start Session
-        </a>
-      </article>
-    {% empty %}
-      <p>No games are available yet.</p>
-    {% endfor %}
-  </div>
+    <p>
+      Create classroom game sessions, invite students with a join code,
+      and manage live activities from one place.
+    </p>
+  </section>
+
+  <section class="fr-panel">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Available Games</span>
+      <strong>Choose a game mode</strong>
+    </div>
+
+    {% if games %}
+      <div class="fr-game-card-grid">
+        {% for game in games %}
+          <article class="fr-game-template-card {% if not game.is_active %}is-disabled{% endif %}">
+            <div class="fr-game-card-icon">
+              {% if game.code == "FANTASY_ROLES" %}
+                ⚔
+              {% elif game.code == "CHOOSE_ADVENTURE" %}
+                ✉
+              {% elif game.code == "TREASURE_HUNT" %}
+                ◆
+              {% elif game.code == "ROLE_PLAY" %}
+                🎭
+              {% else %}
+                ✦
+              {% endif %}
+            </div>
+
+            <div class="fr-game-card-body">
+              <span class="fr-kicker">
+                {% if game.is_active %}
+                  Ready to Play
+                {% else %}
+                  Coming Soon
+                {% endif %}
+              </span>
+
+              <h2>{{ game.title }}</h2>
+
+              {% if game.description %}
+                <p>{{ game.description }}</p>
+              {% else %}
+                <p>
+                  Classroom game mode for interactive learning sessions.
+                </p>
+              {% endif %}
+
+              <div class="fr-game-card-actions">
+                {% if game.is_active %}
+                  <a
+                    class="fr-btn fr-btn-primary"
+                    href="{% url 'sessions:create_session' game.id %}"
+                  >
+                    Create Session
+                  </a>
+                {% else %}
+                  <button class="fr-btn" type="button" disabled>
+                    Not Available Yet
+                  </button>
+                {% endif %}
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="fr-muted-text">
+        No game templates are available yet. Add them from the Django admin.
+      </p>
+    {% endif %}
+  </section>
 </section>
 {% endblock %}

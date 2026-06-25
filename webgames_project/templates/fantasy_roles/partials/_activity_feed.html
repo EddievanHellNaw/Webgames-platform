@@ -1,0 +1,81 @@
+<section class="fr-panel fr-activity-feed">
+  <div class="fr-panel-heading">
+    <span class="fr-kicker">Party Log</span>
+    <strong>Recent Actions</strong>
+  </div>
+
+  {% if recent_attempts %}
+    <div class="fr-log-list">
+      {% for attempt in recent_attempts %}
+        <article class="fr-log-entry {% if attempt.success %}is-success{% else %}is-failure{% endif %}">
+          <div class="fr-log-icon">
+            {% if attempt.success %}
+              ✓
+            {% else %}
+              !
+            {% endif %}
+          </div>
+
+          <div class="fr-log-body">
+            <div class="fr-log-title">
+              <strong>{{ attempt.character.character_name }}</strong>
+              <span>{{ attempt.get_action_type_display }}</span>
+            </div>
+
+            <div class="fr-log-meta">
+              {% if attempt.skill_used %}
+                <span>Skill: {{ attempt.skill_used.name }}</span>
+              {% endif %}
+
+              {% if attempt.die_roll %}
+                <span>
+                  Roll:
+                  {{ attempt.die_roll }}
+                  {% if attempt.roll_bonus %}
+                    + {{ attempt.roll_bonus }}
+                  {% endif %}
+                  {% if attempt.final_roll_total %}
+                    = {{ attempt.final_roll_total }}
+                  {% endif %}
+                </span>
+
+                <span>Difficulty {{ attempt.difficulty_at_roll }}</span>
+              {% endif %}
+
+              {% if attempt.damage_taken %}
+                <span class="fr-danger-text">
+                  Damage {{ attempt.damage_taken }}
+                </span>
+              {% endif %}
+            </div>
+
+            {% if attempt.result_text %}
+              <p>{{ attempt.result_text }}</p>
+            {% endif %}
+
+            {% if attempt.item_awarded %}
+              <div class="fr-log-item">
+                {% if attempt.item_awarded.image %}
+                  <img
+                    src="{{ attempt.item_awarded.image.url }}"
+                    alt="{{ attempt.item_awarded.name }}"
+                  >
+                {% endif %}
+
+                <div>
+                  <span class="fr-kicker">Item Found</span>
+                  <strong>{{ attempt.item_awarded.name }}</strong>
+                  <p>{{ attempt.item_awarded.effect_text }}</p>
+                </div>
+              </div>
+            {% endif %}
+          </div>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="fr-muted-text">
+      No actions have been taken in this room yet.
+    </p>
+  {% endif %}
+</section>

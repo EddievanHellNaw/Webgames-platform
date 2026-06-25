@@ -1,0 +1,71 @@
+<section
+  class="fr-panel fr-map-panel"
+  {% if run.dungeon.image %}
+    style="--dungeon-bg: url('{{ run.dungeon.image.url }}');"
+  {% endif %}
+>
+  <div class="fr-panel-heading">
+    <span class="fr-kicker">Dungeon Map</span>
+    <strong>{{ run.dungeon.name }}</strong>
+  </div>
+
+  {% if generated_rooms %}
+    <div class="fr-node-map">
+      {% for room in generated_rooms %}
+        <div
+          class="
+            fr-room-node
+            {% if run.current_room_id == room.id %}is-current{% endif %}
+            {% if room.is_cleared %}is-cleared{% endif %}
+            {% if room.id in connected_room_ids %}is-connected{% endif %}
+          "
+          style="grid-row: {{ room.grid_row }}; grid-column: {{ room.grid_col }};"
+          title="Room {{ room.room_number }} — {{ room.name }}"
+        >
+          <span>{{ room.room_number }}</span>
+        </div>
+      {% endfor %}
+    </div>
+
+    <div class="fr-map-legend">
+      <span><i class="legend-current"></i> Current</span>
+      <span><i class="legend-cleared"></i> Cleared</span>
+      <span><i class="legend-connected"></i> Connected</span>
+    </div>
+  {% else %}
+    <p>No generated rooms exist for this run yet.</p>
+  {% endif %}
+
+  <div class="fr-connected-room-panel">
+    <h3>Connected Rooms</h3>
+
+    {% if connected_rooms %}
+      <div class="fr-connected-list">
+        {% for room in connected_rooms %}
+          <article class="fr-connected-room">
+            <div>
+              <strong>
+                Room {{ room.room_number }}
+              </strong>
+
+              {% if room.name %}
+                <span>{{ room.name }}</span>
+              {% endif %}
+
+              <small>
+                {{ room.get_room_type_display }}
+                · Difficulty {{ room.difficulty }}/5
+              </small>
+            </div>
+
+            
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="fr-muted-text">
+        No connected rooms are available from your current room.
+      </p>
+    {% endif %}
+  </div>
+</section>

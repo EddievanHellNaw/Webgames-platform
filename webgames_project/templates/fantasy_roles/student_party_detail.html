@@ -1,52 +1,232 @@
 {% extends "base.html" %}
 
+{% block title %}Your Party · Fantasy Roles{% endblock %}
+
 {% block content %}
-<section class="student-party">
-  <h1>Your Party</h1>
+<section class="fr-student-party-page">
+  <section class="fr-student-party-hero">
+    <span class="fr-kicker">Fantasy Roles</span>
 
-  <p>
-    Character:
-    <strong>{{ character.character_name }}</strong>
-    — {{ character.character_class.name }}
-  </p>
+    {% if membership %}
+      <h1>{{ membership.party.name }}</h1>
 
-  {% if membership %}
-    <h2>{{ membership.party.name }}</h2>
-
-    {% if membership.party.current_dm %}
       <p>
-        Current DM:
-        <strong>{{ membership.party.current_dm.character_name }}</strong>
+        Your adventuring party is being prepared. Check your members, your
+        Dungeon Master, and the next step before entering the dungeon.
       </p>
     {% else %}
-      <p>Your teacher has not selected the first DM yet.</p>
+      <h1>Waiting for Party</h1>
+
+      <p>
+        Your hero has been created. Wait while your teacher assigns you to an
+        adventuring party.
+      </p>
     {% endif %}
 
-    <h3>Party Members</h3>
+    <div class="fr-status-row">
+      <span class="fr-status-pill">{{ session.title }}</span>
+      <span class="fr-status-pill">{{ session.join_code }}</span>
 
-    <ul>
-      {% for member in membership.party.members.all %}
-        <li>
-          <strong>{{ member.character.character_name }}</strong>
-          — {{ member.character.character_class.name }}
-          / {{ member.character.participant.display_name }}
+      {% if membership %}
+        <span class="fr-status-pill">{{ party_members|length }} Members</span>
+      {% else %}
+        <span class="fr-status-pill">Not Assigned Yet</span>
+      {% endif %}
+    </div>
+  </section>
 
-          {% if membership.party.current_dm_id == member.character.id %}
-            <strong> · DM</strong>
-          {% endif %}
-        </li>
-      {% endfor %}
-    </ul>
+  {% if not membership %}
+    <section class="fr-panel fr-party-waiting-card">
+      <div class="fr-party-waiting-orb">
+        <span>◆</span>
+      </div>
 
-    <p>Wait for your teacher to choose the dungeon.</p>
+      <span class="fr-kicker">Please Wait</span>
+
+      <h2>Your party is not ready yet</h2>
+
+      <p class="fr-muted-text">
+        Stay on this page or refresh after your teacher organizes the parties.
+      </p>
+
+      <div class="fr-button-row">
+        <a class="fr-btn fr-btn-primary" href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
+          Refresh Party Status
+        </a>
+
+        <a class="fr-btn" href="{% url 'fantasy_roles:character_detail' session.join_code %}">
+          View Character
+        </a>
+      </div>
+    </section>
   {% else %}
-    <h2>Waiting for party assignment...</h2>
-    <p>Your teacher will assign you to an adventuring party soon.</p>
+
+    <section class="fr-student-party-grid">
+      <article class="fr-panel fr-party-roster-panel">
+        <div class="fr-panel-heading">
+          <span class="fr-kicker">Party Roster</span>
+          <strong>{{ membership.party.name }}</strong>
+        </div>
+
+        <div class="fr-student-party-member-list">
+          {% for member in party_members %}
+            <article class="fr-student-party-member {% if member.character.id == character.id %}is-current-player{% endif %} {% if membership.party.current_dm_id == member.character.id %}is-dm{% endif %}">
+              <div class="fr-student-party-member-portrait">
+                {% with portrait=member.character.selected_image %}
+                  {% if portrait %}
+                    <img src="{{ portrait.url }}" alt="{{ member.character.character_name }}">
+                  {% else %}
+                    <span>◆</span>
+                  {% endif %}
+                {% endwith %}
+              </div>
+
+              <div class="fr-student-party-member-body">
+                <div class="fr-student-party-member-title">
+                  <div>
+                    <strong>{{ member.character.character_name }}</strong>
+                    <small>
+                      {{ member.character.participant.display_name }}
+                      · {{ member.character.character_class.name }}
+                    </small>
+                  </div>
+
+                  <div class="fr-party-member-badges">
+                    {% if member.character.id == character.id %}
+                      <span class="fr-status-pill">You</span>
+                    {% endif %}
+
+                    {% if membership.party.current_dm_id == member.character.id %}
+                      <span class="fr-status-pill is-gold">DM</span>
+                    {% endif %}
+                  </div>
+                </div>
+
+                <div class="fr-character-stat-row">
+                  <span>♥ {{ member.character.current_life }}/{{ member.character.character_class.max_life }}</span>
+                  <span>⚔ {{ member.character.character_class.attack }}</span>
+                  <span>✦ {{ member.character.current_action_points }}/{{ member.character.character_class.action_points }}</span>
+                </div>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      </article>
+
+      <article class="fr-panel fr-party-status-panel">
+        <div class="fr-panel-heading">
+          <span class="fr-kicker">Current Mission</span>
+          <strong>Next Step</strong>
+        </div>
+
+        {% if existing_run %}
+          <div class="fr-party-status-emblem">
+            {% if existing_run.dungeon.image %}
+              <img src="{{ existing_run.dungeon.image.url }}" alt="{{ existing_run.dungeon.name }}">
+            {% else %}
+              <span>◆</span>
+            {% endif %}
+          </div>
+
+          <h2>{{ existing_run.dungeon.name }}</h2>
+
+          {% if existing_run.dungeon.kingdom %}
+            <p class="fr-muted-text">
+              {{ existing_run.dungeon.kingdom }}
+            </p>
+          {% endif %}
+
+          <div class="fr-status-row">
+            <span class="fr-status-pill">
+              {{ existing_run.get_status_display }}
+            </span>
+
+            {% if existing_run.current_room %}
+              <span class="fr-status-pill">
+                Room {{ existing_run.current_room.room_number }}
+              </span>
+            {% endif %}
+          </div>
+
+          <div class="fr-button-row">
+            <a class="fr-btn fr-btn-primary" href="{% url 'fantasy_roles:student_dungeon_detail' session.join_code %}">
+              Enter Dungeon
+            </a>
+          </div>
+
+        {% elif is_current_dm %}
+          <div class="fr-party-status-emblem">
+            <span>⚔</span>
+          </div>
+
+          <h2>You are the Dungeon Master</h2>
+
+          <p class="fr-muted-text">
+            Your party is ready. Choose the dungeon your group will explore.
+          </p>
+
+          <div class="fr-button-row">
+            <a class="fr-btn fr-btn-primary" href="{% url 'fantasy_roles:student_dungeon_select' session.join_code %}">
+              Choose Dungeon
+            </a>
+          </div>
+
+        {% elif membership.party.current_dm %}
+          <div class="fr-party-status-emblem">
+            <span>◆</span>
+          </div>
+
+          <h2>Waiting for the DM</h2>
+
+          <p class="fr-muted-text">
+            {{ membership.party.current_dm.character_name }} is the current
+            Dungeon Master. Wait while they choose the dungeon.
+          </p>
+
+          <div class="fr-button-row">
+            <a class="fr-btn fr-btn-primary" href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
+              Refresh Status
+            </a>
+          </div>
+
+        {% else %}
+          <div class="fr-party-status-emblem">
+            <span>?</span>
+          </div>
+
+          <h2>No DM selected yet</h2>
+
+          <p class="fr-muted-text">
+            Wait while your teacher chooses the first Dungeon Master for your
+            party.
+          </p>
+
+          <div class="fr-button-row">
+            <a class="fr-btn fr-btn-primary" href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
+              Refresh Status
+            </a>
+          </div>
+        {% endif %}
+      </article>
+    </section>
+
+    <section class="fr-panel fr-student-party-next">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Your Hero</span>
+        <strong>{{ character.character_name }}</strong>
+      </div>
+
+      <p class="fr-muted-text">
+        Review your character sheet if you need to check your class, stats,
+        skills, weaknesses, or backstory.
+      </p>
+
+      <div class="fr-button-row">
+        <a class="fr-btn" href="{% url 'fantasy_roles:character_detail' session.join_code %}">
+          View Character Sheet
+        </a>
+      </div>
+    </section>
   {% endif %}
 </section>
-<p>
-  <a href="{% url 'fantasy_roles:student_dungeon_select' session.join_code %}">
-    Choose / View Dungeon Options
-  </a>
-</p>
 {% endblock %}

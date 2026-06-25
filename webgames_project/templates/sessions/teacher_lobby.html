@@ -1,73 +1,128 @@
 {% extends "base.html" %}
 
+{% block title %}Lobby · {{ session.title }}{% endblock %}
+
 {% block content %}
-<section class="lobby">
-  <h1>{{ session.title }}</h1>
-  <p>Status: <strong>{{ session.get_status_display }}</strong></p>
+<section class="fr-lobby-page">
+  <section class="fr-lobby-hero">
+    <div>
+      <span class="fr-kicker">Session Lobby</span>
 
-  <div class="qr-box">
-    <h2>Student Access</h2>
-    <p>Students can scan this QR code to join the game.</p>
+      <h1>{{ session.title }}</h1>
 
-    <img src="{{ qr_image }}" alt="QR Code for joining the game session">
+      <p>
+        Prepare the session, share the join code, and wait for students to enter
+        the game.
+      </p>
 
-    <p>
-      Join code:
+      <div class="fr-status-row">
+        <span class="fr-status-pill">
+          {{ session.game_template.title }}
+        </span>
+
+        <span class="fr-status-pill">
+          Status: {{ session.get_status_display }}
+        </span>
+      </div>
+    </div>
+
+    <div class="fr-lobby-code-card">
+      <span class="fr-kicker">Join Code</span>
       <strong>{{ session.join_code }}</strong>
-    </p>
+    </div>
+  </section>
 
-    <p>
-      Link:
-      <br>
-      <small>{{ join_url }}</small>
-    </p>
-  </div>
+  <section class="fr-lobby-grid">
+    <article class="fr-panel fr-join-panel">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Student Access</span>
+        <strong>Join the Game</strong>
+      </div>
 
-  <hr>
+      <div class="fr-qr-wrap">
+        {% if qr_image %}
+          <img src="{{ qr_image }}" alt="Join QR code">
+        {% elif qr_code_image %}
+          <img src="{{ qr_code_image }}" alt="Join QR code">
+        {% elif qr_code %}
+          <img src="{{ qr_code }}" alt="Join QR code">
+        {% else %}
+          <div class="fr-qr-placeholder">
+            QR
+          </div>
+        {% endif %}
+      </div>
 
-  <h2>Joined Students</h2>
-{% if session.game_template.code == "FANTASY_ROLES" %}
-  <p>
-    <a href="{% url 'fantasy_roles:teacher_character_list' session.join_code %}">
-      View Fantasy Roles Characters
-    </a>
-  </p>
-{% endif %}
-  <ul>
-    {% for participant in session.participants.all %}
-      <li>{{ participant.display_name }}{% if participant.student_id %} — {{ participant.student_id }}{% endif %}</li>
-    {% empty %}
-      <li>No students have joined yet.</li>
-    {% endfor %}
-  </ul>
-  {% if session.game_template.code == "FANTASY_ROLES" %}
-  <p>
-    <a href="{% url 'fantasy_roles:teacher_character_list' session.join_code %}">
-      View Fantasy Roles Characters
-    </a>
-  </p>
+      {% if join_url %}
+        <p class="fr-muted-text">
+          Students can scan the QR code or open:
+        </p>
 
-  <p>
-    <a href="{% url 'fantasy_roles:teacher_party_setup' session.join_code %}">
-      Form Adventuring Parties
-    </a>
-  </p>
+        <p class="fr-lobby-link">
+          {{ join_url }}
+        </p>
+      {% else %}
+        <p class="fr-muted-text">
+          Students can join using the code above.
+        </p>
+      {% endif %}
+    </article>
 
-  <p>
-    <a href="{% url 'fantasy_roles:teacher_dungeon_setup' session.join_code %}">
-      Monitor Dungeon Choices
-    </a>
-  </p>
-{% endif %}
+    <article
+      class="fr-panel fr-participant-panel"
+      id="lobby-participants"
+      hx-get="{% url 'sessions:teacher_lobby_participants' session.join_code %}"
+      hx-trigger="load, every 2s"
+      hx-swap="innerHTML"
+    >
+      {% include "sessions/partials/_lobby_participants.html" %}
+    </article>
+  </section>
 
-  {% if session.status == "LOBBY" %}
-    <form method="post" action="{% url 'sessions:start_session' session.join_code %}">
-      {% csrf_token %}
-      <button type="submit">Start Game</button>
-    </form>
-  {% else %}
-    <p>The game has started.</p>
-  {% endif %}
+  <section class="fr-panel fr-lobby-actions">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Teacher Actions</span>
+      <strong>Control the Session</strong>
+    </div>
+
+    <div class="fr-button-row">
+      {% if session.status == "LOBBY" %}
+        <form method="post" action="{% url 'sessions:start_session' session.join_code %}">
+          {% csrf_token %}
+          <button class="fr-btn fr-btn-primary" type="submit">
+            Start Session
+          </button>
+        </form>
+      {% else %}
+        <span class="fr-status-pill">
+          Session already started
+        </span>
+      {% endif %}
+
+      {% if session.game_template.code == "FANTASY_ROLES" %}
+        <a
+          class="fr-btn fr-btn-secondary"
+          href="{% url 'fantasy_roles:teacher_character_list' session.join_code %}"
+        >
+          View Characters
+        </a>
+
+        <a
+          class="fr-btn fr-btn-secondary"
+          href="{% url 'fantasy_roles:teacher_party_setup' session.join_code %}"
+        >
+          Manage Parties
+        </a>
+
+        <a
+          class="fr-btn fr-btn-secondary"
+          href="{% url 'fantasy_roles:teacher_dungeon_setup' session.join_code %}"
+        >
+          Monitor Dungeons
+        </a>
+      {% endif %}
+    </div>
+  </section>
 </section>
 {% endblock %}
 

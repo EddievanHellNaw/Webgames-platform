@@ -1,0 +1,30 @@
+<div class="fr-panel-heading">
+  <span class="fr-kicker">Joined Students</span>
+  <strong>{{ participants|length }} joined</strong>
+</div>
+
+{% if participants %}
+  <div class="fr-lobby-participant-list">
+    {% for participant in participants %}
+      <article class="fr-lobby-participant">
+        <div class="fr-lobby-participant-mark">
+          {{ participant.display_name|slice:":1" }}
+        </div>
+
+        <div>
+          <strong>{{ participant.display_name }}</strong>
+
+          {% if participant.student_id %}
+            <small>ID: {{ participant.student_id }}</small>
+          {% else %}
+            <small>No student ID</small>
+          {% endif %}
+        </div>
+      </article>
+    {% endfor %}
+  </div>
+{% else %}
+  <p class="fr-muted-text">
+    No students have joined yet. Share the QR code or join code.
+  </p>
+{% endif %}

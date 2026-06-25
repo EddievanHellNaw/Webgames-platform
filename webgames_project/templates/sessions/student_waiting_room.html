@@ -1,27 +1,105 @@
 {% extends "base.html" %}
 
+{% block title %}Waiting Room · {{ session.title }}{% endblock %}
+
 {% block content %}
-<section class="waiting-room">
-  <h1>Waiting to start the game...</h1>
+<section class="fr-waiting-page">
+  <section class="fr-waiting-hero">
+    <div class="fr-waiting-orb">
+      <span>◆</span>
+    </div>
 
-  <p>Welcome, <strong>{{ participant.display_name }}</strong>.</p>
-  <p>Your teacher will start the game soon.</p>
+    <span class="fr-kicker">You Have Joined</span>
 
-  <div class="loader">
-    Please keep this page open.
-  </div>
+    <h1>Waiting Room</h1>
+
+    <p>
+      Welcome, <strong>{{ participant.display_name }}</strong>.
+      Stay on this screen. Your teacher will start the session soon.
+    </p>
+
+    <div class="fr-status-row">
+      <span class="fr-status-pill">
+        {{ session.game_template.title }}
+      </span>
+
+      <span class="fr-status-pill">
+        Code: {{ session.join_code }}
+      </span>
+
+      <span class="fr-status-pill">
+        {{ session.get_status_display }}
+      </span>
+    </div>
+  </section>
+
+  <section class="fr-waiting-grid">
+    <article class="fr-panel fr-waiting-status-card">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Current Status</span>
+        <strong>Preparing Adventure</strong>
+      </div>
+
+      <div class="fr-loading-runes" aria-hidden="true">
+        <span></span>
+        <span></span>
+        <span></span>
+      </div>
+
+      <p class="fr-muted-text">
+        The portal will open automatically when your teacher starts the game.
+      </p>
+
+      <div
+        id="session-status-check"
+        hx-get="{% url 'sessions:session_status' session.join_code %}"
+        hx-trigger="load, every 2s"
+        hx-swap="none"
+      ></div>
+    </article>
+
+    <article class="fr-panel fr-waiting-player-card">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Player</span>
+        <strong>Your Entry</strong>
+      </div>
+
+      <div class="fr-waiting-player-mark">
+        {{ participant.display_name|slice:":1" }}
+      </div>
+
+      <h2>{{ participant.display_name }}</h2>
+
+      {% if participant.student_id %}
+        <p class="fr-muted-text">
+          Student ID: {{ participant.student_id }}
+        </p>
+      {% else %}
+        <p class="fr-muted-text">
+          No student ID was provided.
+        </p>
+      {% endif %}
+    </article>
+  </section>
 </section>
 
 <script>
-  async function checkSessionStatus() {
-    const response = await fetch("{% url 'sessions:session_status' session.join_code %}");
-    const data = await response.json();
+  document.body.addEventListener("htmx:afterRequest", function (event) {
+    const xhr = event.detail.xhr;
 
-    if (data.status === "ACTIVE") {
-      window.location.href = data.redirect_url;
+    if (!xhr || !xhr.responseText) {
+      return;
     }
-  }
 
-  setInterval(checkSessionStatus, 2000);
+    try {
+      const data = JSON.parse(xhr.responseText);
+
+      if (data.status === "ACTIVE" && data.redirect_url) {
+        window.location.href = data.redirect_url;
+      }
+    } catch (error) {
+      // Ignore non-JSON responses.
+    }
+  });
 </script>
 {% endblock %}

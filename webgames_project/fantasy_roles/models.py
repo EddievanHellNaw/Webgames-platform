@@ -52,6 +52,20 @@ class ClassSkill(models.Model):
     ap_cost = models.PositiveIntegerField(default=1)
     description = models.TextField()
 
+    roll_bonus = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Bonus added to the die roll when this skill is used.",
+    )
+
+    can_use_in_combat = models.BooleanField(default=True)
+
+    can_use_in_trap = models.BooleanField(
+        default=False,
+        help_text="Usually false. Trap rooms normally require written actions.",
+    )
+
+    can_use_in_special = models.BooleanField(default=True)
+
     class Meta:
         ordering = ["ap_cost", "name"]
 
@@ -225,6 +239,7 @@ class Dungeon(models.Model):
     name = models.CharField(max_length=150, unique=True)
     slug = models.SlugField(max_length=150, unique=True)
 
+
     kingdom = models.CharField(
         max_length=100,
         blank=True,
@@ -248,6 +263,12 @@ class Dungeon(models.Model):
     room_count = models.PositiveSmallIntegerField(default=9)
 
     treasure_room_count = models.PositiveSmallIntegerField(default=1)
+    combat_room_count = models.PositiveSmallIntegerField(default=3)
+    trap_room_count = models.PositiveSmallIntegerField(default=4)
+    special_room_count = models.PositiveSmallIntegerField(
+    default=1,
+    help_text="Usually 1 special mimic room."
+    )
 
     final_boss_name = models.CharField(
         max_length=150,
@@ -423,11 +444,159 @@ class DungeonRoomConnection(models.Model):
     def __str__(self):
         return f"{self.dungeon.name}: Room {self.from_room.number} ↔ Room {self.to_room.number}"
 
+class DungeonRoomTemplate(models.Model):
+    class RoomType(models.TextChoices):
+        TRAP = "TRAP", "Trap Room"
+        COMBAT = "COMBAT", "Combat Room"
+        TREASURE = "TREASURE", "Treasure Room"
+        SPECIAL = "SPECIAL", "Special Room"
+
+    dungeon = models.ForeignKey(
+        Dungeon,
+        on_delete=models.CASCADE,
+        related_name="room_templates",
+    )
+
+    name = models.CharField(max_length=150)
+
+    room_type = models.CharField(
+        max_length=20,
+        choices=RoomType.choices,
+    )
+
+    image = models.ImageField(
+        upload_to="room_templates/",
+        blank=True,
+        null=True,
+    )
+
+    difficulty = models.PositiveSmallIntegerField(
+        default=3,
+        help_text="Use a value from 1 to 5.",
+    )
+
+    flavor_text = models.TextField(
+        blank=True,
+        help_text="Description or hint shown to players.",
+    )
+
+    failure_text = models.TextField(
+        blank=True,
+        help_text="What happens when players fail.",
+    )
+
+    damage_on_failure = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+        help_text="Optional explicit damage. Useful for combat rooms.",
+    )
+
+    is_mimic_room = models.BooleanField(
+        default=False,
+        help_text="Mark this if the special room is a mimic encounter.",
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["dungeon", "room_type", "difficulty", "name"]
+
+    def __str__(self):
+        return f"{self.dungeon.name} - {self.name}"
+    
+class ItemTemplate(models.Model):
+    class ItemScope(models.TextChoices):
+        GLOBAL = "GLOBAL", "Global"
+        DUNGEON_SPECIFIC = "DUNGEON_SPECIFIC", "Dungeon-specific"
+
+    name = models.CharField(max_length=150)
+
+    dungeon = models.ForeignKey(
+        Dungeon,
+        on_delete=models.CASCADE,
+        related_name="item_templates",
+        null=True,
+        blank=True,
+        help_text="Leave blank if this item can appear in any dungeon.",
+    )
+
+    scope = models.CharField(
+        max_length=30,
+        choices=ItemScope.choices,
+        default=ItemScope.GLOBAL,
+    )
+
+    image = models.ImageField(
+        upload_to="items/",
+        blank=True,
+        null=True,
+    )
+
+    effect_text = models.TextField()
+
+    roll_number = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+        help_text="Optional number needed to obtain this item from a chest.",
+    )
+
+    is_consumable = models.BooleanField(default=True)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["name"]
+
+    def __str__(self):
+        if self.dungeon:
+            return f"{self.name} - {self.dungeon.name}"
+        return self.name
+    
+class PartyInventoryItem(models.Model):
+    party = models.ForeignKey(
+        AdventuringParty,
+        on_delete=models.CASCADE,
+        related_name="inventory_items",
+    )
+
+    item = models.ForeignKey(
+        ItemTemplate,
+        on_delete=models.PROTECT,
+        related_name="party_inventory_entries",
+    )
+
+    quantity = models.PositiveIntegerField(default=1)
+
+    obtained_in_room = models.ForeignKey(
+        "DungeonRunRoom",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="items_obtained_here",
+    )
+
+    obtained_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["item__name"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["party", "item"],
+                name="unique_item_per_party_inventory",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.party.name} - {self.item.name} x{self.quantity}"
+    
+
+    
 
 class PartyDungeonRun(models.Model):
     class Status(models.TextChoices):
         SELECTED = "SELECTED", "Selected"
         ACTIVE = "ACTIVE", "Active"
+        BOSS_READY = "BOSS_READY", "Boss Ready"
+        BOSS_ACTIVE = "BOSS_ACTIVE", "Boss Active"
         CLEARED = "CLEARED", "Cleared"
         FAILED = "FAILED", "Failed"
 
@@ -444,7 +613,7 @@ class PartyDungeonRun(models.Model):
     )
 
     current_room = models.ForeignKey(
-        DungeonRoom,
+        "DungeonRunRoom",
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -469,22 +638,204 @@ class PartyDungeonRun(models.Model):
     updated_at = models.DateTimeField(auto_now=True)
 
     def clean(self):
-        if self.current_room and self.current_room.dungeon_id != self.dungeon_id:
-            raise ValidationError("Current room must belong to the selected dungeon.")
-
         if self.party and self.party.session.game_template.code != "FANTASY_ROLES":
-            raise ValidationError("Dungeon runs can only be created for Fantasy Roles sessions.")
+            raise ValidationError(
+                "Dungeon runs can only be created for Fantasy Roles sessions."
+            )
+
+        if self.current_room and self.current_room.run_id != self.id:
+            raise ValidationError(
+                "Current room must belong to this dungeon run."
+            )
+
+    def __str__(self):
+        return f"{self.party.name} in {self.dungeon.name}"
+    
+class DungeonRunRoom(models.Model):
+    class RoomType(models.TextChoices):
+        TRAP = "TRAP", "Trap Room"
+        COMBAT = "COMBAT", "Combat Room"
+        TREASURE = "TREASURE", "Treasure Room"
+        SPECIAL = "SPECIAL", "Special Room"
+        BOSS = "BOSS", "Boss Room"
+
+    run = models.ForeignKey(
+        PartyDungeonRun,
+        on_delete=models.CASCADE,
+        related_name="generated_rooms",
+    )
+    source_template = models.ForeignKey(
+        DungeonRoomTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="generated_run_rooms",
+    )
+
+    room_number = models.PositiveSmallIntegerField()
+
+    name = models.CharField(max_length=150, blank=True)
+
+    room_type = models.CharField(
+        max_length=20,
+        choices=RoomType.choices,
+    )
+
+    difficulty = models.PositiveSmallIntegerField(default=3)
+
+    flavor_text = models.TextField(blank=True)
+    failure_text = models.TextField(blank=True)
+
+    damage_on_failure = models.PositiveIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    is_cleared = models.BooleanField(default=False)
+
+    grid_row = models.PositiveSmallIntegerField(default=1)
+    grid_col = models.PositiveSmallIntegerField(default=1)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["run", "room_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["run", "room_number"],
+                name="unique_generated_room_number_per_run",
+            )
+        ]
+
+    def __str__(self):
+        return f"{self.run.party.name} - Room {self.room_number}"
+
+
+class DungeonRunConnection(models.Model):
+    run = models.ForeignKey(
+        PartyDungeonRun,
+        on_delete=models.CASCADE,
+        related_name="generated_connections",
+    )
+
+    from_room = models.ForeignKey(
+        DungeonRunRoom,
+        on_delete=models.CASCADE,
+        related_name="generated_connections_from",
+    )
+
+    to_room = models.ForeignKey(
+        DungeonRunRoom,
+        on_delete=models.CASCADE,
+        related_name="generated_connections_to",
+    )
+
+    class Meta:
+        ordering = ["run", "from_room__room_number", "to_room__room_number"]
+        constraints = [
+            models.UniqueConstraint(
+                fields=["from_room", "to_room"],
+                name="unique_generated_room_connection",
+            )
+        ]
+
+    def clean(self):
+        if self.from_room_id and self.to_room_id:
+            if self.from_room_id == self.to_room_id:
+                raise ValidationError("A room cannot connect to itself.")
+
+            if self.from_room.run_id != self.to_room.run_id:
+                raise ValidationError("Connected rooms must belong to the same run.")
+
+            if self.run_id != self.from_room.run_id:
+                raise ValidationError("Connection run must match the selected rooms.")
 
     def save(self, *args, **kwargs):
-        if not self.current_room_id:
-            self.current_room = (
-                DungeonRoom.objects
-                .filter(dungeon=self.dungeon, number=1)
-                .first()
-            )
+        if self.from_room_id and self.to_room_id:
+            if self.from_room_id > self.to_room_id:
+                self.from_room_id, self.to_room_id = self.to_room_id, self.from_room_id
 
         self.full_clean()
         super().save(*args, **kwargs)
 
+    def other_room(self, current_room):
+        if current_room.id == self.from_room_id:
+            return self.to_room
+        return self.from_room
+
     def __str__(self):
-        return f"{self.party.name} in {self.dungeon.name}"
+        return (
+            f"{self.run.party.name}: Room {self.from_room.room_number} "
+            f"↔ Room {self.to_room.room_number}"
+        )
+    
+class RoomAttempt(models.Model):
+    class ActionType(models.TextChoices):
+        TRAP_ACTION = "TRAP_ACTION", "Trap Action"
+        BASIC_ATTACK = "BASIC_ATTACK", "Basic Attack"
+        SKILL = "SKILL", "Skill"
+        OPEN_CHEST = "OPEN_CHEST", "Open Chest"
+        LEAVE_TREASURE = "LEAVE_TREASURE", "Leave Treasure"
+        SPECIAL_ACTION = "SPECIAL_ACTION", "Special Action"
+
+    room = models.ForeignKey(
+        DungeonRunRoom,
+        on_delete=models.CASCADE,
+        related_name="attempts",
+    )
+
+    character = models.ForeignKey(
+        PlayerCharacter,
+        on_delete=models.CASCADE,
+        related_name="room_attempts",
+    )
+
+    action_type = models.CharField(
+        max_length=30,
+        choices=ActionType.choices,
+    )
+
+    skill_used = models.ForeignKey(
+        ClassSkill,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="room_attempts",
+    )
+
+    action_text = models.TextField(blank=True)
+
+    die_roll = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    difficulty_at_roll = models.PositiveSmallIntegerField(
+        null=True,
+        blank=True,
+    )
+
+    success = models.BooleanField(default=False)
+
+    damage_taken = models.PositiveIntegerField(default=0)
+
+    item_awarded = models.ForeignKey(
+        ItemTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="room_attempts_awarded",
+    )
+    
+    roll_bonus = models.PositiveSmallIntegerField(default=0)
+    final_roll_total = models.PositiveSmallIntegerField(null=True, blank=True)
+    
+    result_text = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.character.character_name} - {self.room.name}"

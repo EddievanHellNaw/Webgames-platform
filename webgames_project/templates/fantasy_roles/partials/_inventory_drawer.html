@@ -1,0 +1,22 @@
+<details class="fr-inventory-drawer">
+  <summary>
+    <span class="fr-inventory-icon">◆</span>
+    <span>Party Inventory</span>
+  </summary>
+
+  <section class="fr-inventory-panel">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Shared Items</span>
+      <strong>{{ membership.party.name }}</strong>
+    </div>
+
+    <div
+      id="party-inventory-content"
+      hx-get="{% url 'fantasy_roles:student_inventory_panel' session.join_code %}"
+      hx-trigger="load, every 3s"
+      hx-swap="innerHTML"
+    >
+      {% include "fantasy_roles/partials/_inventory_contents.html" %}
+    </div>
+  </section>
+</details>

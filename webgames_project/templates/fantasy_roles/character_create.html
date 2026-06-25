@@ -1,122 +1,536 @@
 {% extends "base.html" %}
 
+{% block title %}Create Character · Fantasy Roles{% endblock %}
+
 {% block content %}
-<section class="character-create">
-  <h1>Create Your Character</h1>
+<section class="fr-character-create-page">
+  <section class="fr-character-hero">
+    <span class="fr-kicker">Fantasy Roles</span>
 
-  <p>
-    Welcome, <strong>{{ participant.display_name }}</strong>.
-    Choose a class, name your character, and write a short backstory.
-  </p>
+    <h1>Create Your Hero</h1>
 
-  <form method="post">
+    <p>
+      Welcome, <strong>{{ participant.display_name }}</strong>.
+      Build your hero step by step before entering the dungeon.
+    </p>
+
+    <div class="fr-status-row">
+      <span class="fr-status-pill">{{ session.title }}</span>
+      <span class="fr-status-pill">{{ session.join_code }}</span>
+    </div>
+  </section>
+
+  <form method="post" class="fr-character-form" id="character-create-form">
     {% csrf_token %}
 
-    <h2>Choose your class</h2>
-
-    {% if form.character_class.errors %}
-      <div class="form-errors">{{ form.character_class.errors }}</div>
+    {% if form and form.errors %}
+      <section class="fr-message-list">
+        <div class="fr-message">
+          Please check your character information before continuing.
+          {{ form.errors }}
+        </div>
+      </section>
     {% endif %}
 
-    <div class="class-grid">
-      {% for class in character_classes %}
-        <label class="class-card">
-          <input
-            type="radio"
-            name="character_class"
-            value="{{ class.id }}"
-            {% if form.character_class.value|stringformat:"s" == class.id|stringformat:"s" %}checked{% endif %}
-          >
+    <section class="fr-character-stepper">
+      <span class="fr-step-dot is-active" data-step-dot="1">1</span>
+      <span class="fr-step-line"></span>
+      <span class="fr-step-dot" data-step-dot="2">2</span>
+      <span class="fr-step-line"></span>
+      <span class="fr-step-dot" data-step-dot="3">3</span>
+    </section>
 
-          <div class="class-images">
-        {% if class.female_image %}
-            <div>
-            <img src="{{ class.female_image.url }}" alt="{{ class.name }} female version">
-            <small>Female</small>
-            </div>
-        {% endif %}
-
-        {% if class.male_image %}
-            <div>
-            <img src="{{ class.male_image.url }}" alt="{{ class.name }} male version">
-            <small>Male</small>
-            </div>
-        {% endif %}
-
-        {% if not class.female_image and not class.male_image and class.image %}
-            <img src="{{ class.image.url }}" alt="{{ class.name }}">
-        {% endif %}
+    <!-- STEP 1: CLASS -->
+    <section class="fr-character-step is-active" data-step="1">
+      <section class="fr-panel">
+        <div class="fr-panel-heading">
+          <span class="fr-kicker">Step 1</span>
+          <strong>Choose Your Class</strong>
         </div>
 
-          <h3>{{ class.name }}</h3>
+        <div class="fr-class-card-grid">
+          {% for character_class in character_classes %}
+            <label
+              class="fr-class-select-card"
+              data-class-card
+              data-class-id="{{ character_class.id }}"
+              data-class-name="{{ character_class.name }}"
+            >
+              <input
+                type="radio"
+                name="character_class"
+                value="{{ character_class.id }}"
+                required
+              >
 
-          <p>{{ class.description }}</p>
+              <div class="fr-class-card-image">
+                {% if character_class.image %}
+                  <img src="{{ character_class.image.url }}" alt="{{ character_class.name }}">
+                {% else %}
+                  <span>◆</span>
+                {% endif %}
+              </div>
 
-          <ul>
-            <li><strong>Life:</strong> {{ class.max_life }}</li>
-            <li><strong>AP:</strong> {{ class.action_points }}</li>
-            <li><strong>Attack:</strong> {{ class.attack }}</li>
-          </ul>
+              <div class="fr-class-card-body">
+                <h2>{{ character_class.name }}</h2>
 
-          <h4>Skills</h4>
-          <ul>
-            {% for skill in class.skills.all %}
-              <li>
-                <strong>{{ skill.name }}</strong>
-                — {{ skill.ap_cost }} AP.
-                {{ skill.description }}
-              </li>
-            {% empty %}
-              <li>No skills added yet.</li>
-            {% endfor %}
-          </ul>
+                {% if character_class.description %}
+                  <p>{{ character_class.description }}</p>
+                {% endif %}
 
-          <h4>Weaknesses</h4>
-          <ul>
-            {% for weakness in class.weaknesses.all %}
-              <li>
-                <strong>{{ weakness.name }}</strong>
-                — {{ weakness.description }}
-              </li>
-            {% empty %}
-              <li>No weaknesses added yet.</li>
-            {% endfor %}
-          </ul>
-        </label>
-      {% empty %}
-        <p>No character classes are available yet. Add them from the Django admin.</p>
-      {% endfor %}
-    </div>
-    <hr>
+                <div class="fr-class-stats">
+                  <span>♥ {{ character_class.max_life }}</span>
+                  <span>⚔ {{ character_class.attack }}</span>
+                  <span>✦ {{ character_class.action_points }}</span>
+                </div>
+              </div>
+            </label>
+          {% endfor %}
+        </div>
 
-<h2>Choose your character version</h2>
+        <div class="fr-step-actions">
+          <button class="fr-btn fr-btn-primary" type="button" data-next-step="2">
+            Continue
+          </button>
+        </div>
+      </section>
+    </section>
 
-<div>
-  {{ form.visual_variant }}
-  {{ form.visual_variant.errors }}
-</div>
+    <!-- STEP 2: NAME + PORTRAIT -->
+    <section class="fr-character-step" data-step="2">
+      <section class="fr-character-grid">
+        <article class="fr-form-card">
+          <div class="fr-panel-heading">
+            <span class="fr-kicker">Step 2</span>
+            <strong>Name Your Hero</strong>
+          </div>
 
-    <hr>
+          <div>
+            <label for="character_name">Character name</label>
+            <input
+              type="text"
+              id="character_name"
+              name="character_name"
+              placeholder="Example: Lyra Stormblade"
+              required
+            >
+          </div>
+        </article>
 
-    <div>
-      {{ form.character_name.label_tag }}
-      {{ form.character_name }}
-      {{ form.character_name.errors }}
-    </div>
+        <article class="fr-panel">
+          <div class="fr-panel-heading">
+            <span class="fr-kicker">Portrait</span>
+            <strong>Choose Your Look</strong>
+          </div>
 
-    <div>
-      {{ form.english_level.label_tag }}
-      {{ form.english_level }}
-      {{ form.english_level.errors }}
-    </div>
+          <p class="fr-muted-text" id="selected-class-helper">
+            Choose a class first.
+          </p>
 
-    <div>
-      {{ form.backstory.label_tag }}
-      {{ form.backstory }}
-      {{ form.backstory.errors }}
-    </div>
+          {% for character_class in character_classes %}
+            <div
+              class="fr-portrait-choice-group"
+              data-portrait-group="{{ character_class.id }}"
+              hidden
+            >
+              <label class="fr-portrait-card">
+                <input
+                  type="radio"
+                  name="visual_variant"
+                  value="FEMALE"
+                  required
+                >
 
-    <button type="submit">Create Character</button>
+                <div class="fr-portrait-image">
+                  {% if character_class.female_image %}
+                    <img src="{{ character_class.female_image.url }}" alt="{{ character_class.name }} female portrait">
+                  {% elif character_class.image %}
+                    <img src="{{ character_class.image.url }}" alt="{{ character_class.name }} portrait">
+                  {% else %}
+                    <span>♀</span>
+                  {% endif %}
+                </div>
+
+                <strong>Body 1</strong>
+              </label>
+
+              <label class="fr-portrait-card">
+                <input
+                  type="radio"
+                  name="visual_variant"
+                  value="MALE"
+                  required
+                >
+
+                <div class="fr-portrait-image">
+                  {% if character_class.male_image %}
+                    <img src="{{ character_class.male_image.url }}" alt="{{ character_class.name }} male portrait">
+                  {% elif character_class.image %}
+                    <img src="{{ character_class.image.url }}" alt="{{ character_class.name }} portrait">
+                  {% else %}
+                    <span>♂</span>
+                  {% endif %}
+                </div>
+
+                <strong>Body 2</strong>
+              </label>
+            </div>
+          {% endfor %}
+        </article>
+      </section>
+
+      <div class="fr-step-actions">
+        <button class="fr-btn" type="button" data-prev-step="1">
+          Back
+        </button>
+
+        <button class="fr-btn fr-btn-primary" type="button" data-next-step="3">
+          Continue
+        </button>
+      </div>
+    </section>
+
+    <!-- STEP 3: LEVEL + MISSION + BACKSTORY -->
+    <section class="fr-character-step" data-step="3">
+      <section class="fr-character-grid">
+        <article class="fr-form-card">
+          <div class="fr-panel-heading">
+            <span class="fr-kicker">Step 3</span>
+            <strong>English Level</strong>
+          </div>
+
+          <div>
+            <label for="english_level">Choose your English level</label>
+            <select id="english_level" name="english_level" required>
+              <option value="">Choose your level</option>
+              <option value="LEVEL_1">Level 1 · Can / Can’t</option>
+              <option value="LEVEL_2">Level 2 · Simple Past</option>
+              <option value="LEVEL_3">Level 3 · Modal Verbs</option>
+              <option value="LEVEL_4">Level 4 · Infinitives and Gerunds</option>
+              <option value="LEVEL_5">Level 5 · Present Perfect and Strategies</option>
+            </select>
+          </div>
+        </article>
+
+        <article class="fr-panel fr-backstory-guide" id="language-mission-panel" hidden>
+          <div class="fr-panel-heading">
+            <span class="fr-kicker">Language Mission</span>
+            <strong>Your Writing Goal</strong>
+          </div>
+
+          <div class="fr-language-mission" data-mission="LEVEL_1" hidden>
+            <strong>Level 1 · Can / Can’t</strong>
+            <p>
+              Write about what your hero can and can’t do.
+            </p>
+            <span>I can fight. I can’t fly.</span>
+          </div>
+
+          <div class="fr-language-mission" data-mission="LEVEL_2" hidden>
+            <strong>Level 2 · Simple Past</strong>
+            <p>
+              Write about your hero’s past, origin, or training.
+            </p>
+            <span>I lived in a small village. I trained every day.</span>
+          </div>
+
+          <div class="fr-language-mission" data-mission="LEVEL_3" hidden>
+            <strong>Level 3 · Modal Verbs</strong>
+            <p>
+              Write about duties, advice, or possibilities.
+            </p>
+            <span>I must protect my friends. I should be brave.</span>
+          </div>
+
+          <div class="fr-language-mission" data-mission="LEVEL_4" hidden>
+            <strong>Level 4 · Infinitives and Gerunds</strong>
+            <p>
+              Write about goals, likes, dislikes, and motivations.
+            </p>
+            <span>I enjoy exploring ruins. I want to become stronger.</span>
+          </div>
+
+          <div class="fr-language-mission" data-mission="LEVEL_5" hidden>
+            <strong>Level 5 · Present Perfect and Strategies</strong>
+            <p>
+              Write about experiences and connect ideas clearly.
+            </p>
+            <span>I have survived many battles. However, I still need allies.</span>
+          </div>
+        </article>
+      </section>
+
+      <section class="fr-form-card" id="backstory-section" hidden>
+        <div class="fr-panel-heading">
+          <span class="fr-kicker">Backstory</span>
+          <strong>Write Your Hero Story</strong>
+        </div>
+
+        <div>
+          <label for="backstory">Backstory</label>
+          <textarea
+            id="backstory"
+            name="backstory"
+            rows="6"
+            placeholder="Write 4–6 sentences about your character."
+            required
+          ></textarea>
+        </div>
+      </section>
+
+      <div class="fr-step-actions">
+        <button class="fr-btn" type="button" data-prev-step="2">
+          Back
+        </button>
+
+        <button class="fr-btn fr-btn-primary" type="button" id="open-confirmation">
+          Review Character
+        </button>
+      </div>
+    </section>
+
+    <!-- CONFIRMATION MODAL -->
+    <section class="fr-confirm-overlay" id="character-confirmation" hidden>
+      <article class="fr-confirm-modal">
+        <div class="fr-panel-heading">
+          <span class="fr-kicker">Final Review</span>
+          <strong>Confirm Your Hero</strong>
+        </div>
+
+        <div class="fr-confirm-summary">
+          <div>
+            <span>Class</span>
+            <strong id="confirm-class">—</strong>
+          </div>
+
+          <div>
+            <span>Name</span>
+            <strong id="confirm-name">—</strong>
+          </div>
+
+          <div>
+            <span>Portrait</span>
+            <strong id="confirm-portrait">—</strong>
+          </div>
+
+          <div>
+            <span>English Level</span>
+            <strong id="confirm-level">—</strong>
+          </div>
+
+          <div class="fr-confirm-backstory">
+            <span>Backstory</span>
+            <p id="confirm-backstory">—</p>
+          </div>
+        </div>
+
+        <div class="fr-step-actions">
+          <button class="fr-btn" type="button" id="close-confirmation">
+            Edit
+          </button>
+
+          <button class="fr-btn fr-btn-primary" type="submit">
+            Create Character
+          </button>
+        </div>
+      </article>
+    </section>
   </form>
 </section>
+
+<script>
+  document.addEventListener("DOMContentLoaded", function () {
+    const form = document.getElementById("character-create-form");
+    const steps = Array.from(document.querySelectorAll("[data-step]"));
+    const stepDots = Array.from(document.querySelectorAll("[data-step-dot]"));
+
+    const classRadios = Array.from(document.querySelectorAll('input[name="character_class"]'));
+    const portraitGroups = Array.from(document.querySelectorAll("[data-portrait-group]"));
+    const portraitRadios = Array.from(document.querySelectorAll('input[name="visual_variant"]'));
+    const selectedClassHelper = document.getElementById("selected-class-helper");
+
+    const englishLevel = document.getElementById("english_level");
+    const languageMissionPanel = document.getElementById("language-mission-panel");
+    const missionCards = Array.from(document.querySelectorAll("[data-mission]"));
+    const backstorySection = document.getElementById("backstory-section");
+
+    const confirmation = document.getElementById("character-confirmation");
+    const openConfirmation = document.getElementById("open-confirmation");
+    const closeConfirmation = document.getElementById("close-confirmation");
+
+    function showStep(stepNumber) {
+      steps.forEach((step) => {
+        step.classList.toggle("is-active", step.dataset.step === String(stepNumber));
+      });
+
+      stepDots.forEach((dot) => {
+        dot.classList.toggle("is-active", Number(dot.dataset.stepDot) <= Number(stepNumber));
+      });
+
+      window.scrollTo({ top: 0, behavior: "smooth" });
+    }
+
+    function getSelectedClassCard() {
+      const checkedClass = document.querySelector('input[name="character_class"]:checked');
+
+      if (!checkedClass) {
+        return null;
+      }
+
+      return checkedClass.closest("[data-class-card]");
+    }
+
+    function validateStep(stepNumber) {
+      if (stepNumber === 1) {
+        if (!document.querySelector('input[name="character_class"]:checked')) {
+          alert("Please choose your class.");
+          return false;
+        }
+      }
+
+      if (stepNumber === 2) {
+        const nameInput = document.getElementById("character_name");
+
+        if (!nameInput.value.trim()) {
+          nameInput.reportValidity();
+          return false;
+        }
+
+        if (!document.querySelector('input[name="visual_variant"]:checked')) {
+          alert("Please choose your portrait.");
+          return false;
+        }
+      }
+
+      if (stepNumber === 3) {
+        if (!englishLevel.value) {
+          englishLevel.reportValidity();
+          return false;
+        }
+
+        const backstory = document.getElementById("backstory");
+
+        if (!backstory.value.trim()) {
+          backstory.reportValidity();
+          return false;
+        }
+      }
+
+      return true;
+    }
+
+    function updatePortraitChoices() {
+      const selectedClassCard = getSelectedClassCard();
+
+      portraitGroups.forEach((group) => {
+        group.hidden = true;
+      });
+
+      portraitRadios.forEach((radio) => {
+        radio.checked = false;
+      });
+
+      if (!selectedClassCard) {
+        selectedClassHelper.textContent = "Choose a class first.";
+        return;
+      }
+
+      const classId = selectedClassCard.dataset.classId;
+      const className = selectedClassCard.dataset.className;
+      const matchingGroup = document.querySelector(`[data-portrait-group="${classId}"]`);
+
+      selectedClassHelper.textContent = `Choose your ${className} portrait.`;
+
+      if (matchingGroup) {
+        matchingGroup.hidden = false;
+      }
+    }
+
+    function updateLanguageMission() {
+      const selectedLevel = englishLevel.value;
+
+      missionCards.forEach((card) => {
+        card.hidden = true;
+      });
+
+      if (!selectedLevel) {
+        languageMissionPanel.hidden = true;
+        backstorySection.hidden = true;
+        return;
+      }
+
+      const selectedMission = document.querySelector(`[data-mission="${selectedLevel}"]`);
+
+      if (selectedMission) {
+        languageMissionPanel.hidden = false;
+        selectedMission.hidden = false;
+        backstorySection.hidden = false;
+      }
+    }
+
+    function fillConfirmation() {
+      const selectedClassCard = getSelectedClassCard();
+      const selectedPortrait = document.querySelector('input[name="visual_variant"]:checked');
+      const nameInput = document.getElementById("character_name");
+      const backstory = document.getElementById("backstory");
+
+      document.getElementById("confirm-class").textContent =
+        selectedClassCard ? selectedClassCard.dataset.className : "—";
+
+      document.getElementById("confirm-name").textContent =
+        nameInput.value.trim() || "—";
+
+      document.getElementById("confirm-portrait").textContent =
+        selectedPortrait ? selectedPortrait.value : "—";
+
+      document.getElementById("confirm-level").textContent =
+        englishLevel.options[englishLevel.selectedIndex]?.text || "—";
+
+      document.getElementById("confirm-backstory").textContent =
+        backstory.value.trim() || "—";
+    }
+
+    classRadios.forEach((radio) => {
+      radio.addEventListener("change", updatePortraitChoices);
+    });
+
+    englishLevel.addEventListener("change", updateLanguageMission);
+
+    document.querySelectorAll("[data-next-step]").forEach((button) => {
+      button.addEventListener("click", function () {
+        const currentStep = Number(button.closest("[data-step]").dataset.step);
+        const nextStep = button.dataset.nextStep;
+
+        if (validateStep(currentStep)) {
+          showStep(nextStep);
+        }
+      });
+    });
+
+    document.querySelectorAll("[data-prev-step]").forEach((button) => {
+      button.addEventListener("click", function () {
+        showStep(button.dataset.prevStep);
+      });
+    });
+
+    openConfirmation.addEventListener("click", function () {
+      if (!validateStep(3)) {
+        return;
+      }
+
+      fillConfirmation();
+      confirmation.hidden = false;
+    });
+
+    closeConfirmation.addEventListener("click", function () {
+      confirmation.hidden = true;
+    });
+
+    confirmation.addEventListener("click", function (event) {
+      if (event.target === confirmation) {
+        confirmation.hidden = true;
+      }
+    });
+  });
+</script>
 {% endblock %}

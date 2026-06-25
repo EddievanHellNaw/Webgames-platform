@@ -14,6 +14,7 @@ from games.models import GameTemplate
 from .models import GameSession, Participant
 
 
+
 @login_required
 def create_session(request, game_id):
     game_template = get_object_or_404(GameTemplate, id=game_id, is_active=True)
@@ -73,6 +74,28 @@ def start_session(request, join_code):
 
     return redirect("sessions:teacher_lobby", join_code=session.join_code)
 
+@login_required
+def teacher_lobby_participants(request, join_code):
+    session = get_object_or_404(
+        GameSession,
+        join_code=join_code,
+        teacher=request.user,
+    )
+
+    participants = (
+        Participant.objects
+        .filter(session=session)
+        .order_by("joined_at")
+    )
+
+    return render(
+        request,
+        "sessions/partials/_lobby_participants.html",
+        {
+            "session": session,
+            "participants": participants,
+        },
+    )
 
 def join_session(request, join_code):
     session = get_object_or_404(GameSession, join_code=join_code)
@@ -130,11 +153,31 @@ def student_waiting_room(request, join_code):
 def session_status(request, join_code):
     session = get_object_or_404(GameSession, join_code=join_code)
 
+    redirect_url = None
+
+    if session.status == GameSession.Status.ACTIVE:
+        if session.game_template.code == GameTemplate.GameCode.FANTASY_ROLES:
+            if session.current_step == "character_creation":
+                redirect_url = reverse(
+                    "fantasy_roles:character_create",
+                    args=[session.join_code],
+                )
+            else:
+                redirect_url = reverse(
+                    "sessions:placeholder_game_started",
+                    args=[session.join_code],
+                )
+        else:
+            redirect_url = reverse(
+                "sessions:placeholder_game_started",
+                args=[session.join_code],
+            )
+
     return JsonResponse(
         {
             "status": session.status,
             "current_step": session.current_step,
-            "redirect_url": get_game_step_url(session),
+            "redirect_url": redirect_url,
         }
     )
 

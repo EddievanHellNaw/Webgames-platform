@@ -1,44 +1,142 @@
 {% extends "base.html" %}
 
+{% block title %}Character Review · {{ session.title }}{% endblock %}
+
 {% block content %}
-<section class="teacher-character-list">
-  <h1>Fantasy Roles Characters</h1>
-  <p>Session: <strong>{{ session.title }}</strong></p>
+<section class="fr-teacher-character-page">
+  <section class="fr-teacher-character-hero">
+    <span class="fr-kicker">Fantasy Roles</span>
 
-  <table>
-    <thead>
-      <tr>
-        <th>Student</th>
-        <th>Character</th>
-        <th>Class</th>
-        <th>Version</th>
-        <th>English Level</th>
-        <th>Approved</th>
-      </tr>
-    </thead>
+    <h1>Character Review</h1>
 
-    <tbody>
-      {% for character in characters %}
-        <tr>
-          <td>{{ character.participant.display_name }}</td>
-          <td>{{ character.character_name }}</td>
-          <td>{{ character.character_class.name }}</td>
-          <td>{{ character.get_visual_variant_display }}</td>
-          <td>{{ character.get_english_level_display }}</td>
-          <td>
-            {% if character.is_approved %}
-              Yes
-            {% else %}
-              Not yet
-            {% endif %}
-          </td>
-        </tr>
-      {% empty %}
-        <tr>
-          <td colspan="5">No characters have been created yet.</td>
-        </tr>
-      {% endfor %}
-    </tbody>
-  </table>
+    <p>
+      Review student heroes, check their backstories, and approve characters
+      before organizing parties.
+    </p>
+
+    <div class="fr-status-row">
+      <span class="fr-status-pill">{{ session.title }}</span>
+      <span class="fr-status-pill">{{ session.join_code }}</span>
+      <span class="fr-status-pill">{{ characters|length }} Characters</span>
+    </div>
+  </section>
+
+  <section class="fr-panel">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Student Heroes</span>
+      <strong>Created Characters</strong>
+    </div>
+
+    {% if characters %}
+      <div class="fr-teacher-character-grid">
+        {% for character in characters %}
+          <article class="fr-teacher-character-card {% if character.is_approved %}is-approved{% endif %}">
+            <div class="fr-teacher-character-portrait">
+              {% with portrait=character.selected_image %}
+                {% if portrait %}
+                  <img src="{{ portrait.url }}" alt="{{ character.character_name }}">
+                {% else %}
+                  <span>◆</span>
+                {% endif %}
+              {% endwith %}
+            </div>
+
+            <div class="fr-teacher-character-body">
+              <div class="fr-teacher-character-title">
+                <div>
+                  <span class="fr-kicker">
+                    {{ character.participant.display_name }}
+                  </span>
+
+                  <h2>{{ character.character_name }}</h2>
+                </div>
+
+                {% if character.is_approved %}
+                  <span class="fr-status-pill is-gold">Approved</span>
+                {% else %}
+                  <span class="fr-status-pill">Review</span>
+                {% endif %}
+              </div>
+
+              <p class="fr-muted-text">
+                {{ character.character_class.name }}
+                · {{ character.get_english_level_display }}
+              </p>
+
+              <div class="fr-character-stat-row">
+                <span>♥ {{ character.current_life }}/{{ character.character_class.max_life }}</span>
+                <span>⚔ {{ character.character_class.attack }}</span>
+                <span>✦ {{ character.current_action_points }}/{{ character.character_class.action_points }}</span>
+              </div>
+
+              <details class="fr-character-backstory-details">
+                <summary>Read backstory</summary>
+
+                <p>
+                  {{ character.backstory|linebreaksbr }}
+                </p>
+              </details>
+
+              <div class="fr-button-row">
+                {% if character.is_approved %}
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="unapprove_character">
+                    <input type="hidden" name="character_id" value="{{ character.id }}">
+
+                    <button class="fr-btn" type="submit">
+                      Mark for Review
+                    </button>
+                  </form>
+                {% else %}
+                  <form method="post">
+                    {% csrf_token %}
+                    <input type="hidden" name="action" value="approve_character">
+                    <input type="hidden" name="character_id" value="{{ character.id }}">
+
+                    <button class="fr-btn fr-btn-primary" type="submit">
+                      Approve Character
+                    </button>
+                  </form>
+                {% endif %}
+              </div>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="fr-muted-text">
+        No students have created characters yet.
+      </p>
+    {% endif %}
+  </section>
+
+  <section class="fr-panel fr-teacher-character-next">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Next Step</span>
+      <strong>Organize Parties</strong>
+    </div>
+
+    <p class="fr-muted-text">
+      After students finish creating their heroes, organize them into parties
+      and choose the first Dungeon Master for each group.
+    </p>
+
+    <div class="fr-button-row">
+      <a
+        class="fr-btn fr-btn-primary"
+        href="{% url 'fantasy_roles:teacher_party_setup' session.join_code %}"
+      >
+        Manage Parties
+      </a>
+
+      <a
+        class="fr-btn"
+        href="{% url 'sessions:teacher_lobby' session.join_code %}"
+      >
+        Back to Lobby
+      </a>
+    </div>
+  </section>
 </section>
 {% endblock %}

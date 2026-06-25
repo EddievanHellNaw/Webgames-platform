@@ -1,0 +1,179 @@
+{% if party_cards %}
+  <section class="fr-teacher-dungeon-grid">
+    {% for card in party_cards %}
+      <article class="fr-teacher-dungeon-card">
+        <header class="fr-teacher-dungeon-card-header">
+          <div>
+            <span class="fr-kicker">
+              {{ card.members|length }} Members
+            </span>
+
+            <h2>{{ card.party.name }}</h2>
+          </div>
+
+          {% if card.party.current_dm %}
+            <span class="fr-status-pill is-gold">
+              DM: {{ card.party.current_dm.character_name }}
+            </span>
+          {% else %}
+            <span class="fr-status-pill">
+              No DM
+            </span>
+          {% endif %}
+        </header>
+
+        {% if card.run %}
+          <section class="fr-teacher-dungeon-run">
+            <div class="fr-teacher-dungeon-image">
+              {% if card.run.dungeon.image %}
+                <img src="{{ card.run.dungeon.image.url }}" alt="{{ card.run.dungeon.name }}">
+              {% else %}
+                <span>◆</span>
+              {% endif %}
+            </div>
+
+            <div class="fr-teacher-dungeon-info">
+              <span class="fr-kicker">
+                {% if card.run.dungeon.kingdom %}
+                  {{ card.run.dungeon.kingdom }}
+                {% else %}
+                  Dungeon
+                {% endif %}
+              </span>
+
+              <h3>{{ card.run.dungeon.name }}</h3>
+
+              <div class="fr-status-row">
+                <span class="fr-status-pill">
+                  {{ card.run.get_status_display }}
+                </span>
+
+                <span class="fr-status-pill">
+                  {{ card.cleared_count }}/{{ card.total_rooms }} Rooms
+                </span>
+              </div>
+
+              <div class="fr-dungeon-progress">
+                <div
+                  class="fr-dungeon-progress-fill"
+                  style="--progress: {{ card.progress }}%;"
+                ></div>
+              </div>
+
+              {% if card.run.current_room %}
+                <div class="fr-current-room-summary">
+                  <span class="fr-kicker">Current Room</span>
+
+                  <strong>
+                    Room {{ card.run.current_room.room_number }}
+                    {% if card.run.current_room.name %}
+                      — {{ card.run.current_room.name }}
+                    {% endif %}
+                  </strong>
+
+                  <small>
+                    {{ card.run.current_room.get_room_type_display }}
+                    · Difficulty {{ card.run.current_room.difficulty }}/5
+                  </small>
+                </div>
+              {% else %}
+                <p class="fr-muted-text">
+                  No current room has been assigned yet.
+                </p>
+              {% endif %}
+            </div>
+          </section>
+
+          {% if card.generated_rooms %}
+            <section class="fr-teacher-room-map">
+              {% for room in card.generated_rooms %}
+                <div
+                  class="fr-teacher-room-node
+                    {% if room.is_cleared %}is-cleared{% endif %}
+                    {% if card.run.current_room_id == room.id %}is-current{% endif %}
+                  "
+                  style="grid-row: {{ room.grid_row }}; grid-column: {{ room.grid_col }};"
+                  title="Room {{ room.room_number }} — {{ room.name }}"
+                >
+                  {{ room.room_number }}
+                </div>
+              {% endfor %}
+            </section>
+          {% endif %}
+
+        {% else %}
+          <section class="fr-teacher-no-dungeon">
+            <div class="fr-teacher-no-dungeon-icon">
+              {% if card.party.current_dm %}
+                ⚔
+              {% else %}
+                ?
+              {% endif %}
+            </div>
+
+            {% if card.party.current_dm %}
+              <h3>Waiting for Dungeon Choice</h3>
+
+              <p class="fr-muted-text">
+                {{ card.party.current_dm.character_name }} is the current DM.
+                They need to choose a dungeon from their party screen.
+              </p>
+            {% else %}
+              <h3>No Dungeon Master Yet</h3>
+
+              <p class="fr-muted-text">
+                Choose a Dungeon Master in Party Setup before the group selects
+                a dungeon.
+              </p>
+            {% endif %}
+          </section>
+        {% endif %}
+
+        <section class="fr-teacher-party-roster-mini">
+          <span class="fr-kicker">Party Members</span>
+
+          <div class="fr-teacher-party-roster-row">
+            {% for member in card.members %}
+              <div
+                class="fr-teacher-party-avatar
+                  {% if card.party.current_dm_id == member.character.id %}is-dm{% endif %}
+                "
+                title="{{ member.character.character_name }} — {{ member.character.character_class.name }}"
+              >
+                {% with portrait=member.character.selected_image %}
+                  {% if portrait %}
+                    <img src="{{ portrait.url }}" alt="{{ member.character.character_name }}">
+                  {% else %}
+                    <span>{{ member.character.character_name|slice:":1" }}</span>
+                  {% endif %}
+                {% endwith %}
+              </div>
+            {% empty %}
+              <p class="fr-muted-text">
+                No members yet.
+              </p>
+            {% endfor %}
+          </div>
+        </section>
+      </article>
+    {% endfor %}
+  </section>
+{% else %}
+  <section class="fr-panel">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">No Parties</span>
+      <strong>Nothing to Monitor Yet</strong>
+    </div>
+
+    <p class="fr-muted-text">
+      Create parties first, then return to this screen to monitor dungeon runs.
+    </p>
+
+    <a
+      class="fr-btn fr-btn-primary"
+      href="{% url 'fantasy_roles:teacher_party_setup' session.join_code %}"
+    >
+      Manage Parties
+    </a>
+  </section>
+{% endif %}

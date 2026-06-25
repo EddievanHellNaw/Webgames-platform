@@ -1,144 +1,274 @@
 {% extends "base.html" %}
 
+{% block title %}Party Setup · {{ session.title }}{% endblock %}
+
 {% block content %}
-<section class="party-setup">
-  <h1>Party Formation</h1>
-  <p>Session: <strong>{{ session.title }}</strong></p>
+<section class="fr-party-setup-page">
+  <section class="fr-party-setup-hero">
+    <span class="fr-kicker">Fantasy Roles</span>
 
-  <p>
-    Recommended party size: <strong>3–4 students</strong>.
-  </p>
+    <h1>Party Setup</h1>
 
-  <hr>
+    <p>
+      Organize students into adventuring parties, choose the first Dungeon Master,
+      and prepare each group for dungeon selection.
+    </p>
 
-  <h2>Create Party</h2>
+    <div class="fr-status-row">
+      <span class="fr-status-pill">{{ session.title }}</span>
+      <span class="fr-status-pill">{{ session.join_code }}</span>
+      <span class="fr-status-pill">{{ parties|length }} Parties</span>
+    </div>
+  </section>
 
-  <form method="post">
-    {% csrf_token %}
-    <input type="hidden" name="action" value="create_party">
+  <section class="fr-party-setup-grid">
+    <article class="fr-form-card fr-create-party-card">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Create</span>
+        <strong>New Party</strong>
+      </div>
 
-    <label for="party_name">Party name</label>
-    <input
-      type="text"
-      id="party_name"
-      name="party_name"
-      placeholder="Example: The Dragon Snacks"
-    >
+      <form method="post">
+        {% csrf_token %}
+        <input type="hidden" name="action" value="create_party">
 
-    <button type="submit">Create Party</button>
-  </form>
+        <div>
+          <label for="party_name">Party name</label>
+          <input
+            type="text"
+            id="party_name"
+            name="party_name"
+            placeholder="Example: The Arcane Wolves"
+          >
+        </div>
 
-  <hr>
+        <button class="fr-btn fr-btn-primary" type="submit">
+          Create Party
+        </button>
+      </form>
+    </article>
 
-  <h2>Unassigned Characters</h2>
+    <article class="fr-panel fr-unassigned-card">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Waiting</span>
+        <strong>Unassigned Heroes</strong>
+      </div>
 
-  {% if unassigned_characters %}
-    <table>
-      <thead>
-        <tr>
-          <th>Student</th>
-          <th>Character</th>
-          <th>Class</th>
-          <th>Add to Party</th>
-        </tr>
-      </thead>
+      {% if unassigned_characters %}
+        <div class="fr-unassigned-list">
+          {% for character in unassigned_characters %}
+            <article class="fr-mini-hero-card">
+              <div class="fr-mini-hero-portrait">
+                {% with portrait=character.selected_image %}
+                  {% if portrait %}
+                    <img src="{{ portrait.url }}" alt="{{ character.character_name }}">
+                  {% else %}
+                    <span>◆</span>
+                  {% endif %}
+                {% endwith %}
+              </div>
 
-      <tbody>
-        {% for character in unassigned_characters %}
-          <tr>
-            <td>{{ character.participant.display_name }}</td>
-            <td>{{ character.character_name }}</td>
-            <td>{{ character.character_class.name }}</td>
-            <td>
-              {% if parties %}
+              <div>
+                <strong>{{ character.character_name }}</strong>
+                <small>
+                  {{ character.participant.display_name }}
+                  · {{ character.character_class.name }}
+                </small>
+              </div>
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="fr-muted-text">
+          All created characters have been assigned to a party.
+        </p>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="fr-panel">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Party Board</span>
+      <strong>Adventuring Parties</strong>
+    </div>
+
+    {% if parties %}
+      <div class="fr-party-board-grid">
+        {% for party in parties %}
+          <article class="fr-party-board-card">
+            <header class="fr-party-board-header">
+              <div>
+                <span class="fr-kicker">
+                  {{ party.members.count }}/4 Members
+                </span>
+
+                <h2>{{ party.name }}</h2>
+              </div>
+
+              <form method="post">
+                {% csrf_token %}
+                <input type="hidden" name="action" value="delete_party">
+                <input type="hidden" name="party_id" value="{{ party.id }}">
+
+                <button class="fr-btn fr-btn-danger fr-btn-small" type="submit">
+                  Delete
+                </button>
+              </form>
+            </header>
+
+            <div class="fr-party-dm-banner">
+              {% if party.current_dm %}
+                <span>Current DM</span>
+                <strong>{{ party.current_dm.character_name }}</strong>
+              {% else %}
+                <span>No DM selected yet</span>
+                <strong>Choose a party member</strong>
+              {% endif %}
+            </div>
+
+            <div class="fr-party-member-list">
+              {% for member in party.members.all %}
+                <article class="fr-party-member-card {% if party.current_dm == member.character %}is-dm{% endif %}">
+                  <div class="fr-party-member-portrait">
+                    {% with portrait=member.character.selected_image %}
+                      {% if portrait %}
+                        <img src="{{ portrait.url }}" alt="{{ member.character.character_name }}">
+                      {% else %}
+                        <span>◆</span>
+                      {% endif %}
+                    {% endwith %}
+                  </div>
+
+                  <div class="fr-party-member-body">
+                    <div class="fr-party-member-title">
+                      <div>
+                        <strong>{{ member.character.character_name }}</strong>
+                        <small>
+                          {{ member.character.participant.display_name }}
+                          · {{ member.character.character_class.name }}
+                        </small>
+                      </div>
+
+                      {% if party.current_dm == member.character %}
+                        <span class="fr-status-pill is-gold">DM</span>
+                      {% endif %}
+                    </div>
+
+                    <div class="fr-character-stat-row">
+                      <span>♥ {{ member.character.current_life }}</span>
+                      <span>⚔ {{ member.character.character_class.attack }}</span>
+                      <span>✦ {{ member.character.current_action_points }}</span>
+                    </div>
+
+                    <div class="fr-button-row">
+                      {% if party.current_dm != member.character %}
+                        <form method="post">
+                          {% csrf_token %}
+                          <input type="hidden" name="action" value="set_dm">
+                          <input type="hidden" name="member_id" value="{{ member.id }}">
+
+                          <button class="fr-btn fr-btn-secondary fr-btn-small" type="submit">
+                            Set as DM
+                          </button>
+                        </form>
+                      {% endif %}
+
+                      <form method="post">
+                        {% csrf_token %}
+                        <input type="hidden" name="action" value="remove_member">
+                        <input type="hidden" name="member_id" value="{{ member.id }}">
+
+                        <button class="fr-btn fr-btn-danger fr-btn-small" type="submit">
+                          Remove
+                        </button>
+                      </form>
+                    </div>
+                  </div>
+                </article>
+              {% empty %}
+                <p class="fr-muted-text">
+                  This party has no members yet.
+                </p>
+              {% endfor %}
+            </div>
+
+            <div class="fr-add-member-panel">
+              <span class="fr-kicker">Add Hero</span>
+
+              {% if unassigned_characters and party.members.count < 4 %}
                 <form method="post">
                   {% csrf_token %}
                   <input type="hidden" name="action" value="add_member">
-                  <input type="hidden" name="character_id" value="{{ character.id }}">
+                  <input type="hidden" name="party_id" value="{{ party.id }}">
 
-                  <select name="party_id" required>
-                    {% for party in parties %}
-                      <option value="{{ party.id }}">
-                        {{ party.name }} ({{ party.member_count }}/4)
+                  <select name="character_id" required>
+                    <option value="">Choose unassigned hero</option>
+                    {% for character in unassigned_characters %}
+                      <option value="{{ character.id }}">
+                        {{ character.character_name }}
+                        — {{ character.participant.display_name }}
+                        — {{ character.character_class.name }}
                       </option>
                     {% endfor %}
                   </select>
 
-                  <button type="submit">Add</button>
+                  <button class="fr-btn fr-btn-primary" type="submit">
+                    Add to Party
+                  </button>
                 </form>
+              {% elif party.members.count >= 4 %}
+                <p class="fr-muted-text">
+                  This party is full.
+                </p>
               {% else %}
-                Create a party first.
+                <p class="fr-muted-text">
+                  No unassigned heroes are available.
+                </p>
               {% endif %}
-            </td>
-          </tr>
+            </div>
+          </article>
         {% endfor %}
-      </tbody>
-    </table>
-  {% else %}
-    <p>All created characters have been assigned to parties.</p>
-  {% endif %}
-
-  <hr>
-
-  <h2>Current Parties</h2>
-
-  {% for party in parties %}
-    <article class="party-card">
-      <h3>{{ party.name }}</h3>
-
-      <p>
-        Members: <strong>{{ party.member_count }}/4</strong>
+      </div>
+    {% else %}
+      <p class="fr-muted-text">
+        No parties have been created yet. Create the first party above.
       </p>
+    {% endif %}
+  </section>
 
-      {% if party.current_dm %}
-        <p>
-          Current DM:
-          <strong>{{ party.current_dm.character_name }}</strong>
-        </p>
-      {% else %}
-        <p>No DM selected yet.</p>
-      {% endif %}
+  <section class="fr-panel fr-party-next-step">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Next Step</span>
+      <strong>Dungeon Selection</strong>
+    </div>
 
-      <ul>
-        {% for member in party.members.all %}
-          <li>
-            <strong>{{ member.character.character_name }}</strong>
-            — {{ member.character.character_class.name }}
-            / {{ member.character.participant.display_name }}
+    <p class="fr-muted-text">
+      After each party has 3–4 members and a Dungeon Master, students can move
+      to the party screen and the DM can choose the dungeon.
+    </p>
 
-            <form method="post" style="display:inline;">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="set_dm">
-              <input type="hidden" name="member_id" value="{{ member.id }}">
-              <button type="submit">Set as DM</button>
-            </form>
+    <div class="fr-button-row">
+      <a
+        class="fr-btn fr-btn-primary"
+        href="{% url 'fantasy_roles:teacher_dungeon_setup' session.join_code %}"
+      >
+        Monitor Dungeons
+      </a>
 
-            <form method="post" style="display:inline;">
-              {% csrf_token %}
-              <input type="hidden" name="action" value="remove_member">
-              <input type="hidden" name="member_id" value="{{ member.id }}">
-              <button type="submit">Remove</button>
-            </form>
-          </li>
-        {% empty %}
-          <li>No members yet.</li>
-        {% endfor %}
-      </ul>
+      <a
+        class="fr-btn"
+        href="{% url 'fantasy_roles:teacher_character_list' session.join_code %}"
+      >
+        Back to Characters
+      </a>
 
-      <form method="post">
-        {% csrf_token %}
-        <input type="hidden" name="action" value="delete_party">
-        <input type="hidden" name="party_id" value="{{ party.id }}">
-        <button type="submit">Delete Party</button>
-      </form>
-    </article>
-  {% empty %}
-    <p>No parties created yet.</p>
-  {% endfor %}
+      <a
+        class="fr-btn"
+        href="{% url 'sessions:teacher_lobby' session.join_code %}"
+      >
+        Back to Lobby
+      </a>
+    </div>
+  </section>
 </section>
-<p>
-  <a href="{% url 'fantasy_roles:teacher_dungeon_setup' session.join_code %}">
-    Continue to Dungeon Selection
-  </a>
-</p>
 {% endblock %}

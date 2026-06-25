@@ -1,0 +1,87 @@
+{% if not membership %}
+  <h2>Waiting for party assignment...</h2>
+  <p>Your teacher will assign you to an adventuring party soon.</p>
+
+  <p>
+    <a href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
+      View My Party
+    </a>
+  </p>
+
+{% elif not run %}
+  <h2>Waiting for dungeon selection...</h2>
+  <p>Your party is ready, but your party has not chosen a dungeon yet.</p>
+
+  <p>
+    <a href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
+      View My Party
+    </a>
+  </p>
+
+  <p>
+    <a href="{% url 'fantasy_roles:student_dungeon_select' session.join_code %}">
+      Choose / View Dungeon Options
+    </a>
+  </p>
+
+{% else %}
+
+<section
+  class="fr-dungeon-hero"
+  {% if run.dungeon.image %}
+    style="--dungeon-hero-bg: url('{{ run.dungeon.image.url }}');"
+  {% endif %}
+>
+  <div class="fr-dungeon-hero__icon">
+    {% if run.dungeon.image %}
+      <img
+        src="{{ run.dungeon.image.url }}"
+        alt="{{ run.dungeon.name }}"
+      >
+    {% else %}
+      <span>◆</span>
+    {% endif %}
+  </div>
+
+  <div class="fr-dungeon-hero__content">
+    {% if run.dungeon.kingdom %}
+      <span class="fr-kicker">{{ run.dungeon.kingdom }}</span>
+    {% else %}
+      <span class="fr-kicker">Dungeon</span>
+    {% endif %}
+
+    <h1>{{ run.dungeon.name }}</h1>
+
+    {% if run.dungeon.description %}
+      <p>{{ run.dungeon.description }}</p>
+    {% endif %}
+
+    <div class="fr-status-row">
+      <span class="fr-status-pill">
+        {{ run.get_status_display }}
+      </span>
+
+      {% if is_current_dm %}
+        <span class="fr-status-pill is-gold">
+          ◆ You are the DM
+        </span>
+      {% elif membership.party.current_dm %}
+        <span class="fr-status-pill">
+          DM: {{ membership.party.current_dm.character_name }}
+        </span>
+      {% endif %}
+    </div>
+  </div>
+</section>
+
+{% include "fantasy_roles/partials/_party_hud.html" %}
+
+  <section class="fr-game-grid">
+    {% include "fantasy_roles/partials/_current_room_panel.html" %}
+    {% include "fantasy_roles/partials/_dungeon_map_panel.html" %}
+  </section>
+  {% include "fantasy_roles/partials/_dm_controls.html" %}
+  {% include "fantasy_roles/partials/_activity_feed.html" %}
+
+  
+{% endif %}

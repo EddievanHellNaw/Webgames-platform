@@ -1,0 +1,93 @@
+{% if is_current_dm and run %}
+  <section class="fr-panel fr-dm-controls">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">DM Controls</span>
+      <strong>Party Movement</strong>
+    </div>
+
+    {% if run.status == "BOSS_READY" %}
+      <p class="fr-status-cleared">
+        All rooms have been cleared. The party is ready to challenge the boss.
+      </p>
+
+      <button class="fr-btn fr-btn-primary" type="button" disabled>
+        Challenge Boss Coming Soon
+      </button>
+
+    {% elif run.status != "ACTIVE" %}
+      <p class="fr-muted-text">
+        The dungeon is not currently active.
+      </p>
+
+    {% elif not run.current_room %}
+      <p class="fr-muted-text">
+        There is no current room yet.
+      </p>
+
+    {% elif not run.current_room.is_cleared %}
+      <p class="fr-muted-text">
+        Clear the current room before moving the party.
+      </p>
+
+      <div class="fr-dm-current-room-reminder">
+        <strong>Current Room:</strong>
+        Room {{ run.current_room.room_number }}
+        {% if run.current_room.name %}
+          — {{ run.current_room.name }}
+        {% endif %}
+      </div>
+
+    {% elif connected_rooms %}
+      <p class="fr-muted-text">
+        Choose where the party moves next.
+      </p>
+
+      <div class="fr-dm-move-grid">
+        {% for room in connected_rooms %}
+          <article class="fr-dm-move-card">
+            {% if room.source_template and room.source_template.image %}
+              <img
+                src="{{ room.source_template.image.url }}"
+                alt="{{ room.name }}"
+              >
+            {% endif %}
+
+            <div class="fr-dm-move-card-body">
+              <strong>
+                Room {{ room.room_number }}
+              </strong>
+
+              {% if room.name %}
+                <span>{{ room.name }}</span>
+              {% endif %}
+
+              <small>
+                {{ room.get_room_type_display }}
+                · Difficulty {{ room.difficulty }}/5
+              </small>
+
+              {% if room.is_cleared %}
+                <small class="fr-status-cleared">Already cleared</small>
+              {% endif %}
+
+              <form
+                method="post"
+                action="{% url 'fantasy_roles:move_to_room' session.join_code room.id %}"
+              >
+                {% csrf_token %}
+                <button class="fr-btn fr-btn-primary fr-btn-small" type="submit">
+                  Move Party Here
+                </button>
+              </form>
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+
+    {% else %}
+      <p class="fr-muted-text">
+        There are no connected rooms available from the current room.
+      </p>
+    {% endif %}
+  </section>
+{% endif %}

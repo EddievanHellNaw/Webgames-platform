@@ -1,69 +1,153 @@
 {% extends "base.html" %}
 
+{% block title %}{{ character.character_name }} · Character Sheet{% endblock %}
+
 {% block content %}
-<section class="character-detail">
-  <h1>{{ character.character_name }}</h1>
+<section class="fr-character-sheet-page">
+  <section class="fr-character-sheet-hero">
+    <div class="fr-character-sheet-portrait">
+      {% with portrait=character.selected_image %}
+        {% if portrait %}
+          <img src="{{ portrait.url }}" alt="{{ character.character_name }}">
+        {% else %}
+          <span>◆</span>
+        {% endif %}
+      {% endwith %}
+    </div>
 
-  <p>
-    Created by <strong>{{ participant.display_name }}</strong>
-  </p>
+    <div class="fr-character-sheet-main">
+      <span class="fr-kicker">Character Sheet</span>
 
-  <article class="class-card">
-    {% if character.selected_image %}
-  <img
-    src="{{ character.selected_image.url }}"
-    alt="{{ character.character_name }}"
-    >
-    {% endif %}
+      <h1>{{ character.character_name }}</h1>
 
-    <h2>{{ character.character_class.name }}</h2>
+      <p>
+        {{ character.character_class.name }}
+        · {{ character.get_english_level_display }}
+      </p>
 
-    <ul>
-      <li><strong>Class:</strong> {{ character.character_class.name }}</li>
-      <li><strong>Version:</strong> {{ character.get_visual_variant_display }}</li>
-      <li><strong>Life:</strong> {{ character.current_life }}</li>
-      <li><strong>AP:</strong> {{ character.current_action_points }}</li>
-      <li><strong>Attack:</strong> {{ character.character_class.attack }}</li>
-      <li><strong>English Level:</strong> {{ character.get_english_level_display }}</li>
-    </ul>
+      <div class="fr-character-stat-row">
+        <span>♥ Life {{ character.current_life }}/{{ character.character_class.max_life }}</span>
+        <span>⚔ Attack {{ character.character_class.attack }}</span>
+        <span>✦ AP {{ character.current_action_points }}/{{ character.character_class.action_points }}</span>
+      </div>
 
-    <h3>Backstory</h3>
-    <p>{{ character.backstory|linebreaks }}</p>
+      <div class="fr-status-row">
+        {% if character.is_approved %}
+          <span class="fr-status-pill is-gold">Approved</span>
+        {% else %}
+          <span class="fr-status-pill">Waiting for teacher review</span>
+        {% endif %}
 
-    <h3>Skills</h3>
-    <ul>
-      {% for skill in character.character_class.skills.all %}
-        <li>
-          <strong>{{ skill.name }}</strong>
-          — {{ skill.ap_cost }} AP.
-          {{ skill.description }}
-        </li>
-      {% endfor %}
-    </ul>
+        <span class="fr-status-pill">{{ session.title }}</span>
+      </div>
+    </div>
+  </section>
 
-    <h3>Weaknesses</h3>
-    <ul>
-      {% for weakness in character.character_class.weaknesses.all %}
-        <li>
-          <strong>{{ weakness.name }}</strong>
-          — {{ weakness.description }}
-        </li>
-      {% endfor %}
-    </ul>
-  </article>
+  <section class="fr-character-sheet-grid">
+    <article class="fr-panel">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Backstory</span>
+        <strong>Hero Origin</strong>
+      </div>
 
-  <p>
-    Character ready. Wait for your teacher to continue.
-  </p>
+      <p class="fr-character-backstory">
+        {{ character.backstory|linebreaksbr }}
+      </p>
+    </article>
+
+    <article class="fr-panel">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Class</span>
+        <strong>{{ character.character_class.name }}</strong>
+      </div>
+
+      {% if character.character_class.description %}
+        <p class="fr-muted-text">
+          {{ character.character_class.description }}
+        </p>
+      {% else %}
+        <p class="fr-muted-text">
+          No class description available.
+        </p>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="fr-character-sheet-grid">
+    <article class="fr-panel">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Abilities</span>
+        <strong>Skills</strong>
+      </div>
+
+      {% if skills %}
+        <div class="fr-skill-list">
+          {% for skill in skills %}
+            <article class="fr-skill-card">
+              <div>
+                <strong>{{ skill.name }}</strong>
+                <span>Costs {{ skill.ap_cost }} AP</span>
+              </div>
+
+              {% if skill.description %}
+                <p>{{ skill.description }}</p>
+              {% endif %}
+
+              {% if skill.roll_bonus %}
+                <small>Roll bonus: +{{ skill.roll_bonus }}</small>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="fr-muted-text">
+          This class has no skills yet.
+        </p>
+      {% endif %}
+    </article>
+
+    <article class="fr-panel">
+      <div class="fr-panel-heading">
+        <span class="fr-kicker">Danger</span>
+        <strong>Weaknesses</strong>
+      </div>
+
+      {% if weaknesses %}
+        <div class="fr-weakness-list">
+          {% for weakness in weaknesses %}
+            <article class="fr-weakness-card">
+              <strong>{{ weakness.name }}</strong>
+
+              {% if weakness.description %}
+                <p>{{ weakness.description }}</p>
+              {% endif %}
+            </article>
+          {% endfor %}
+        </div>
+      {% else %}
+        <p class="fr-muted-text">
+          This class has no weaknesses yet.
+        </p>
+      {% endif %}
+    </article>
+  </section>
+
+  <section class="fr-panel fr-character-next-step">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Next Step</span>
+      <strong>Wait for Party Setup</strong>
+    </div>
+
+    <p class="fr-muted-text">
+      Your hero has been created. Wait for your teacher to organize the parties
+      and assign the first Dungeon Master.
+    </p>
+
+    <div class="fr-button-row">
+      <a class="fr-btn fr-btn-primary" href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
+        Go to Party Screen
+      </a>
+    </div>
+  </section>
 </section>
-<p>
-  <a href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
-    View My Party
-  </a>
-</p>
-<p>
-  <a href="{% url 'fantasy_roles:student_dungeon_select' session.join_code %}">
-    Choose / View Dungeon Options
-  </a>
-</p>
 {% endblock %}

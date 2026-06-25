@@ -2,96 +2,17 @@
 
 {% block content %}
 <section class="student-dungeon">
-  <h1>Your Dungeon</h1>
+  <section
+    id="dungeon-live-panel"
+    hx-get="{% url 'fantasy_roles:student_dungeon_live_panel' session.join_code %}"
+    hx-trigger="load, every 2s"
+    hx-swap="innerHTML"
+  >
+    {% include "fantasy_roles/partials/student_dungeon_live_panel.html" %}
+  </section>
 
-  <p>
-    Character:
-    <strong>{{ character.character_name }}</strong>
-    — {{ character.character_class.name }}
-  </p>
-
-  {% if not membership %}
-    <h2>Waiting for party assignment...</h2>
-    <p>Your teacher will assign you to an adventuring party soon.</p>
-
-    <p>
-      <a href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
-        View My Party
-      </a>
-    </p>
-  {% elif not run %}
-    <h2>Waiting for dungeon selection...</h2>
-    <p>
-      Your party is ready, but your teacher has not assigned a dungeon yet.
-    </p>
-
-    <p>
-      <a href="{% url 'fantasy_roles:student_party_detail' session.join_code %}">
-        View My Party
-      </a>
-    </p>
-  {% else %}
-    <article class="dungeon-card">
-      {% if run.dungeon.image %}
-        <img
-          src="{{ run.dungeon.image.url }}"
-          alt="{{ run.dungeon.name }}"
-          style="max-width: 320px;"
-        >
-      {% endif %}
-
-      <h2>{{ run.dungeon.name }}</h2>
-
-      {% if run.dungeon.kingdom %}
-        <p>
-          Kingdom:
-          <strong>{{ run.dungeon.kingdom }}</strong>
-        </p>
-      {% endif %}
-
-      <p>{{ run.dungeon.description }}</p>
-
-      <h3>{{ membership.party.name }}</h3>
-
-      <p>
-        Dungeon status:
-        <strong>{{ run.get_status_display }}</strong>
-      </p>
-
-      {% if run.current_room %}
-        <p>
-          Current room:
-          <strong>Room {{ run.current_room.number }}</strong>
-          {% if run.current_room.name %}
-            — {{ run.current_room.name }}
-          {% endif %}
-        </p>
-      {% else %}
-        <p>Your teacher has not selected a starting room yet.</p>
-      {% endif %}
-
-      {% if connected_rooms %}
-        <h3>Connected Rooms</h3>
-        <ul>
-          {% for room in connected_rooms %}
-            <li>
-              Room {{ room.number }}
-              {% if room.name %}
-                — {{ room.name }}
-              {% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      {% else %}
-        <p>
-          Room connections will appear here once the dungeon map is configured.
-        </p>
-      {% endif %}
-    </article>
-
-    <p>
-      Wait for your teacher to begin dungeon exploration.
-    </p>
+  {% if membership %}
+    {% include "fantasy_roles/partials/_inventory_drawer.html" %}
   {% endif %}
 </section>
 {% endblock %}
