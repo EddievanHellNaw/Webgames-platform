@@ -74,4 +74,10 @@ urlpatterns = [
     views.teacher_dungeon_monitor_panel,
     name="teacher_dungeon_monitor_panel",
     ),
+
+    path(
+    "<str:join_code>/room/pass/",
+    views.pass_room_turn,
+    name="pass_room_turn",
+    ),
 ]

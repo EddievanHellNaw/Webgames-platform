@@ -4,6 +4,20 @@ from sessions.models import GameSession, Participant
 from django.conf import settings
 from django.core.exceptions import ValidationError
 
+ROOM_ROLL_AP_COST = 1
+
+def spend_character_ap(character, amount):
+    if amount <= 0:
+        return True
+
+    if character.current_action_points < amount:
+        return False
+
+    character.current_action_points -= amount
+    character.save(update_fields=["current_action_points", "updated_at"])
+
+    return True
+
 class CharacterClass(models.Model):
     name = models.CharField(max_length=100, unique=True)
     slug = models.SlugField(max_length=100, unique=True)
@@ -43,18 +57,78 @@ class CharacterClass(models.Model):
     
 
 class ClassSkill(models.Model):
+    class SkillScope(models.TextChoices):
+        ROOM = "ROOM", "Room Skill"
+        BOSS = "BOSS", "Boss Skill"
+
+    class EffectCode(models.TextChoices):
+        NONE = "NONE", "No Special Effect"
+
+        # Room effects
+        ROOM_REDUCE_DIFFICULTY = "ROOM_REDUCE_DIFFICULTY", "Reduce room difficulty"
+        ROOM_ROLL_BONUS = "ROOM_ROLL_BONUS", "Add bonus to room roll"
+        ROOM_REDUCE_FAILURE_DAMAGE = "ROOM_REDUCE_FAILURE_DAMAGE", "Reduce failure damage"
+        ROOM_REROLL_AFTER_FAIL = "ROOM_REROLL_AFTER_FAIL", "Reroll after failed room roll"
+        ROOM_RANDOM_ROLL_BONUS = "ROOM_RANDOM_ROLL_BONUS", "Random bonus before roll"
+        ROOM_RECOVER_LIFE_ON_SUCCESS = "ROOM_RECOVER_LIFE_ON_SUCCESS", "Recover life on success"
+        ROOM_FIELD_AID = "ROOM_FIELD_AID", "Reduce another player’s failure damage"
+
+        # Boss effects — for later
+        BOSS_DAMAGE_OVER_TIME = "BOSS_DAMAGE_OVER_TIME", "Boss damage over time"
+        BOSS_DAMAGE_BUFF = "BOSS_DAMAGE_BUFF", "Boss damage buff"
+        BOSS_SKIP_TURN = "BOSS_SKIP_TURN", "Boss skips turn"
+        BOSS_PARTY_DAMAGE_BUFF = "BOSS_PARTY_DAMAGE_BUFF", "Party damage buff"
+        BOSS_TAUNT = "BOSS_TAUNT", "Force boss to target user"
+        BOSS_DOUBLE_ATTACK = "BOSS_DOUBLE_ATTACK", "Attack twice"
+        BOSS_PARTY_SHIELD = "BOSS_PARTY_SHIELD", "Party shield"
+        BOSS_FIXED_DAMAGE = "BOSS_FIXED_DAMAGE", "Fixed boss damage"
+        BOSS_UNTARGETABLE = "BOSS_UNTARGETABLE", "User cannot be attacked"
+        BOSS_RESTORE_AP = "BOSS_RESTORE_AP", "Restore AP"
+        BOSS_HEAL = "BOSS_HEAL", "Restore life"
+        BOSS_D6_DAMAGE = "BOSS_D6_DAMAGE", "Deal d6 damage"
+        BOSS_D6_PLUS_DAMAGE = "BOSS_D6_PLUS_DAMAGE", "Deal d6 plus damage"
+        BOSS_LIFESTEAL = "BOSS_LIFESTEAL", "Lifesteal effect"
+
     character_class = models.ForeignKey(
         CharacterClass,
         on_delete=models.CASCADE,
         related_name="skills",
     )
+
     name = models.CharField(max_length=100)
-    ap_cost = models.PositiveIntegerField(default=1)
-    description = models.TextField()
+    ap_cost = models.PositiveSmallIntegerField(default=1)
+    description = models.TextField(blank=True)
+
+    skill_scope = models.CharField(
+        max_length=20,
+        choices=SkillScope.choices,
+        default=SkillScope.ROOM,
+    )
+
+    effect_code = models.CharField(
+        max_length=60,
+        choices=EffectCode.choices,
+        default=EffectCode.NONE,
+    )
+
+    effect_value = models.SmallIntegerField(
+        default=0,
+        help_text="Main numeric value for the effect, such as +2, -1, or 5 healing.",
+    )
+
+    secondary_value = models.SmallIntegerField(
+        default=0,
+        help_text="Optional second value, such as d6 + 2 or damage reduction.",
+    )
+
+    duration_turns = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Used mostly for boss effects.",
+    )
 
     roll_bonus = models.PositiveSmallIntegerField(
         default=0,
-        help_text="Bonus added to the die roll when this skill is used.",
+        help_text="Direct bonus added to a die roll, if applicable.",
     )
 
     can_use_in_combat = models.BooleanField(default=True)
@@ -64,29 +138,79 @@ class ClassSkill(models.Model):
         help_text="Usually false. Trap rooms normally require written actions.",
     )
 
+    can_use_in_treasure = models.BooleanField(default=False)
+
     can_use_in_special = models.BooleanField(default=True)
 
-    class Meta:
-        ordering = ["ap_cost", "name"]
-
     def __str__(self):
-        return f"{self.character_class.name} - {self.name}"
-
+        return f"{self.character_class.name} · {self.name}"
 
 class ClassWeakness(models.Model):
+    class WeaknessScope(models.TextChoices):
+        ROOM = "ROOM", "Room Weakness"
+        BOSS = "BOSS", "Boss Weakness"
+
+    class EffectCode(models.TextChoices):
+        NONE = "NONE", "No Special Effect"
+
+        # Room weaknesses
+        ROOM_EXTRA_TRAP_FAIL_DAMAGE = "ROOM_EXTRA_TRAP_FAIL_DAMAGE", "Extra damage on failed Trap Room"
+        ROOM_EXTRA_COMBAT_FAIL_DAMAGE = "ROOM_EXTRA_COMBAT_FAIL_DAMAGE", "Extra damage on failed Combat Room"
+        ROOM_TRAP_ROLL_PENALTY = "ROOM_TRAP_ROLL_PENALTY", "Penalty on Trap Room rolls"
+        ROOM_COMBAT_ROLL_PENALTY = "ROOM_COMBAT_ROLL_PENALTY", "Penalty on Combat Room rolls"
+        ROOM_EXTRA_DAMAGE_AFTER_SKILL_FAIL = "ROOM_EXTRA_DAMAGE_AFTER_SKILL_FAIL", "Extra damage after failed skill roll"
+        ROOM_NEXT_SKILL_COST_AFTER_FAIL = "ROOM_NEXT_SKILL_COST_AFTER_FAIL", "Next room skill costs more after fail"
+        ROOM_LOSE_AP_ON_LOW_NATURAL_ROLL = "ROOM_LOSE_AP_ON_LOW_NATURAL_ROLL", "Lose AP on low natural roll"
+        ROOM_SKILLS_COST_LIFE = "ROOM_SKILLS_COST_LIFE", "Room skills cost life instead of AP"
+
+        # Boss weaknesses — for later
+        BOSS_EXTRA_DAMAGE_TAKEN = "BOSS_EXTRA_DAMAGE_TAKEN", "Extra boss damage taken"
+        BOSS_AFTER_SKILL_EXTRA_DAMAGE = "BOSS_AFTER_SKILL_EXTRA_DAMAGE", "Extra damage after using skill"
+        BOSS_CANNOT_REPEAT_SKILL = "BOSS_CANNOT_REPEAT_SKILL", "Cannot repeat same skill"
+        BOSS_FAILED_ROLL_BACKLASH = "BOSS_FAILED_ROLL_BACKLASH", "Failed roll backlash"
+        BOSS_ATTACK_DIFFICULTY_UP = "BOSS_ATTACK_DIFFICULTY_UP", "Boss difficulty up for attacks"
+        BOSS_CONSECUTIVE_SKILL_COST_UP = "BOSS_CONSECUTIVE_SKILL_COST_UP", "Consecutive skill cost up"
+        BOSS_LOW_ROLL_SELF_DAMAGE = "BOSS_LOW_ROLL_SELF_DAMAGE", "Low roll self damage"
+        BOSS_SKILLS_COST_LIFE = "BOSS_SKILLS_COST_LIFE", "Boss skills cost life instead of AP"
+
     character_class = models.ForeignKey(
         CharacterClass,
         on_delete=models.CASCADE,
         related_name="weaknesses",
     )
-    name = models.CharField(max_length=100)
-    description = models.TextField()
 
-    class Meta:
-        ordering = ["name"]
+    name = models.CharField(max_length=100)
+    description = models.TextField(blank=True)
+
+    weakness_scope = models.CharField(
+        max_length=20,
+        choices=WeaknessScope.choices,
+        default=WeaknessScope.ROOM,
+    )
+
+    effect_code = models.CharField(
+        max_length=70,
+        choices=EffectCode.choices,
+        default=EffectCode.NONE,
+    )
+
+    effect_value = models.SmallIntegerField(
+        default=0,
+        help_text="Main numeric value for the weakness, such as +1 damage or -1 roll.",
+    )
+
+    secondary_value = models.SmallIntegerField(
+        default=0,
+        help_text="Optional second value.",
+    )
+
+    duration_turns = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Used mostly for boss weaknesses.",
+    )
 
     def __str__(self):
-        return f"{self.character_class.name} - {self.name}"
+        return f"{self.character_class.name} · {self.name}"
 
 
 class PlayerCharacter(models.Model):
@@ -141,7 +265,11 @@ class PlayerCharacter(models.Model):
 
     teacher_notes = models.TextField(blank=True)
     is_approved = models.BooleanField(default=False)
-
+    
+    room_skill_ap_penalty = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="Temporary AP penalty applied to the next room skill.",
+    )
     class Meta:
         ordering = ["created_at"]
 
@@ -600,6 +728,11 @@ class PartyDungeonRun(models.Model):
         CLEARED = "CLEARED", "Cleared"
         FAILED = "FAILED", "Failed"
 
+    class FailureReason(models.TextChoices):
+        NONE = "NONE", "No failure"
+        PARTY_DEFEATED = "PARTY_DEFEATED", "The party was defeated"
+        OUT_OF_AP = "OUT_OF_AP", "The party ran out of AP"
+
     party = models.OneToOneField(
         AdventuringParty,
         on_delete=models.CASCADE,
@@ -620,6 +753,16 @@ class PartyDungeonRun(models.Model):
         related_name="current_party_runs",
     )
 
+    current_turn_character = models.ForeignKey(
+        "PlayerCharacter",
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="current_turn_runs",
+    )
+
+    turn_number = models.PositiveIntegerField(default=1)
+
     status = models.CharField(
         max_length=20,
         choices=Status.choices,
@@ -632,6 +775,12 @@ class PartyDungeonRun(models.Model):
         null=True,
         blank=True,
         related_name="selected_dungeon_runs",
+    )
+
+    failure_reason = models.CharField(
+        max_length=30,
+        choices=FailureReason.choices,
+        default=FailureReason.NONE,
     )
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -650,6 +799,8 @@ class PartyDungeonRun(models.Model):
 
     def __str__(self):
         return f"{self.party.name} in {self.dungeon.name}"
+    
+    
     
 class DungeonRunRoom(models.Model):
     class RoomType(models.TextChoices):
@@ -827,7 +978,7 @@ class RoomAttempt(models.Model):
         related_name="room_attempts_awarded",
     )
     
-    roll_bonus = models.PositiveSmallIntegerField(default=0)
+    roll_bonus = models.SmallIntegerField(default=0) 
     final_roll_total = models.PositiveSmallIntegerField(null=True, blank=True)
     
     result_text = models.TextField(blank=True)

@@ -20,6 +20,20 @@
               No DM
             </span>
           {% endif %}
+          {% if card.run.status == "FAILED" %}
+  <div class="fr-teacher-failed-run">
+    {% if card.run.failure_reason == "OUT_OF_AP" %}
+      <strong>Out of AP</strong>
+      <p>The party has no remaining AP among living members.</p>
+    {% elif card.run.failure_reason == "PARTY_DEFEATED" %}
+      <strong>Party Defeated</strong>
+      <p>All party members have fallen.</p>
+    {% else %}
+      <strong>Dungeon Failed</strong>
+      <p>The party failed the dungeon.</p>
+    {% endif %}
+  </div>
+{% endif %}
         </header>
 
         {% if card.run %}

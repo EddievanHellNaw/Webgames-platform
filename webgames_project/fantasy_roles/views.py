@@ -11,6 +11,7 @@ from django.shortcuts import get_object_or_404, redirect, render
 from django.contrib.auth.decorators import login_required
 from .forms import PlayerCharacterForm
 from .models import (
+    ROOM_ROLL_AP_COST,
     CharacterClass,
     PlayerCharacter,
     AdventuringParty,
@@ -96,6 +97,176 @@ def character_create(request, join_code):
     )
 
 
+def party_has_living_members(party):
+    return PartyMember.objects.filter(
+        party=party,
+        character__current_life__gt=0,
+    ).exists()
+
+
+def party_has_ap_remaining(party):
+    return PartyMember.objects.filter(
+        party=party,
+        character__current_life__gt=0,
+        character__current_action_points__gt=0,
+    ).exists()
+
+
+def fail_dungeon_run(run, failure_reason):
+    run.status = PartyDungeonRun.Status.FAILED
+    run.failure_reason = failure_reason
+    run.current_turn_character = None
+    run.save(
+        update_fields=[
+            "status",
+            "failure_reason",
+            "current_turn_character",
+            "updated_at",
+        ]
+    )
+
+
+def check_dungeon_failure_state(run):
+    if run.status != PartyDungeonRun.Status.ACTIVE:
+        return False
+
+    if not party_has_living_members(run.party):
+        fail_dungeon_run(
+            run,
+            PartyDungeonRun.FailureReason.PARTY_DEFEATED,
+        )
+        return True
+
+    if not party_has_ap_remaining(run.party):
+        fail_dungeon_run(
+            run,
+            PartyDungeonRun.FailureReason.OUT_OF_AP,
+        )
+        return True
+
+    return False
+
+def transform_special_room_into_mimic(room):
+    if room.room_type != DungeonRunRoom.RoomType.SPECIAL:
+        return
+
+    original_name = room.name or "Suspicious Chest"
+
+    if not original_name.lower().startswith("mimic"):
+        room.name = f"Mimic Ambush — {original_name}"
+
+    room.room_type = DungeonRunRoom.RoomType.COMBAT
+
+    if not room.flavor_text:
+        room.flavor_text = (
+            "The chest twists open with teeth and claws. "
+            "It was a Mimic waiting for the perfect moment to attack!"
+        )
+
+    room.save(
+        update_fields=[
+            "name",
+            "room_type",
+            "flavor_text",
+        ]
+    )
+
+def get_living_party_members(party):
+    return list(
+        PartyMember.objects
+        .filter(
+            party=party,
+            character__current_life__gt=0,
+        )
+        .select_related(
+            "character",
+            "character__character_class",
+        )
+        .order_by("order", "joined_at")
+    )
+
+
+def ensure_run_has_turn(run):
+    living_members = get_living_party_members(run.party)
+
+    if not living_members:
+        fail_dungeon_run(
+            run,
+            PartyDungeonRun.FailureReason.PARTY_DEFEATED,
+        )
+        return None
+    
+    if not party_has_ap_remaining(run.party):
+        fail_dungeon_run(
+            run,
+            PartyDungeonRun.FailureReason.OUT_OF_AP,
+        )
+        return None
+
+    living_character_ids = [
+        member.character_id
+        for member in living_members
+    ]
+
+    if run.current_turn_character_id in living_character_ids:
+        return run.current_turn_character
+
+    run.current_turn_character = living_members[0].character
+    run.save(
+        update_fields=[
+            "current_turn_character",
+            "updated_at",
+        ]
+    )
+
+    return run.current_turn_character
+
+
+def advance_room_turn(run):
+    living_members = get_living_party_members(run.party)
+
+    if not living_members:
+        run.status = PartyDungeonRun.Status.FAILED
+        run.current_turn_character = None
+        run.save(
+            update_fields=[
+                "status",
+                "current_turn_character",
+                "updated_at",
+            ]
+        )
+        return None
+
+    living_characters = [
+        member.character
+        for member in living_members
+    ]
+
+    current_id = run.current_turn_character_id
+
+    if current_id not in [character.id for character in living_characters]:
+        next_character = living_characters[0]
+    else:
+        current_index = [
+            character.id
+            for character in living_characters
+        ].index(current_id)
+
+        next_index = (current_index + 1) % len(living_characters)
+        next_character = living_characters[next_index]
+
+    run.current_turn_character = next_character
+    run.turn_number += 1
+    run.save(
+        update_fields=[
+            "current_turn_character",
+            "turn_number",
+            "updated_at",
+        ]
+    )
+
+    return next_character
+
 def character_detail(request, join_code):
     session = get_object_or_404(
         GameSession,
@@ -138,6 +309,97 @@ def character_detail(request, join_code):
         },
     )
 
+ROOM_ROLL_AP_COST = 1
+
+
+def get_room_weaknesses(character):
+    return list(
+        character.character_class.weaknesses.filter(
+            weakness_scope=ClassWeakness.WeaknessScope.ROOM,
+        )
+    )
+
+
+def get_weakness_value(weaknesses, effect_code, default=0):
+    for weakness in weaknesses:
+        if weakness.effect_code == effect_code:
+            return weakness.effect_value
+    return default
+
+
+def has_weakness(weaknesses, effect_code):
+    return any(
+        weakness.effect_code == effect_code
+        for weakness in weaknesses
+    )
+
+
+def spend_character_ap(character, amount):
+    if amount <= 0:
+        return True
+
+    if character.current_action_points < amount:
+        return False
+
+    character.current_action_points -= amount
+    character.save(update_fields=["current_action_points", "updated_at"])
+
+    return True
+
+
+def spend_character_life(character, amount):
+    if amount <= 0:
+        return True
+
+    # Prevent a character from killing themselves with a room skill.
+    if character.current_life <= amount:
+        return False
+
+    character.current_life -= amount
+    character.save(update_fields=["current_life", "updated_at"])
+
+    return True
+
+
+def lose_character_ap(character, amount):
+    if amount <= 0:
+        return
+
+    character.current_action_points = max(
+        0,
+        character.current_action_points - amount,
+    )
+    character.save(update_fields=["current_action_points", "updated_at"])
+
+
+def recover_character_life(character, amount):
+    if amount <= 0:
+        return
+
+    character.current_life = min(
+        character.character_class.max_life,
+        character.current_life + amount,
+    )
+    character.save(update_fields=["current_life", "updated_at"])
+
+
+def set_next_room_skill_penalty(character, amount):
+    if amount <= 0:
+        return
+
+    character.room_skill_ap_penalty = max(
+        character.room_skill_ap_penalty,
+        amount,
+    )
+    character.save(update_fields=["room_skill_ap_penalty", "updated_at"])
+
+
+def clear_next_room_skill_penalty(character):
+    if character.room_skill_ap_penalty == 0:
+        return
+
+    character.room_skill_ap_penalty = 0
+    character.save(update_fields=["room_skill_ap_penalty", "updated_at"])
 
 @login_required
 def teacher_character_list(request, join_code):
@@ -530,6 +792,8 @@ def build_student_dungeon_context(request, session):
     party_members = []
     is_current_dm = False
     available_skills = []
+    current_turn_character = None
+    is_current_turn = False
 
     if membership:
         is_current_dm = membership.party.current_dm_id == character.id
@@ -543,6 +807,7 @@ def build_student_dungeon_context(request, session):
                 "current_room__source_template",
                 "party",
                 "party__current_dm",
+                "current_turn_character",
             )
             .first()
         )
@@ -569,6 +834,12 @@ def build_student_dungeon_context(request, session):
                 .select_related("source_template")
                 .all()
             )
+            current_turn_character = run.current_turn_character
+            is_current_turn = (
+                current_turn_character is not None
+                and character is not None
+                and current_turn_character.id == character.id
+            )
 
         if run and run.current_room:
             connections = (
@@ -592,21 +863,41 @@ def build_student_dungeon_context(request, session):
 
             connected_room_ids = [room.id for room in connected_rooms]
 
-            recent_attempts = (
-                RoomAttempt.objects
-                .filter(room=run.current_room)
-                .select_related(
-                    "character",
-                    "skill_used",
-                    "item_awarded",
-                )
-                [:5]
-            )
+            recent_attempts = []
+            latest_attempt = None
 
-            available_skills = [
-                skill for skill in character.character_class.skills.all()
-                if skill_can_be_used_in_room(skill, run.current_room)
-            ]
+            if run:
+                recent_attempts = list(
+                    RoomAttempt.objects
+                    .filter(room__run=run)
+                    .select_related(
+                        "character",
+                        "character__character_class",
+                        "skill_used",
+                        "item_awarded",
+                        "room",
+                    )
+                    .order_by("-created_at")[:8]
+                )
+
+                if recent_attempts:
+                    latest_attempt = recent_attempts[0]
+
+            if run and run.current_room:
+                room_skills = (
+                    character.character_class.skills
+                    .filter(skill_scope=ClassSkill.SkillScope.ROOM)
+                    .order_by("ap_cost", "name")
+                )
+
+                available_skills = [
+                    skill
+                    for skill in room_skills
+                    if skill_can_be_used_in_room(skill, run.current_room)
+                ]
+        if run.status == PartyDungeonRun.Status.ACTIVE:
+            ensure_run_has_turn(run)
+            run.refresh_from_db()
 
     return {
         "session": session,
@@ -618,10 +909,13 @@ def build_student_dungeon_context(request, session):
         "connected_room_ids": connected_room_ids,
         "generated_rooms": generated_rooms,
         "recent_attempts": recent_attempts,
+        "latest_attempt": latest_attempt,
         "party_inventory": party_inventory,
         "party_members": party_members,
         "is_current_dm": is_current_dm,
         "available_skills": available_skills,
+        "current_turn_character": current_turn_character,
+        "is_current_turn": is_current_turn,
     }
 
 def student_dungeon_detail(request, join_code):
@@ -662,7 +956,7 @@ def student_dungeon_live_panel(request, join_code):
 
     return render(
         request,
-        "fantasy_roles/partials/student_dungeon_live_panel.html",
+        "fantasy_roles/partials/_student_dungeon_live_shell.html",
         context,
     )
 
@@ -765,6 +1059,7 @@ def student_dungeon_select(request, join_code):
         )
 
         generate_dungeon_run(run)
+        ensure_run_has_turn(run)
 
         messages.success(
             request,
@@ -896,8 +1191,21 @@ def award_random_item_to_party(party, dungeon, room):
 
     return item
 
+def spend_character_ap(character, amount):
+    if amount <= 0:
+        return True
+
+    if character.current_action_points < amount:
+        return False
+
+    character.current_action_points -= amount
+    character.save(update_fields=["current_action_points", "updated_at"])
+
+    return True
 
 def update_run_status_after_room_result(run):
+    if check_dungeon_failure_state(run):
+        return
     if party_is_defeated(run.party):
         run.status = PartyDungeonRun.Status.FAILED
         run.save(update_fields=["status", "updated_at"])
@@ -957,15 +1265,45 @@ def submit_room_action(request, join_code):
     if character.current_life <= 0:
         messages.warning(request, "Your character cannot act because they have 0 life.")
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+    ensure_run_has_turn(run)
+
+    if run.current_turn_character_id != character.id:
+        if run.current_turn_character:
+            messages.warning(
+                request,
+                f"It is {run.current_turn_character.character_name}'s turn.",
+            )
+        else:
+            messages.warning(
+                request,
+                "There is no active turn right now.",
+            )
+
+        return redirect(
+            "fantasy_roles:student_dungeon_detail",
+            join_code=session.join_code,
+        )
 
     action_text = request.POST.get("action_text", "").strip()
-    action_type = request.POST.get("action_type", "").strip()
+    submitted_action_type = request.POST.get("action_type", "").strip()
 
     skill = None
-    roll_bonus = 0
-    final_roll_total = None
+    room_weaknesses = get_room_weaknesses(character)
 
-    if action_type == RoomAttempt.ActionType.SKILL:
+    ap_cost = ROOM_ROLL_AP_COST
+    life_cost = 0
+
+    roll_modifier = 0
+    effective_difficulty = room.difficulty
+    failure_damage_reduction = 0
+    recover_life_on_success = 0
+    reroll_after_fail = False
+    random_bonus_roll = None
+    random_bonus_applied = False
+
+    action_type = submitted_action_type
+
+    if submitted_action_type == RoomAttempt.ActionType.SKILL:
         skill_id = request.POST.get("skill_id")
 
         skill = get_object_or_404(
@@ -978,158 +1316,308 @@ def submit_room_action(request, join_code):
             messages.warning(request, "This skill cannot be used in this room.")
             return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
-        if character.current_action_points < skill.ap_cost:
-            messages.warning(request, "You do not have enough AP to use this skill.")
-            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+        ap_cost = skill.ap_cost + character.room_skill_ap_penalty
+        action_type = RoomAttempt.ActionType.SKILL
 
-        character.current_action_points -= skill.ap_cost
-        character.save(update_fields=["current_action_points", "updated_at"])
+        if has_weakness(
+            room_weaknesses,
+            ClassWeakness.EffectCode.ROOM_SKILLS_COST_LIFE,
+        ):
+            life_cost = ap_cost
+            ap_cost = 0
 
-        roll_bonus = skill.roll_bonus
+        effect_code = skill.effect_code
+
+        if effect_code == ClassSkill.EffectCode.ROOM_REDUCE_DIFFICULTY:
+            effective_difficulty = max(
+                0,
+                room.difficulty - skill.effect_value,
+            )
+
+        elif effect_code == ClassSkill.EffectCode.ROOM_ROLL_BONUS:
+            roll_modifier += skill.effect_value or skill.roll_bonus
+
+        elif effect_code == ClassSkill.EffectCode.ROOM_REDUCE_FAILURE_DAMAGE:
+            failure_damage_reduction += skill.effect_value
+
+        elif effect_code == ClassSkill.EffectCode.ROOM_REROLL_AFTER_FAIL:
+            reroll_after_fail = True
+
+        elif effect_code == ClassSkill.EffectCode.ROOM_RANDOM_ROLL_BONUS:
+            random_bonus_roll = random.randint(1, 6)
+
+            if random_bonus_roll >= 4:
+                roll_modifier += skill.effect_value
+                random_bonus_applied = True
+
+        elif effect_code == ClassSkill.EffectCode.ROOM_RECOVER_LIFE_ON_SUCCESS:
+            effective_difficulty = max(
+                0,
+                room.difficulty - skill.effect_value,
+            )
+            recover_life_on_success = skill.secondary_value
+
+        elif effect_code == ClassSkill.EffectCode.ROOM_FIELD_AID:
+            failure_damage_reduction += skill.effect_value
+
+    elif submitted_action_type == RoomAttempt.ActionType.LEAVE_TREASURE:
+        ap_cost = 0
+        action_type = RoomAttempt.ActionType.LEAVE_TREASURE
+
+    # Room weakness roll penalties.
+    if room.room_type == DungeonRunRoom.RoomType.TRAP:
+        roll_modifier -= get_weakness_value(
+            room_weaknesses,
+            ClassWeakness.EffectCode.ROOM_TRAP_ROLL_PENALTY,
+        )
+
+    if room.room_type == DungeonRunRoom.RoomType.COMBAT:
+        roll_modifier -= get_weakness_value(
+            room_weaknesses,
+            ClassWeakness.EffectCode.ROOM_COMBAT_ROLL_PENALTY,
+        )
+
+    if not spend_character_ap(character, ap_cost):
+        messages.warning(
+            request,
+            f"You need {ap_cost} AP to do that action.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if not spend_character_life(character, life_cost):
+        messages.warning(
+            request,
+            f"You need more than {life_cost} Life to use that skill.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if skill:
+        clear_next_room_skill_penalty(character)
 
     die_roll = None
+    first_die_roll = None
+    final_roll_total = None
     success = False
     damage_taken = 0
     item_awarded = None
-    result_text = ""
+    result_text_parts = []
 
-    if room.room_type == DungeonRunRoom.RoomType.TRAP:
-        action_type = RoomAttempt.ActionType.TRAP_ACTION
+    if skill:
+        result_text_parts.append(
+            f"{character.character_name} used {skill.name}."
+        )
 
-        if not action_text:
-            messages.warning(request, "Write an action before rolling for a trap room.")
-            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+    if effective_difficulty != room.difficulty:
+        result_text_parts.append(
+            f"Room difficulty changed from {room.difficulty} to {effective_difficulty}."
+        )
 
-        die_roll = random.randint(1, 6)
-        success = die_roll > room.difficulty
+    if roll_modifier > 0:
+        result_text_parts.append(
+            f"Roll bonus: +{roll_modifier}."
+        )
 
-        if success:
-            room.is_cleared = True
-            room.save(update_fields=["is_cleared"])
-            reset_party_ap(membership.party)
-            result_text = f"Success! You rolled {die_roll} and cleared the trap."
+    if roll_modifier < 0:
+        result_text_parts.append(
+            f"Roll penalty: {roll_modifier}."
+        )
+
+    if failure_damage_reduction:
+        result_text_parts.append(
+            f"Failure damage will be reduced by {failure_damage_reduction}."
+        )
+    if random_bonus_roll is not None:
+        if random_bonus_applied:
+            result_text_parts.append(
+                f"Quick Invention rolled {random_bonus_roll}, so +{skill.effect_value} was added."
+            )
         else:
-            damage_taken = room.difficulty
-            apply_damage(character, damage_taken)
-            result_text = (
-                f"Failure. You rolled {die_roll}. "
-                f"{character.character_name} took {damage_taken} damage."
+            result_text_parts.append(
+                f"Quick Invention rolled {random_bonus_roll}, so no bonus was added."
             )
 
-    elif room.room_type == DungeonRunRoom.RoomType.COMBAT:
-        if action_type == RoomAttempt.ActionType.SKILL:
-            action_type = RoomAttempt.ActionType.SKILL
+    # Treasure room: leaving safely does not require a roll.
+    if (
+        room.room_type in [
+            DungeonRunRoom.RoomType.TREASURE,
+            DungeonRunRoom.RoomType.SPECIAL,
+        ]
+        and action_type == RoomAttempt.ActionType.LEAVE_TREASURE
+    ):
+        success = True
+        room.is_cleared = True
+        room.save(update_fields=["is_cleared"])
+
+        if room.room_type == DungeonRunRoom.RoomType.SPECIAL:
+            result_text_parts.append(
+                "The party decided not to touch the suspicious chest and moved on safely."
+            )
         else:
+            result_text_parts.append(
+                "The party left the treasure room safely."
+            )
+
+    else:
+        if (
+            room.room_type == DungeonRunRoom.RoomType.TRAP
+            and not action_text
+            and action_type != RoomAttempt.ActionType.SKILL
+            ):
+        
+            messages.warning(request, "Write an action before rolling for this room.")
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+        
+        first_die_roll = random.randint(1, 6)
+        die_roll = first_die_roll
+        final_roll_total = die_roll + roll_modifier
+        success = final_roll_total > effective_difficulty
+
+        if not success and reroll_after_fail:
+            second_die_roll = random.randint(1, 6)
+            die_roll = second_die_roll
+            final_roll_total = die_roll + roll_modifier
+            success = final_roll_total > effective_difficulty
+
+            result_text_parts.append(
+                f"Shadow Step activated: first roll {first_die_roll}, reroll {second_die_roll}."
+            )
+
+        # Room-specific default action labels.
+        if room.room_type == DungeonRunRoom.RoomType.TRAP and not skill:
+            action_type = RoomAttempt.ActionType.TRAP_ACTION
+
+        elif room.room_type == DungeonRunRoom.RoomType.COMBAT and not skill:
             action_type = RoomAttempt.ActionType.BASIC_ATTACK
 
-        die_roll = random.randint(1, 6)
-        final_roll_total = die_roll + roll_bonus
-        success = final_roll_total > room.difficulty
+        elif room.room_type == DungeonRunRoom.RoomType.SPECIAL and not skill:
+            action_type = RoomAttempt.ActionType.SPECIAL_ACTION
 
-        if success:
-            room.is_cleared = True
-            room.save(update_fields=["is_cleared"])
-            reset_party_ap(membership.party)
-
-            if skill:
-                result_text = (
-                    f"Success! {character.character_name} used {skill.name}, "
-                    f"rolled {die_roll} + {roll_bonus} = {final_roll_total}, "
-                    "and defeated the enemy."
-                )
-            else:
-                result_text = (
-                    f"Success! You rolled {die_roll} and defeated the enemy."
-                )
-        else:
-            damage_taken = room.damage_on_failure or room.difficulty
-            apply_damage(character, damage_taken)
-
-            if skill:
-                result_text = (
-                    f"Failure. {character.character_name} used {skill.name}, "
-                    f"rolled {die_roll} + {roll_bonus} = {final_roll_total}. "
-                    f"{character.character_name} took {damage_taken} damage."
-                )
-            else:
-                result_text = (
-                    f"Failure. You rolled {die_roll}. "
-                    f"{character.character_name} took {damage_taken} damage."
-                )
-
-    elif room.room_type == DungeonRunRoom.RoomType.SPECIAL:
-        action_type = RoomAttempt.ActionType.SPECIAL_ACTION
-
-        die_roll = random.randint(1, 6)
-        success = die_roll > room.difficulty
-
-        if success:
-            room.is_cleared = True
-            room.save(update_fields=["is_cleared"])
-            reset_party_ap(membership.party)
-            result_text = f"Success! You rolled {die_roll} and survived the special room."
-        else:
-            damage_taken = room.damage_on_failure or room.difficulty
-            apply_damage(character, damage_taken)
-            result_text = (
-                f"Failure. You rolled {die_roll}. "
-                f"{character.character_name} took {damage_taken} damage."
-            )
-
-    elif room.room_type == DungeonRunRoom.RoomType.TREASURE:
-        if action_type == RoomAttempt.ActionType.LEAVE_TREASURE:
-            success = True
-            room.is_cleared = True
-            room.save(update_fields=["is_cleared"])
-            reset_party_ap(membership.party)
-            result_text = "The party left the treasure room safely."
-
-        else:
+        elif room.room_type == DungeonRunRoom.RoomType.TREASURE and not skill:
             action_type = RoomAttempt.ActionType.OPEN_CHEST
-            die_roll = random.randint(1, 6)
-            success = die_roll > room.difficulty
 
-            if success:
+        if success:
+            if room.room_type in [
+                DungeonRunRoom.RoomType.TREASURE,
+                DungeonRunRoom.RoomType.SPECIAL,
+            ]:
                 item_awarded = award_random_item_to_party(
                     membership.party,
                     run.dungeon,
                     room,
                 )
-                room.is_cleared = True
-                room.save(update_fields=["is_cleared"])
-                reset_party_ap(membership.party)
 
-                if item_awarded:
-                    result_text = (
-                        f"Success! You rolled {die_roll} and found "
-                        f"{item_awarded.name}."
-                    )
-                else:
-                    result_text = (
-                        f"Success! You rolled {die_roll}, but no items are available yet."
-                    )
-            else:
-                damage_taken = room.damage_on_failure or room.difficulty
-                apply_damage(character, damage_taken)
-                result_text = (
-                    f"Failure. You rolled {die_roll}. "
-                    f"{character.character_name} took {damage_taken} damage."
+            if recover_life_on_success:
+                recover_character_life(character, recover_life_on_success)
+                result_text_parts.append(
+                    f"{character.character_name} recovered {recover_life_on_success} Life."
                 )
 
-    else:
-        messages.warning(request, "This room type is not ready yet.")
-        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+            room.is_cleared = True
+            room.save(update_fields=["is_cleared"])
 
-    RoomAttempt.objects.create(
+            if item_awarded:
+                result_text_parts.append(
+                    f"Success! You rolled {die_roll}"
+                    f"{' + ' + str(roll_modifier) if roll_modifier > 0 else ''}"
+                    f"{' - ' + str(abs(roll_modifier)) if roll_modifier < 0 else ''}"
+                    f" = {final_roll_total} and found {item_awarded.name}."
+                )
+            else:
+                result_text_parts.append(
+                    f"Success! You rolled {die_roll}"
+                    f"{' + ' + str(roll_modifier) if roll_modifier > 0 else ''}"
+                    f"{' - ' + str(abs(roll_modifier)) if roll_modifier < 0 else ''}"
+                    f" = {final_roll_total} and cleared the room."
+                )
+
+        else:
+            if room.room_type == DungeonRunRoom.RoomType.TRAP:
+                base_damage = room.difficulty
+            else:
+                base_damage = room.damage_on_failure or room.difficulty
+
+            extra_damage = 0
+
+            if room.room_type == DungeonRunRoom.RoomType.TRAP:
+                extra_damage += get_weakness_value(
+                    room_weaknesses,
+                    ClassWeakness.EffectCode.ROOM_EXTRA_TRAP_FAIL_DAMAGE,
+                )
+
+            if room.room_type == DungeonRunRoom.RoomType.COMBAT:
+                extra_damage += get_weakness_value(
+                    room_weaknesses,
+                    ClassWeakness.EffectCode.ROOM_EXTRA_COMBAT_FAIL_DAMAGE,
+                )
+
+            if skill:
+                extra_damage += get_weakness_value(
+                    room_weaknesses,
+                    ClassWeakness.EffectCode.ROOM_EXTRA_DAMAGE_AFTER_SKILL_FAIL,
+                )
+
+            damage_taken = max(
+                0,
+                base_damage + extra_damage - failure_damage_reduction,
+            )
+
+            apply_damage(character, damage_taken)
+
+            if (
+                room.room_type == DungeonRunRoom.RoomType.SPECIAL
+                and action_type == RoomAttempt.ActionType.OPEN_CHEST
+            ):
+                transform_special_room_into_mimic(room)
+
+                result_text_parts.append(
+                    "The chest was a Mimic! It transforms into a Combat Room."
+                )
+
+            next_skill_penalty = get_weakness_value(
+                room_weaknesses,
+                ClassWeakness.EffectCode.ROOM_NEXT_SKILL_COST_AFTER_FAIL,
+            )
+
+            if next_skill_penalty:
+                set_next_room_skill_penalty(character, next_skill_penalty)
+                result_text_parts.append(
+                    f"Broken Focus: your next room skill costs +{next_skill_penalty} AP."
+                )
+
+            result_text_parts.append(
+                f"Failure. You rolled {die_roll}"
+                f"{' + ' + str(roll_modifier) if roll_modifier > 0 else ''}"
+                f"{' - ' + str(abs(roll_modifier)) if roll_modifier < 0 else ''}"
+                f" = {final_roll_total}. "
+                f"{character.character_name} took {damage_taken} damage."
+            )
+
+        # Artificer weakness: natural room roll 1 or 2 loses AP.
+        low_roll_threshold = 0
+
+        for weakness in room_weaknesses:
+            if weakness.effect_code == ClassWeakness.EffectCode.ROOM_LOSE_AP_ON_LOW_NATURAL_ROLL:
+                low_roll_threshold = weakness.secondary_value
+                ap_loss = weakness.effect_value
+
+                if die_roll is not None and die_roll <= low_roll_threshold:
+                    lose_character_ap(character, ap_loss)
+                    result_text_parts.append(
+                        f"Unstable Tools: natural roll {die_roll}, so {character.character_name} lost {ap_loss} AP."
+                    )
+
+    result_text = " ".join(result_text_parts)
+
+    attempt = RoomAttempt.objects.create(
         room=room,
         character=character,
         action_type=action_type,
         skill_used=skill,
         action_text=action_text,
         die_roll=die_roll,
-        roll_bonus=roll_bonus,
+        roll_bonus=roll_modifier,
         final_roll_total=final_roll_total,
-        difficulty_at_roll=room.difficulty,
+        difficulty_at_roll=effective_difficulty,
         success=success,
         damage_taken=damage_taken,
         item_awarded=item_awarded,
@@ -1137,6 +1625,19 @@ def submit_room_action(request, join_code):
     )
 
     update_run_status_after_room_result(run)
+    run.refresh_from_db()
+
+    if run.status == PartyDungeonRun.Status.ACTIVE:
+        next_character = advance_room_turn(run)
+
+        if next_character:
+            result_text = (
+                f"{result_text} "
+                f"Next turn: {next_character.character_name}."
+            )
+
+            attempt.result_text = result_text
+            attempt.save(update_fields=["result_text"])
 
     messages.info(request, result_text)
 
@@ -1228,13 +1729,105 @@ def reset_party_ap(party):
 
 
 def skill_can_be_used_in_room(skill, room):
+    if skill.skill_scope != ClassSkill.SkillScope.ROOM:
+        return False
+
     if room.room_type == DungeonRunRoom.RoomType.COMBAT:
         return skill.can_use_in_combat
 
     if room.room_type == DungeonRunRoom.RoomType.TRAP:
         return skill.can_use_in_trap
 
+    if room.room_type == DungeonRunRoom.RoomType.TREASURE:
+        return skill.can_use_in_treasure
+
     if room.room_type == DungeonRunRoom.RoomType.SPECIAL:
-        return skill.can_use_in_special
+        return False
 
     return False
+
+def pass_room_turn(request, join_code):
+    session = get_object_or_404(
+        GameSession,
+        join_code=join_code,
+        game_template__code=GameTemplate.GameCode.FANTASY_ROLES,
+    )
+
+    participant, character, membership = get_student_character_and_membership(
+        request,
+        session,
+    )
+
+    if participant is None:
+        return redirect("sessions:join_session", join_code=session.join_code)
+
+    if character is None:
+        return redirect("fantasy_roles:character_create", join_code=session.join_code)
+
+    if membership is None:
+        return redirect("fantasy_roles:student_party_detail", join_code=session.join_code)
+
+    run = get_object_or_404(
+        PartyDungeonRun,
+        party=membership.party,
+    )
+
+    if request.method != "POST":
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if run.status != PartyDungeonRun.Status.ACTIVE:
+        messages.warning(request, "The party cannot pass turns right now.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if run.current_room is None:
+        messages.warning(request, "There is no current room.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if run.current_room.is_cleared:
+        messages.warning(request, "The room is already cleared.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    ensure_run_has_turn(run)
+    run.refresh_from_db()
+
+    if run.status == PartyDungeonRun.Status.FAILED:
+        messages.warning(
+            request,
+            "The dungeon has failed.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+    
+    if run.current_turn_character_id != character.id:
+        if run.current_turn_character:
+            messages.warning(
+                request,
+                f"It is {run.current_turn_character.character_name}'s turn.",
+            )
+        else:
+            messages.warning(request, "There is no active turn right now.")
+
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    next_character = advance_room_turn(run)
+
+    run.refresh_from_db()
+
+    if run.status == PartyDungeonRun.Status.FAILED:
+        messages.warning(
+            request,
+            "The dungeon has failed.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if next_character:
+        messages.info(
+            request,
+            f"{character.character_name} passed. Next turn: {next_character.character_name}.",
+        )
+    else:
+        messages.warning(
+            request,
+            "No living characters remain.",
+        )
+
+    return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)

@@ -25,10 +25,16 @@ class ClassSkillInline(admin.TabularInline):
     extra = 1
     fields = (
         "name",
+        "skill_scope",
+        "effect_code",
         "ap_cost",
+        "effect_value",
+        "secondary_value",
+        "duration_turns",
         "roll_bonus",
         "can_use_in_combat",
         "can_use_in_trap",
+        "can_use_in_treasure",
         "can_use_in_special",
         "description",
     )
@@ -37,6 +43,15 @@ class ClassSkillInline(admin.TabularInline):
 class ClassWeaknessInline(admin.TabularInline):
     model = ClassWeakness
     extra = 1
+    fields = (
+        "name",
+        "weakness_scope",
+        "effect_code",
+        "effect_value",
+        "secondary_value",
+        "duration_turns",
+        "description",
+    )
 
 class PartyMemberInline(admin.TabularInline):
     model = PartyMember

@@ -1,0 +1,10 @@
+<section
+  id="dungeon-live-panel"
+  {% if not run or run.status != "FAILED" %}
+    hx-get="{% url 'fantasy_roles:student_dungeon_live_panel' session.join_code %}"
+    hx-trigger="load, every 2s"
+    hx-swap="outerHTML"
+  {% endif %}
+>
+  {% include "fantasy_roles/partials/student_dungeon_live_panel.html" %}
+</section>

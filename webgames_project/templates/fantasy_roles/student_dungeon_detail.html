@@ -2,17 +2,211 @@
 
 {% block content %}
 <section class="student-dungeon">
-  <section
-    id="dungeon-live-panel"
-    hx-get="{% url 'fantasy_roles:student_dungeon_live_panel' session.join_code %}"
-    hx-trigger="load, every 2s"
-    hx-swap="innerHTML"
-  >
-    {% include "fantasy_roles/partials/student_dungeon_live_panel.html" %}
-  </section>
+ {% include "fantasy_roles/partials/_student_dungeon_live_shell.html" %}
 
   {% if membership %}
     {% include "fantasy_roles/partials/_inventory_drawer.html" %}
   {% endif %}
 </section>
+<section class="fr-roll-overlay" id="roll-result-overlay" hidden>
+  <article class="fr-roll-card" id="roll-result-card">
+    <div class="fr-roll-card-header">
+      <span class="fr-kicker" id="roll-result-kicker">Dungeon Roll</span>
+      <strong id="roll-result-title">Rolling...</strong>
+    </div>
+
+    <div class="fr-roll-dice-wrap" id="roll-dice-wrap">
+      <div class="fr-roll-dice" id="roll-dice">?</div>
+    </div>
+
+    <div class="fr-roll-summary">
+      <p id="roll-result-main">The dice are rolling...</p>
+      <p class="fr-muted-text" id="roll-result-detail"></p>
+    </div>
+
+    <button class="fr-btn fr-btn-primary" type="button" id="close-roll-result">
+      Continue
+    </button>
+  </article>
+</section>
+<script>
+  (function () {
+    const overlay = document.getElementById("roll-result-overlay");
+    const card = document.getElementById("roll-result-card");
+    const dice = document.getElementById("roll-dice");
+    const diceWrap = document.getElementById("roll-dice-wrap");
+    const title = document.getElementById("roll-result-title");
+    const kicker = document.getElementById("roll-result-kicker");
+    const main = document.getElementById("roll-result-main");
+    const detail = document.getElementById("roll-result-detail");
+    const closeButton = document.getElementById("close-roll-result");
+
+    if (!overlay || !card || !dice || !closeButton) {
+      return;
+    }
+
+    function getPayload() {
+      return document.getElementById("latest-attempt-payload");
+    }
+
+    function markCharacterDamage(characterId) {
+      if (!characterId) {
+        return;
+      }
+
+      const chip = document.querySelector(
+        `.fr-hero-chip[data-character-id="${characterId}"]`
+      );
+
+      if (!chip) {
+        return;
+      }
+
+      chip.classList.remove("is-damaged");
+      void chip.offsetWidth;
+      chip.classList.add("is-damaged");
+
+      window.setTimeout(function () {
+        chip.classList.remove("is-damaged");
+      }, 900);
+    }
+
+    function markRoomResult(success) {
+      const roomPanel = document.querySelector(".fr-current-room-panel");
+
+      if (!roomPanel) {
+        return;
+      }
+
+      roomPanel.classList.remove("is-roll-success", "is-roll-failure");
+      void roomPanel.offsetWidth;
+
+      if (success) {
+        roomPanel.classList.add("is-roll-success");
+      } else {
+        roomPanel.classList.add("is-roll-failure");
+      }
+
+      window.setTimeout(function () {
+        roomPanel.classList.remove("is-roll-success", "is-roll-failure");
+      }, 1200);
+    }
+
+    function closeOverlay() {
+      overlay.hidden = true;
+      card.classList.remove("is-success", "is-failure", "has-item");
+      diceWrap.classList.remove("is-rolling");
+    }
+
+    function showAttemptAnimation(payload) {
+      const attemptId = payload.dataset.attemptId;
+
+      if (!attemptId) {
+        return;
+      }
+
+      const storageKey = `fantasy_roles_attempt_seen_${attemptId}`;
+
+      if (sessionStorage.getItem(storageKey)) {
+        return;
+      }
+
+      sessionStorage.setItem(storageKey, "true");
+
+      const success = payload.dataset.success === "true";
+      const dieRoll = payload.dataset.dieRoll;
+      const finalTotal = payload.dataset.finalTotal;
+      const difficulty = payload.dataset.difficulty;
+      const damage = parseInt(payload.dataset.damage || "0", 10);
+      const item = payload.dataset.item || "";
+      const characterName = payload.dataset.characterName || "A hero";
+      const resultText = payload.dataset.resultText || "";
+      const characterId = payload.dataset.characterId;
+
+      card.classList.remove("is-success", "is-failure", "has-item");
+      card.classList.add(success ? "is-success" : "is-failure");
+
+      if (item) {
+        card.classList.add("has-item");
+      }
+
+      kicker.textContent = characterName;
+
+      if (success) {
+        title.textContent = item ? "Treasure Found!" : "Success!";
+      } else {
+        title.textContent = damage > 0 ? "Failure!" : "Not Quite!";
+      }
+
+      main.textContent = resultText || (success ? "The action succeeded." : "The action failed.");
+
+      if (dieRoll) {
+        detail.textContent = `Roll ${dieRoll} · Total ${finalTotal || "—"} · Difficulty ${difficulty || "—"}`;
+      } else {
+        detail.textContent = item ? `Item obtained: ${item}` : "No roll was needed.";
+      }
+
+      dice.textContent = dieRoll || "◆";
+      overlay.hidden = false;
+
+      if (dieRoll) {
+        diceWrap.classList.add("is-rolling");
+
+        let ticks = 0;
+        const interval = window.setInterval(function () {
+          ticks += 1;
+          dice.textContent = String(Math.floor(Math.random() * 6) + 1);
+
+          if (ticks >= 10) {
+            window.clearInterval(interval);
+            dice.textContent = dieRoll;
+            diceWrap.classList.remove("is-rolling");
+
+            if (success) {
+              diceWrap.classList.add("is-success-pop");
+            } else {
+              diceWrap.classList.add("is-failure-pop");
+            }
+
+            window.setTimeout(function () {
+              diceWrap.classList.remove("is-success-pop", "is-failure-pop");
+            }, 800);
+          }
+        }, 70);
+      }
+
+      markRoomResult(success);
+
+      if (damage > 0) {
+        markCharacterDamage(characterId);
+      }
+    }
+
+    function checkForNewAttempt() {
+      const payload = getPayload();
+
+      if (!payload) {
+        return;
+      }
+
+      showAttemptAnimation(payload);
+    }
+
+    closeButton.addEventListener("click", closeOverlay);
+
+    overlay.addEventListener("click", function (event) {
+      if (event.target === overlay) {
+        closeOverlay();
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", checkForNewAttempt);
+
+    document.body.addEventListener("htmx:afterSettle", function () {
+    if (document.getElementById("dungeon-live-panel")) {
+        checkForNewAttempt();
+    }
+    });
+  })();
+</script>
 {% endblock %}

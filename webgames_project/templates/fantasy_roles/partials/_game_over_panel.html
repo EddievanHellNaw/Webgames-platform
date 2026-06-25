@@ -1,0 +1,64 @@
+<section class="fr-game-over-panel">
+  <div class="fr-game-over-symbol">
+    {% if run.failure_reason == "OUT_OF_AP" %}
+      ✦
+    {% else %}
+      ☠
+    {% endif %}
+  </div>
+
+  <span class="fr-kicker">Dungeon Failed</span>
+
+  {% if run.failure_reason == "OUT_OF_AP" %}
+    <h1>The Party Ran Out of AP</h1>
+
+    <p>
+      The party no longer has enough energy to continue. The dungeon overwhelms
+      the heroes before they can reach the final challenge.
+    </p>
+  {% elif run.failure_reason == "PARTY_DEFEATED" %}
+    <h1>The Party Was Defeated</h1>
+
+    <p>
+      Every hero has fallen. The dungeon grows silent as the adventure comes to
+      an end.
+    </p>
+  {% else %}
+    <h1>Game Over</h1>
+
+    <p>
+      The party failed the dungeon.
+    </p>
+  {% endif %}
+
+  <div class="fr-game-over-party">
+    {% for member in party_members %}
+      {% with hero=member.character %}
+        <article class="fr-game-over-hero">
+          <div class="fr-game-over-avatar">
+            {% with portrait=hero.selected_image %}
+              {% if portrait %}
+                <img src="{{ portrait.url }}" alt="{{ hero.character_name }}">
+              {% else %}
+                <span>{{ hero.character_name|slice:":1" }}</span>
+              {% endif %}
+            {% endwith %}
+          </div>
+
+          <div>
+            <strong>{{ hero.character_name }}</strong>
+            <small>
+              ♥ {{ hero.current_life }}
+              · ✦ {{ hero.current_action_points }}
+            </small>
+          </div>
+        </article>
+      {% endwith %}
+    {% endfor %}
+  </div>
+
+  <p class="fr-muted-text">
+    Ask your teacher if the party should restart, review the run, or continue
+    the story in another way.
+  </p>
+</section>

@@ -9,7 +9,12 @@
       {% for member in party_members %}
         {% with member_character=member.character %}
           <article
-            class="fr-hero-chip {% if member_character.id == character.id %}is-current-player{% endif %} {% if membership.party.current_dm_id == member_character.id %}is-dm{% endif %}"
+            class="fr-hero-chip
+              {% if member_character.id == character.id %}is-current-player{% endif %}
+              {% if membership.party.current_dm_id == member_character.id %}is-dm{% endif %}
+              {% if run and run.current_turn_character_id == member_character.id %}is-turn{% endif %}
+            "
+            data-character-id="{{ member_character.id }}"
           >
             <div class="fr-hero-name">
               {{ member_character.character_name }}
