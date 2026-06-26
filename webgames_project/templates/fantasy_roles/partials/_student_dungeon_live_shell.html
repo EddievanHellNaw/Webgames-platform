@@ -2,7 +2,7 @@
   id="dungeon-live-panel"
   {% if not run or run.status != "FAILED" %}
     hx-get="{% url 'fantasy_roles:student_dungeon_live_panel' session.join_code %}"
-    hx-trigger="load, every 2s"
+    hx-trigger="every 6s [!document.body.classList.contains('fr-dungeon-input-active')]"
     hx-swap="outerHTML"
   {% endif %}
 >

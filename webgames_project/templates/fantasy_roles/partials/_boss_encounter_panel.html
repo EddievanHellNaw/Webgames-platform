@@ -1,0 +1,301 @@
+{% if boss_encounter %}
+  <section class="fr-panel fr-boss-board-panel">
+    <div class="fr-boss-board-grid">
+
+      <!-- LEFT SIDE: PARTY / TURN ORDER -->
+      <section class="fr-boss-board-party">
+        <div class="fr-panel-heading">
+          <span class="fr-kicker">Turn Order</span>
+
+          {% if boss_encounter.status == "WON" %}
+            <strong>Victory</strong>
+          {% elif boss_encounter.status == "LOST" %}
+            <strong>Defeat</strong>
+          {% elif boss_encounter.current_turn_character %}
+            <strong>{{ boss_encounter.current_turn_character.character_name }}'s turn</strong>
+          {% else %}
+            <strong>Resolving combat...</strong>
+          {% endif %}
+        </div>
+
+        <div class="fr-boss-roster-list">
+          {% for member in party_members %}
+            {% with member_character=member.character %}
+              <article
+                class="fr-boss-roster-row
+                {% if boss_encounter.current_turn_character_id == member_character.id %}is-current-turn{% endif %}
+                {% if member_character.current_life <= 0 %}is-defeated{% endif %}"
+              >
+                <div class="fr-boss-roster-thumb">
+                  {% if member_character.selected_image %}
+                    <img
+                      src="{{ member_character.selected_image.url }}"
+                      alt="{{ member_character.character_name }}"
+                    >
+                  {% else %}
+                    <span>{{ member_character.character_name|first }}</span>
+                  {% endif %}
+                </div>
+
+                <div class="fr-boss-roster-info">
+                  <strong>{{ member_character.character_name }}</strong>
+
+                  <div class="fr-boss-mini-bars">
+                    <span>Life {{ member_character.current_life }}</span>
+                    <span>AP {{ member_character.current_action_points }}</span>
+                  </div>
+                </div>
+
+                {% if boss_encounter.current_turn_character_id == member_character.id %}
+                  <span class="fr-boss-turn-marker">TURN</span>
+                {% endif %}
+              </article>
+            {% endwith %}
+          {% endfor %}
+        </div>
+      </section>
+
+      <!-- RIGHT SIDE: BOSS CARD -->
+      <section class="fr-boss-board-boss">
+        <div class="fr-boss-card-mini">
+          <div class="fr-boss-card-image">
+            {% if boss_encounter.phase == "RAGE" and boss_encounter.boss.rage_image %}
+              <img
+                src="{{ boss_encounter.boss.rage_image.url }}"
+                alt="{{ boss_encounter.current_boss_name }}"
+              >
+            {% elif boss_encounter.boss.image %}
+              <img
+                src="{{ boss_encounter.boss.image.url }}"
+                alt="{{ boss_encounter.current_boss_name }}"
+              >
+            {% else %}
+              <span>♛</span>
+            {% endif %}
+          </div>
+
+          <div class="fr-boss-card-body">
+            <span class="fr-kicker">
+              Final Boss · {{ boss_encounter.get_phase_display }}
+            </span>
+
+            <h2>{{ boss_encounter.current_boss_name }}</h2>
+
+            <div class="fr-boss-hp-block is-board">
+              <div class="fr-boss-hp-label">
+                <span>Boss Life</span>
+                <strong>
+                  {{ boss_encounter.current_life }}/{{ boss_encounter.max_life_for_current_phase }}
+                </strong>
+              </div>
+
+              <div class="fr-boss-hp-bar">
+                <div
+                  class="fr-boss-hp-fill"
+                  style="--boss-hp-percent: {{ boss_hp_percent }}%;"
+                ></div>
+              </div>
+            </div>
+
+            <div class="fr-status-row">
+              <span class="fr-status-pill">
+                Difficulty {{ boss_encounter.current_difficulty }}
+              </span>
+
+              <span class="fr-status-pill">
+                Round {{ boss_encounter.round_number }}
+              </span>
+            </div>
+          </div>
+        </div>
+      </section>
+    </div>
+
+    <!-- ACTION AREA -->
+    <section class="fr-boss-board-actions">
+      {% if boss_encounter.status == "WON" %}
+        <div class="fr-boss-result-card is-victory">
+          <span class="fr-kicker">Realm Saved</span>
+          <strong>The party defeated {{ boss_encounter.current_boss_name }}.</strong>
+          <p>{{ boss_encounter.boss.victory_text }}</p>
+        </div>
+
+      {% elif boss_encounter.status == "LOST" %}
+        <div class="fr-boss-result-card is-defeat">
+          <span class="fr-kicker">Party Defeated</span>
+          <strong>The boss was too powerful.</strong>
+          <p>{{ boss_encounter.boss.defeat_text }}</p>
+        </div>
+
+      {% elif is_boss_player_turn %}
+        <div class="fr-boss-action-header">
+          <span class="fr-kicker">Available Actions</span>
+          <strong>
+            Roll d6. You need {{ boss_encounter.current_difficulty }} or higher to damage the boss.
+          </strong>
+        </div>
+
+        <div class="fr-boss-action-buttons">
+          <form
+            method="post"
+            action="{% url 'fantasy_roles:boss_basic_attack' session.join_code %}"
+            class="fr-boss-action-form"
+          >
+            {% csrf_token %}
+
+            <button
+              class="fr-btn fr-btn-primary"
+              type="submit"
+              {% if not boss_can_basic_attack %}disabled{% endif %}
+            >
+              Basic Attack
+            </button>
+          </form>
+
+          <form
+            method="post"
+            action="{% url 'fantasy_roles:boss_pass_turn' session.join_code %}"
+            class="fr-boss-action-form"
+          >
+            {% csrf_token %}
+
+            <button class="fr-btn" type="submit">
+              Pass Turn
+            </button>
+          </form>
+        </div>
+
+        {% if available_boss_skills %}
+          <div class="fr-boss-board-skills">
+            {% for skill in available_boss_skills %}
+              <form
+                method="post"
+                action="{% url 'fantasy_roles:boss_use_skill' session.join_code %}"
+                class="fr-boss-board-skill"
+              >
+                {% csrf_token %}
+                <input type="hidden" name="skill_id" value="{{ skill.id }}">
+
+                <div>
+                  <span class="fr-kicker">{{ skill.ap_cost }} AP</span>
+                  <strong>{{ skill.name }}</strong>
+
+                  {% if skill.description %}
+                    <p>{{ skill.description }}</p>
+                  {% endif %}
+                </div>
+
+                <button class="fr-btn fr-btn-primary" type="submit">
+                  Use Skill
+                </button>
+              </form>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        {% if not boss_can_basic_attack and boss_attack_block_reason %}
+          <p class="fr-muted-text">
+            {{ boss_attack_block_reason }}
+          </p>
+        {% endif %}
+
+      {% elif boss_encounter.current_turn_character %}
+        <div class="fr-boss-waiting-card">
+          <span class="fr-kicker">Waiting</span>
+          <strong>
+            Waiting for {{ boss_encounter.current_turn_character.character_name }} to act.
+          </strong>
+        </div>
+
+      {% else %}
+        <div class="fr-boss-waiting-card">
+          <span class="fr-kicker">Boss Turn</span>
+          <strong>The boss is resolving its action.</strong>
+        </div>
+      {% endif %}
+    </section>
+  </section>
+
+  <!-- COLLAPSED BATTLE LOG -->
+  <details class="fr-panel fr-boss-log-panel fr-boss-log-details">
+    <summary>
+      <span>
+        <span class="fr-kicker">Battle Log</span>
+        <strong>Final Battle Events</strong>
+      </span>
+
+      <span class="fr-log-summary-hint">
+        Tap to view
+      </span>
+    </summary>
+
+    {% if boss_logs %}
+      <div class="fr-party-log-list fr-boss-log-list-compact">
+        {% for log in boss_logs %}
+          <article class="fr-party-log-entry {% if log.success %}is-success{% else %}is-failure{% endif %}">
+            <span class="fr-kicker">
+              Round {{ log.round_number }} · {{ log.get_action_type_display }}
+            </span>
+
+            <strong>
+              {% if log.actor_type == "BOSS" %}
+                {{ boss_encounter.current_boss_name }}
+              {% elif log.character %}
+                {{ log.character.character_name }}
+              {% else %}
+                System
+              {% endif %}
+            </strong>
+
+            {% if log.die_roll %}
+              <div class="fr-teacher-log-meta">
+                <span>Roll: {{ log.die_roll }}</span>
+
+                {% if log.final_roll_total %}
+                  <span>Total: {{ log.final_roll_total }}</span>
+                {% endif %}
+
+                {% if log.difficulty_at_roll %}
+                  <span>Difficulty: {{ log.difficulty_at_roll }}</span>
+                {% endif %}
+
+                {% if log.damage_to_boss %}
+                  <span>Boss Damage: {{ log.damage_to_boss }}</span>
+                {% endif %}
+
+                {% if log.damage_to_players %}
+                  <span>Player Damage: {{ log.damage_to_players }}</span>
+                {% endif %}
+              </div>
+            {% endif %}
+
+            {% if log.result_text %}
+              <p class="fr-teacher-result-text">
+                {{ log.result_text }}
+              </p>
+            {% endif %}
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <p class="fr-muted-text">
+        The final battle has begun.
+      </p>
+    {% endif %}
+  </details>
+
+  {% if latest_boss_log %}
+    <div
+      id="latest-boss-log-payload"
+      hidden
+      data-log-id="{{ latest_boss_log.id }}"
+      data-boss-name="{{ boss_encounter.current_boss_name }}"
+      data-phase="{{ boss_encounter.get_phase_display }}"
+      data-ability-name="{% if latest_boss_log.boss_ability %}{{ latest_boss_log.boss_ability.name }}{% else %}Boss Ability{% endif %}"
+      data-result-text="{{ latest_boss_log.result_text|escape }}"
+      data-damage="{{ latest_boss_log.damage_to_players|default:'0' }}"
+      data-healing="{{ latest_boss_log.healing_done|default:'0' }}"
+      data-die-roll="{{ latest_boss_log.die_roll|default:'' }}"
+    ></div>
+  {% endif %}
+{% endif %}

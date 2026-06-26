@@ -1,0 +1,72 @@
+{% if card.run and card.run.status == "BOSS_READY" %}
+  <section class="fr-teacher-boss-status">
+    <span class="fr-kicker">Final Battle Ready</span>
+
+    {% if card.boss_template %}
+      <strong>{{ card.boss_template.normal_name }}</strong>
+
+      <p class="fr-muted-text">
+        The dungeon is cleared. The party can start the boss fight and will
+        receive a full Life/AP refresh.
+      </p>
+
+      <form
+        method="post"
+        action="{% url 'fantasy_roles:teacher_start_boss_fight' session.join_code card.run.id %}"
+      >
+        {% csrf_token %}
+
+        <button class="fr-btn fr-btn-primary" type="submit">
+          Start Boss Fight
+        </button>
+      </form>
+    {% else %}
+      <p class="fr-muted-text">
+        This dungeon does not have a boss assigned yet.
+      </p>
+    {% endif %}
+  </section>
+
+{% elif card.run and card.run.status == "BOSS_ACTIVE" and card.boss_encounter %}
+  <section class="fr-teacher-boss-status">
+    <span class="fr-kicker">Boss Fight Active</span>
+
+    <strong>{{ card.boss_encounter.current_boss_name }}</strong>
+
+    <div class="fr-boss-hp-block is-compact">
+      <div class="fr-boss-hp-label">
+        <span>Boss Life</span>
+        <strong>
+          {{ card.boss_encounter.current_life }}/{{ card.boss_encounter.max_life_for_current_phase }}
+        </strong>
+      </div>
+
+      <div class="fr-boss-hp-bar">
+        <div
+          class="fr-boss-hp-fill"
+          style="--boss-hp-percent: {{ card.boss_hp_percent }}%;"
+        ></div>
+      </div>
+    </div>
+
+    <div class="fr-status-row">
+      <span class="fr-status-pill">
+        {{ card.boss_encounter.get_phase_display }}
+      </span>
+
+      <span class="fr-status-pill">
+        Difficulty {{ card.boss_encounter.current_difficulty }}
+      </span>
+
+      {% if card.boss_encounter.current_actor == "BOSS" %}
+        <span class="fr-status-pill is-gold">
+          Boss Turn
+        </span>
+      {% elif card.boss_encounter.current_turn_character %}
+        <span class="fr-status-pill is-gold">
+          {{ card.boss_encounter.current_turn_character.character_name }}
+        </span>
+      {% endif %}
+    </div>
+  </section>
+{% endif %}

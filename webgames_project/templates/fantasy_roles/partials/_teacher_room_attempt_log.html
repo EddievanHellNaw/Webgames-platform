@@ -1,0 +1,89 @@
+<section class="fr-panel fr-teacher-attempt-log">
+  <div class="fr-panel-heading">
+    <span class="fr-kicker">Live Language Log</span>
+    <strong>Student Room Actions</strong>
+  </div>
+
+  <p class="fr-muted-text">
+    Use this log to monitor trap sentences, room actions, rolls, success/failure,
+    and damage in real time.
+  </p>
+
+  {% if room_attempt_log %}
+    <div class="fr-teacher-log-list">
+      {% for attempt in room_attempt_log %}
+        <article class="fr-teacher-log-entry {% if attempt.success %}is-success{% else %}is-failure{% endif %}">
+          <header class="fr-teacher-log-header">
+            <div>
+              <span class="fr-kicker">
+                {{ attempt.room.run.party.name }}
+                · Room {{ attempt.room.room_number }}
+                · {{ attempt.room.get_room_type_display }}
+              </span>
+
+              <strong>
+                {{ attempt.character.character_name }}
+                {% if attempt.skill_used %}
+                  used {{ attempt.skill_used.name }}
+                {% else %}
+                  took an action
+                {% endif %}
+              </strong>
+            </div>
+
+            <span class="fr-teacher-log-result">
+              {% if attempt.success %}
+                Success
+              {% else %}
+                Failure
+              {% endif %}
+            </span>
+          </header>
+
+          {% if attempt.action_text %}
+            <div class="fr-teacher-written-action">
+              <span class="fr-kicker">Student sentence/action</span>
+              <p>{{ attempt.action_text }}</p>
+            </div>
+          {% endif %}
+
+          <div class="fr-teacher-log-meta">
+            {% if attempt.die_roll %}
+              <span>Roll: {{ attempt.die_roll }}</span>
+            {% endif %}
+
+            {% if attempt.final_roll_total %}
+              <span>Total: {{ attempt.final_roll_total }}</span>
+            {% endif %}
+
+            {% if attempt.difficulty_at_roll %}
+              <span>Difficulty: {{ attempt.difficulty_at_roll }}</span>
+            {% endif %}
+
+            {% if attempt.damage_taken %}
+              <span>Damage: {{ attempt.damage_taken }}</span>
+            {% endif %}
+
+            {% if attempt.item_awarded %}
+              <span>Item: {{ attempt.item_awarded.name }}</span>
+            {% endif %}
+          </div>
+
+          {% if attempt.result_text %}
+            <p class="fr-teacher-result-text">
+              {{ attempt.result_text }}
+            </p>
+          {% endif %}
+
+          <small class="fr-muted-text">
+            {{ attempt.created_at|date:"H:i:s" }}
+          </small>
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="fr-muted-text">
+      No room actions have been submitted yet.
+    </p>
+  {% endif %}
+</section>

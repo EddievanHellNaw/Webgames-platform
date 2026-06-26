@@ -1,0 +1,68 @@
+<section class="fr-panel fr-boss-ready-panel">
+  <div class="fr-panel-heading">
+    <span class="fr-kicker">Final Battle</span>
+    <strong>The Boss Awaits</strong>
+  </div>
+
+  {% if boss_template %}
+    <div class="fr-boss-ready-layout">
+      <div class="fr-boss-ready-art">
+        {% if boss_template.image %}
+          <img src="{{ boss_template.image.url }}" alt="{{ boss_template.normal_name }}">
+        {% else %}
+          <span>♛</span>
+        {% endif %}
+      </div>
+
+      <div>
+        <span class="fr-kicker">{{ run.dungeon.kingdom }}</span>
+        <h2>{{ boss_template.normal_name }}</h2>
+
+        {% if boss_template.intro_text %}
+          <p>{{ boss_template.intro_text }}</p>
+        {% else %}
+          <p>
+            The final enemy has appeared. The party may enter the last battle
+            and fight to save the realm.
+          </p>
+        {% endif %}
+
+        <div class="fr-status-row">
+          <span class="fr-status-pill">
+            Difficulty {{ boss_template.phase_one_difficulty }}
+          </span>
+
+          <span class="fr-status-pill">
+            Life {{ boss_template.phase_one_life }}
+          </span>
+
+          <span class="fr-status-pill is-gold">
+            Party refresh on start
+          </span>
+        </div>
+
+        {% if is_current_dm %}
+          <form
+            method="post"
+            action="{% url 'fantasy_roles:start_boss_fight' session.join_code %}"
+            class="fr-boss-start-form"
+          >
+            {% csrf_token %}
+
+            <button class="fr-btn fr-btn-primary" type="submit">
+              Start Boss Fight
+            </button>
+          </form>
+        {% else %}
+          <p class="fr-muted-text">
+            Waiting for the DM to start the final battle.
+          </p>
+        {% endif %}
+      </div>
+    </div>
+  {% else %}
+    <p class="fr-muted-text">
+      This dungeon does not have a boss assigned yet.
+    </p>
+  {% endif %}
+</section>

@@ -154,6 +154,31 @@
           {% endif %}
 
           {% if run.current_room.room_type == "TRAP" %}
+          {% if trap_progress %}
+  <div class="fr-trap-progress-card">
+    <span class="fr-kicker">Trap Group Check</span>
+
+    <strong>
+      Round {{ trap_progress.round }}
+    </strong>
+
+    <p>
+      Successes:
+      {{ trap_progress.success_count }}/{{ trap_progress.required_successes }}
+      needed
+    </p>
+
+    <p>
+      Attempts submitted:
+      {{ trap_progress.attempted_count }}/{{ trap_progress.living_count }}
+    </p>
+  </div>
+{% endif %}
+{% if has_attempted_current_trap_round %}
+  <p class="fr-muted-text">
+    You already submitted your action for this trap round. Wait for your party.
+  </p>
+{% else %}
             <form
               method="post"
               action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
@@ -179,6 +204,7 @@
                 Roll for Action
               </button>
             </form>
+{% endif %}
 
           {% elif run.current_room.room_type == "COMBAT" %}
             <p class="fr-muted-text">

@@ -21,6 +21,17 @@
             </span>
           {% endif %}
           {% if card.run.status == "FAILED" %}
+  <form
+    method="post"
+    action="{% url 'fantasy_roles:retry_dungeon_run' session.join_code card.run.id %}"
+    class="fr-retry-dungeon-form"
+  >
+    {% csrf_token %}
+
+    <button class="fr-btn fr-btn-primary" type="submit">
+      Retry Dungeon
+    </button>
+  </form>
   <div class="fr-teacher-failed-run">
     {% if card.run.failure_reason == "OUT_OF_AP" %}
       <strong>Out of AP</strong>
@@ -61,7 +72,7 @@
                 <span class="fr-status-pill">
                   {{ card.run.get_status_display }}
                 </span>
-
+{% include "fantasy_roles/partials/_teacher_boss_status.html" %}
                 <span class="fr-status-pill">
                   {{ card.cleared_count }}/{{ card.total_rooms }} Rooms
                 </span>
@@ -168,6 +179,7 @@
               </p>
             {% endfor %}
           </div>
+          {% include "fantasy_roles/partials/_teacher_party_language_log.html" %}
         </section>
       </article>
     {% endfor %}

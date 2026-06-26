@@ -18,7 +18,12 @@ from .models import (
     DungeonRunRoom,
     DungeonRunConnection,
     RoomAttempt,
-)
+    BossTemplate,
+    BossAbility,
+    BossEncounter,
+    BossCombatEffect,
+    BossActionLog,
+    )   
 
 class ClassSkillInline(admin.TabularInline):
     model = ClassSkill
@@ -115,6 +120,105 @@ class ItemTemplateInline(admin.TabularInline):
         "is_active",
     )
 
+class BossAbilityInline(admin.TabularInline):
+    model = BossAbility
+    extra = 1
+    fields = (
+        "name",
+        "phase",
+        "slot",
+        "effect_code",
+        "effect_value",
+        "secondary_value",
+        "duration_turns",
+        "order",
+        "is_active",
+        "description",
+    )
+
+
+@admin.register(BossTemplate)
+class BossTemplateAdmin(admin.ModelAdmin):
+    list_display = (
+        "normal_name",
+        "rage_name",
+        "dungeon",
+        "phase_one_life",
+        "phase_two_life",
+        "phase_one_difficulty",
+        "phase_two_difficulty",
+        "is_active",
+    )
+    list_filter = ("is_active", "dungeon")
+    search_fields = ("normal_name", "rage_name", "dungeon__name")
+    inlines = [BossAbilityInline]
+
+
+@admin.register(BossEncounter)
+class BossEncounterAdmin(admin.ModelAdmin):
+    list_display = (
+        "boss",
+        "run",
+        "status",
+        "phase",
+        "current_life",
+        "current_actor",
+        "current_turn_character",
+        "next_boss_ability_slot",
+        "round_number",
+        "player_phase_number",
+        "has_transformed",
+    )
+    list_filter = ("status", "phase", "current_actor", "has_transformed")
+    search_fields = (
+        "boss__normal_name",
+        "boss__rage_name",
+        "run__party__name",
+    )
+    readonly_fields = ("created_at", "updated_at")
+
+
+@admin.register(BossCombatEffect)
+class BossCombatEffectAdmin(admin.ModelAdmin):
+    list_display = (
+        "encounter",
+        "target_type",
+        "target_character",
+        "effect_code",
+        "value",
+        "remaining_turns",
+        "is_active",
+    )
+    list_filter = ("target_type", "effect_code", "is_active")
+    search_fields = (
+        "encounter__boss__normal_name",
+        "target_character__character_name",
+    )
+
+
+@admin.register(BossActionLog)
+class BossActionLogAdmin(admin.ModelAdmin):
+    list_display = (
+        "encounter",
+        "actor_type",
+        "action_type",
+        "character",
+        "boss_ability",
+        "phase",
+        "round_number",
+        "damage_to_boss",
+        "damage_to_players",
+        "success",
+        "created_at",
+    )
+    list_filter = ("actor_type", "action_type", "phase", "success")
+    search_fields = (
+        "encounter__boss__normal_name",
+        "character__character_name",
+        "boss_ability__name",
+        "result_text",
+    )
+    readonly_fields = ("created_at",)
 
 @admin.register(DungeonRunRoom)
 class DungeonRunRoomAdmin(admin.ModelAdmin):

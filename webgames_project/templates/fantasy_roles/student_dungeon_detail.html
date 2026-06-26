@@ -29,6 +29,33 @@
     </button>
   </article>
 </section>
+<div id="boss-attack-overlay" class="fr-boss-attack-overlay" hidden>
+  <div class="fr-boss-attack-card">
+    <div class="fr-boss-attack-symbol">♛</div>
+
+    <span class="fr-kicker" id="boss-attack-phase">
+      Boss Turn
+    </span>
+
+    <h2 id="boss-attack-title">
+      Boss Ability
+    </h2>
+
+    <p id="boss-attack-result">
+      The boss acts.
+    </p>
+
+    <div class="fr-boss-attack-meta" id="boss-attack-meta"></div>
+
+    <button
+      type="button"
+      class="fr-btn fr-btn-primary"
+      id="boss-attack-close"
+    >
+      Continue
+    </button>
+  </div>
+</div>
 <script>
   (function () {
     const overlay = document.getElementById("roll-result-overlay");
@@ -182,6 +209,148 @@
       }
     }
 
+  
+  (function () {
+    const TEXTAREA_KEY_PREFIX = "fantasy_roles_textarea_";
+    let inputBlurTimeout = null;
+
+    function getTextareaKey(textarea) {
+      return TEXTAREA_KEY_PREFIX + window.location.pathname + "_" + textarea.id;
+    }
+
+    function isDungeonInput(element) {
+      return (
+        element &&
+        element.matches &&
+        element.matches("#dungeon-live-panel textarea, #dungeon-live-panel input, #dungeon-live-panel select")
+      );
+    }
+
+    function isWritingNow() {
+      return isDungeonInput(document.activeElement);
+    }
+
+    function setInputActive() {
+      window.clearTimeout(inputBlurTimeout);
+      document.body.classList.add("fr-dungeon-input-active");
+    }
+
+    function clearInputActiveSoon() {
+      window.clearTimeout(inputBlurTimeout);
+
+      inputBlurTimeout = window.setTimeout(function () {
+        if (!isWritingNow()) {
+          document.body.classList.remove("fr-dungeon-input-active");
+        }
+      }, 1200);
+    }
+
+    function saveTextarea(textarea) {
+      if (!textarea.id) {
+        return;
+      }
+
+      sessionStorage.setItem(
+        getTextareaKey(textarea),
+        textarea.value
+      );
+    }
+
+    function restoreTextareas() {
+      const textareas = document.querySelectorAll("#dungeon-live-panel textarea[id]");
+
+      textareas.forEach(function (textarea) {
+        const savedValue = sessionStorage.getItem(getTextareaKey(textarea));
+
+        if (savedValue !== null && textarea.value === "") {
+          textarea.value = savedValue;
+        }
+      });
+    }
+
+    function clearSubmittedTextareas(form) {
+      const textareas = form.querySelectorAll("textarea[id]");
+
+      textareas.forEach(function (textarea) {
+        sessionStorage.removeItem(getTextareaKey(textarea));
+      });
+    }
+
+    document.addEventListener("focusin", function (event) {
+      if (isDungeonInput(event.target)) {
+        setInputActive();
+      }
+    });
+
+    document.addEventListener("focusout", function (event) {
+      if (isDungeonInput(event.target)) {
+        clearInputActiveSoon();
+      }
+    });
+
+    document.addEventListener("input", function (event) {
+      if (
+        event.target &&
+        event.target.matches("#dungeon-live-panel textarea[id]")
+      ) {
+        setInputActive();
+        saveTextarea(event.target);
+      }
+    });
+
+    document.addEventListener("submit", function (event) {
+      if (event.target && event.target.closest("#dungeon-live-panel")) {
+        clearSubmittedTextareas(event.target);
+        document.body.classList.remove("fr-dungeon-input-active");
+      }
+    });
+
+    document.body.addEventListener("htmx:beforeRequest", function (event) {
+      const requestElement = event.detail && event.detail.elt
+        ? event.detail.elt
+        : event.target;
+
+      if (!requestElement || requestElement.id !== "dungeon-live-panel") {
+        return;
+      }
+
+      if (document.body.classList.contains("fr-dungeon-input-active")) {
+        event.preventDefault();
+        return;
+      }
+
+      const rollOverlay = document.getElementById("roll-result-overlay");
+
+      if (rollOverlay && !rollOverlay.hidden) {
+        event.preventDefault();
+      }
+    });
+
+    document.body.addEventListener("htmx:beforeSwap", function (event) {
+      const swapTarget = event.detail && event.detail.target
+        ? event.detail.target
+        : event.target;
+
+      if (!swapTarget || swapTarget.id !== "dungeon-live-panel") {
+        return;
+      }
+
+      if (document.body.classList.contains("fr-dungeon-input-active")) {
+        event.preventDefault();
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", restoreTextareas);
+
+    document.body.addEventListener("htmx:afterSettle", function () {
+      restoreTextareas();
+
+      if (isWritingNow()) {
+        setInputActive();
+      }
+    });
+  })();
+
     function checkForNewAttempt() {
       const payload = getPayload();
 
@@ -206,6 +375,142 @@
     if (document.getElementById("dungeon-live-panel")) {
         checkForNewAttempt();
     }
+    });
+  })();
+</script>
+<script>
+  (function () {
+    const SEEN_BOSS_LOG_PREFIX = "fantasy_roles_seen_boss_log_";
+
+    function getBossPayload() {
+      return document.getElementById("latest-boss-log-payload");
+    }
+
+    function getOverlay() {
+      return document.getElementById("boss-attack-overlay");
+    }
+
+    function bossOverlayIsOpen() {
+      const overlay = getOverlay();
+      return overlay && !overlay.hidden;
+    }
+
+    function markBossLogSeen(logId) {
+      sessionStorage.setItem(SEEN_BOSS_LOG_PREFIX + logId, "true");
+    }
+
+    function bossLogWasSeen(logId) {
+      return sessionStorage.getItem(SEEN_BOSS_LOG_PREFIX + logId) === "true";
+    }
+
+    function showBossAttackPopup(payload) {
+      const overlay = getOverlay();
+
+      if (!overlay || !payload) return;
+
+      const logId = payload.dataset.logId;
+
+      if (!logId || bossLogWasSeen(logId)) return;
+
+      const bossName = payload.dataset.bossName || "The Boss";
+      const phase = payload.dataset.phase || "Boss Turn";
+      const abilityName = payload.dataset.abilityName || "Boss Ability";
+      const resultText = payload.dataset.resultText || "";
+      const damage = Number(payload.dataset.damage || 0);
+      const healing = Number(payload.dataset.healing || 0);
+      const dieRoll = payload.dataset.dieRoll || "";
+
+      const phaseElement = document.getElementById("boss-attack-phase");
+      const titleElement = document.getElementById("boss-attack-title");
+      const resultElement = document.getElementById("boss-attack-result");
+      const metaElement = document.getElementById("boss-attack-meta");
+
+      phaseElement.textContent = bossName + " · " + phase;
+      titleElement.textContent = abilityName;
+      resultElement.textContent = resultText || bossName + " uses " + abilityName + ".";
+
+      const metaParts = [];
+
+      if (dieRoll) {
+        metaParts.push("Roll: " + dieRoll);
+      }
+
+      if (damage > 0) {
+        metaParts.push("Damage: " + damage);
+      }
+
+      if (healing > 0) {
+        metaParts.push("Healing: " + healing);
+      }
+
+      metaElement.innerHTML = "";
+
+      metaParts.forEach(function (text) {
+        const pill = document.createElement("span");
+        pill.textContent = text;
+        metaElement.appendChild(pill);
+      });
+
+      overlay.hidden = false;
+      document.body.classList.add("fr-modal-open");
+
+      markBossLogSeen(logId);
+    }
+
+    function closeBossAttackPopup() {
+      const overlay = getOverlay();
+
+      if (!overlay) return;
+
+      overlay.hidden = true;
+      document.body.classList.remove("fr-modal-open");
+    }
+
+    function checkForNewBossLog() {
+      const payload = getBossPayload();
+
+      if (!payload) return;
+
+      showBossAttackPopup(payload);
+    }
+
+    document.addEventListener("click", function (event) {
+      if (event.target && event.target.id === "boss-attack-close") {
+        closeBossAttackPopup();
+      }
+
+      if (
+        event.target &&
+        event.target.id === "boss-attack-overlay"
+      ) {
+        closeBossAttackPopup();
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && bossOverlayIsOpen()) {
+        closeBossAttackPopup();
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+      checkForNewBossLog();
+    });
+
+    document.body.addEventListener("htmx:afterSettle", function () {
+      checkForNewBossLog();
+    });
+
+    document.body.addEventListener("htmx:beforeRequest", function (event) {
+      const requestElement = event.detail && event.detail.elt
+        ? event.detail.elt
+        : event.target;
+
+      if (!requestElement || requestElement.id !== "dungeon-live-panel") return;
+
+      if (bossOverlayIsOpen()) {
+        event.preventDefault();
+      }
     });
   })();
 </script>

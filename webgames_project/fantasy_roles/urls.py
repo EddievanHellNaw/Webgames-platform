@@ -80,4 +80,44 @@ urlpatterns = [
     views.pass_room_turn,
     name="pass_room_turn",
     ),
+
+    path(
+    "<str:join_code>/teacher/dungeons/<int:run_id>/retry/",
+    views.retry_dungeon_run,
+    name="retry_dungeon_run",
+    ),
+
+    path(
+    "<str:join_code>/boss/start/",
+    views.start_boss_fight,
+    name="start_boss_fight",
+    ),
+
+    path(
+    "<str:join_code>/teacher/dungeons/<int:run_id>/boss/start/",
+    views.teacher_start_boss_fight,
+    name="teacher_start_boss_fight",
+    ),
+
+    path(
+        "<str:join_code>/boss/activate/",
+        views.activate_boss_ability,
+        name="activate_boss_ability",
+    ),
+    path(
+        "<str:join_code>/boss/basic-attack/",
+        views.boss_basic_attack,
+        name="boss_basic_attack",
+    ),
+    path(
+        "<str:join_code>/boss/pass/",
+        views.boss_pass_turn,
+        name="boss_pass_turn",
+    ),
+
+    path(
+    "<str:join_code>/boss/use-skill/",
+    views.boss_use_skill,
+    name="boss_use_skill",
+    ),
 ]

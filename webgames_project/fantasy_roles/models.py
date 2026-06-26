@@ -800,8 +800,442 @@ class PartyDungeonRun(models.Model):
     def __str__(self):
         return f"{self.party.name} in {self.dungeon.name}"
     
+class BossTemplate(models.Model):
+    dungeon = models.OneToOneField(
+        Dungeon,
+        on_delete=models.CASCADE,
+        related_name="boss_template",
+    )
+
+    normal_name = models.CharField(max_length=120)
+    rage_name = models.CharField(max_length=120, blank=True)
+
+    image = models.ImageField(
+        upload_to="bosses/",
+        blank=True,
+        null=True,
+    )
+
+    rage_image = models.ImageField(
+        upload_to="bosses/rage/",
+        blank=True,
+        null=True,
+    )
+
+    phase_one_life = models.PositiveIntegerField(default=30)
+    phase_two_life = models.PositiveIntegerField(default=15)
+
+    phase_one_difficulty = models.PositiveSmallIntegerField(default=3)
+    phase_two_difficulty = models.PositiveSmallIntegerField(default=4)
+
+    transformation_name = models.CharField(
+        max_length=120,
+        blank=True,
+        help_text="Example: Goethia's Mask, Cool Down, Chain the Beast.",
+    )
+
+    intro_text = models.TextField(blank=True)
+    transformation_text = models.TextField(blank=True)
+    victory_text = models.TextField(blank=True)
+    defeat_text = models.TextField(blank=True)
+
+    is_active = models.BooleanField(default=True)
+
+    def __str__(self):
+        return f"{self.normal_name} · {self.dungeon.name}"
+
+    @property
+    def rage_display_name(self):
+        return self.rage_name or self.normal_name    
     
+class BossAbility(models.Model):
+    class Phase(models.TextChoices):
+        NORMAL = "NORMAL", "Normal Form"
+        RAGE = "RAGE", "Rage Form"
+        BOTH = "BOTH", "Both Forms"
+
+    class Slot(models.TextChoices):
+        FIRST = "FIRST", "First Ability"
+        SECOND = "SECOND", "Second Ability"
+
+    class EffectCode(models.TextChoices):
+        NONE = "NONE", "No Special Effect"
+
+        DAMAGE_LOWEST_LIFE = (
+            "DAMAGE_LOWEST_LIFE",
+            "Damage player with lowest life",
+        )
+
+        PARALYZE_HIGHEST_ATTACK = (
+            "PARALYZE_HIGHEST_ATTACK",
+            "Paralyze player with highest attack",
+        )
+
+        WEAKEN_HIGHEST_ATTACK = (
+            "WEAKEN_HIGHEST_ATTACK",
+            "Highest attack player deals limited damage",
+        )
+
+        DAMAGE_RANDOM_AND_SKIP = (
+            "DAMAGE_RANDOM_AND_SKIP",
+            "Damage random player and skip their action",
+        )
+
+        DAMAGE_PARTY_D6_PLUS = (
+            "DAMAGE_PARTY_D6_PLUS",
+            "Deal d6 plus value damage to party",
+        )
+
+        DAMAGE_RANDOM_AND_PARALYZE = (
+            "DAMAGE_RANDOM_AND_PARALYZE",
+            "Damage random player and paralyze",
+        )
+
+        PARTY_SKIP_AND_RANDOM_DAMAGE = (
+            "PARTY_SKIP_AND_RANDOM_DAMAGE",
+            "Party skips action and random player takes damage",
+        )
+
+        SELF_HEAL = (
+            "SELF_HEAL",
+            "Boss heals itself",
+        )
+
+        DAMAGE_RANDOM_CANNOT_ATTACK = (
+            "DAMAGE_RANDOM_CANNOT_ATTACK",
+            "Damage random player and prevent attacking",
+        )
+
+        PARTY_PARALYZE_AND_DAMAGE_TAKEN_UP = (
+            "PARTY_PARALYZE_AND_DAMAGE_TAKEN_UP",
+            "Paralyze party and increase next boss damage",
+        )
+
+        DAMAGE_RANDOM_AND_PARTY_CANNOT_ATTACK = (
+            "DAMAGE_RANDOM_AND_PARTY_CANNOT_ATTACK",
+            "Damage random player and party cannot attack",
+        )
+
+        DAMAGE_ALL_PLAYERS = (
+            "DAMAGE_ALL_PLAYERS",
+            "Damage all players",
+        )
+
+        DAMAGE_RANDOM_PLAYER = (
+            "DAMAGE_RANDOM_PLAYER",
+            "Damage random player",
+        )
+
+        DAMAGE_TRANSFORMER = (
+            "DAMAGE_TRANSFORMER",
+            "Damage player who triggered transformation",
+        )
+
+        BOSS_UNTARGETABLE_THEN_DAMAGE_HIGHEST_LIFE = (
+            "BOSS_UNTARGETABLE_THEN_DAMAGE_HIGHEST_LIFE",
+            "Boss cannot be attacked, then damages highest life player",
+        )
+
+    boss = models.ForeignKey(
+        BossTemplate,
+        on_delete=models.CASCADE,
+        related_name="abilities",
+    )
+
+    name = models.CharField(max_length=120)
+    description = models.TextField(blank=True)
+
+    phase = models.CharField(
+        max_length=20,
+        choices=Phase.choices,
+        default=Phase.NORMAL,
+    )
+
+    slot = models.CharField(
+        max_length=20,
+        choices=Slot.choices,
+    )
+
+    effect_code = models.CharField(
+        max_length=80,
+        choices=EffectCode.choices,
+        default=EffectCode.NONE,
+    )
+
+    effect_value = models.SmallIntegerField(
+        default=0,
+        help_text="Main value, such as damage, healing, or damage limit.",
+    )
+
+    secondary_value = models.SmallIntegerField(
+        default=0,
+        help_text="Optional second value, such as d6 bonus or failed roll penalty.",
+    )
+
+    duration_turns = models.PositiveSmallIntegerField(
+        default=0,
+        help_text="How long the effect lasts.",
+    )
+
+    order = models.PositiveSmallIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ["boss", "phase", "slot", "order"]
+
+    def __str__(self):
+        return f"{self.boss.normal_name} · {self.get_phase_display()} · {self.name}"
     
+class BossEncounter(models.Model):
+    class Status(models.TextChoices):
+        ACTIVE = "ACTIVE", "Active"
+        WON = "WON", "Won"
+        LOST = "LOST", "Lost"
+
+    class Phase(models.TextChoices):
+        NORMAL = "NORMAL", "Normal"
+        RAGE = "RAGE", "Rage"
+
+    class CurrentActor(models.TextChoices):
+        BOSS = "BOSS", "Boss"
+        PLAYER = "PLAYER", "Player"
+
+    run = models.OneToOneField(
+        PartyDungeonRun,
+        on_delete=models.CASCADE,
+        related_name="boss_encounter",
+    )
+
+    boss = models.ForeignKey(
+        BossTemplate,
+        on_delete=models.PROTECT,
+        related_name="encounters",
+    )
+
+    status = models.CharField(
+        max_length=20,
+        choices=Status.choices,
+        default=Status.ACTIVE,
+    )
+
+    phase = models.CharField(
+        max_length=20,
+        choices=Phase.choices,
+        default=Phase.NORMAL,
+    )
+
+    current_life = models.PositiveIntegerField()
+
+    current_actor = models.CharField(
+        max_length=20,
+        choices=CurrentActor.choices,
+        default=CurrentActor.BOSS,
+    )
+
+    current_turn_character = models.ForeignKey(
+        PlayerCharacter,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="current_boss_turns",
+    )
+
+    next_boss_ability_slot = models.CharField(
+        max_length=20,
+        choices=BossAbility.Slot.choices,
+        default=BossAbility.Slot.FIRST,
+    )
+
+    round_number = models.PositiveIntegerField(default=1)
+
+    player_phase_number = models.PositiveIntegerField(
+        default=0,
+        help_text="Increments after each boss action. Used to track which players acted.",
+    )
+
+    has_transformed = models.BooleanField(default=False)
+
+    transformed_by_character = models.ForeignKey(
+        PlayerCharacter,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="triggered_boss_transformations",
+    )
+
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    def __str__(self):
+        return f"{self.run.party.name} vs {self.boss.normal_name}"
+
+    @property
+    def current_boss_name(self):
+        if self.phase == self.Phase.RAGE:
+            return self.boss.rage_display_name
+        return self.boss.normal_name
+
+    @property
+    def current_difficulty(self):
+        if self.phase == self.Phase.RAGE:
+            return self.boss.phase_two_difficulty
+        return self.boss.phase_one_difficulty
+
+    @property
+    def max_life_for_current_phase(self):
+        if self.phase == self.Phase.RAGE:
+            return self.boss.phase_two_life
+        return self.boss.phase_one_life
+    
+class BossCombatEffect(models.Model):
+    class TargetType(models.TextChoices):
+        PLAYER = "PLAYER", "Player"
+        PARTY = "PARTY", "Party"
+        BOSS = "BOSS", "Boss"
+
+    class EffectCode(models.TextChoices):
+        PLAYER_SKIP_TURN = "PLAYER_SKIP_TURN", "Player skips turn"
+        PLAYER_CANNOT_ATTACK = "PLAYER_CANNOT_ATTACK", "Player cannot attack"
+        PLAYER_DAMAGE_DEALT_OVERRIDE = "PLAYER_DAMAGE_DEALT_OVERRIDE", "Player damage is overridden"
+        PLAYER_EXTRA_DAMAGE_ON_FAILED_THROW = "PLAYER_EXTRA_DAMAGE_ON_FAILED_THROW", "Extra damage on failed throw"
+
+        PARTY_SKIP_TURN = "PARTY_SKIP_TURN", "Party skips turn"
+        PARTY_CANNOT_ATTACK = "PARTY_CANNOT_ATTACK", "Party cannot attack"
+        PARTY_EXTRA_BOSS_DAMAGE_TAKEN = "PARTY_EXTRA_BOSS_DAMAGE_TAKEN", "Party receives extra boss damage"
+
+        BOSS_UNTARGETABLE = "BOSS_UNTARGETABLE", "Boss cannot be attacked"
+        BOSS_PENDING_DAMAGE_HIGHEST_LIFE = "BOSS_PENDING_DAMAGE_HIGHEST_LIFE", "Boss will damage highest life player"
+
+    encounter = models.ForeignKey(
+        BossEncounter,
+        on_delete=models.CASCADE,
+        related_name="combat_effects",
+    )
+
+    source_ability = models.ForeignKey(
+        BossAbility,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="created_effects",
+    )
+
+    target_type = models.CharField(
+        max_length=20,
+        choices=TargetType.choices,
+    )
+
+    target_character = models.ForeignKey(
+        PlayerCharacter,
+        on_delete=models.CASCADE,
+        null=True,
+        blank=True,
+        related_name="boss_combat_effects",
+    )
+
+    effect_code = models.CharField(
+        max_length=80,
+        choices=EffectCode.choices,
+    )
+
+    value = models.SmallIntegerField(default=0)
+    secondary_value = models.SmallIntegerField(default=0)
+
+    remaining_turns = models.PositiveSmallIntegerField(default=1)
+    is_active = models.BooleanField(default=True)
+
+    note = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        target = self.target_character.character_name if self.target_character else self.get_target_type_display()
+        return f"{target} · {self.get_effect_code_display()}"
+
+class BossActionLog(models.Model):
+    class ActorType(models.TextChoices):
+        BOSS = "BOSS", "Boss"
+        PLAYER = "PLAYER", "Player"
+        SYSTEM = "SYSTEM", "System"
+
+    class ActionType(models.TextChoices):
+        BOSS_ABILITY = "BOSS_ABILITY", "Boss Ability"
+        BASIC_ATTACK = "BASIC_ATTACK", "Basic Attack"
+        BOSS_SKILL = "BOSS_SKILL", "Boss Skill"
+        PASS = "PASS", "Pass"
+        TRANSFORMATION = "TRANSFORMATION", "Transformation"
+        VICTORY = "VICTORY", "Victory"
+        DEFEAT = "DEFEAT", "Defeat"
+
+    encounter = models.ForeignKey(
+        BossEncounter,
+        on_delete=models.CASCADE,
+        related_name="action_logs",
+    )
+
+    actor_type = models.CharField(
+        max_length=20,
+        choices=ActorType.choices,
+    )
+
+    action_type = models.CharField(
+        max_length=30,
+        choices=ActionType.choices,
+    )
+
+    character = models.ForeignKey(
+        PlayerCharacter,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="boss_action_logs",
+    )
+
+    boss_ability = models.ForeignKey(
+        BossAbility,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="action_logs",
+    )
+
+    player_skill = models.ForeignKey(
+        ClassSkill,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="boss_action_logs",
+    )
+
+    phase = models.CharField(
+        max_length=20,
+        choices=BossEncounter.Phase.choices,
+        default=BossEncounter.Phase.NORMAL,
+    )
+
+    round_number = models.PositiveIntegerField(default=1)
+    player_phase_number = models.PositiveIntegerField(default=0)
+
+    die_roll = models.PositiveSmallIntegerField(null=True, blank=True)
+    final_roll_total = models.SmallIntegerField(null=True, blank=True)
+    difficulty_at_roll = models.PositiveSmallIntegerField(null=True, blank=True)
+
+    success = models.BooleanField(default=False)
+
+    damage_to_boss = models.PositiveIntegerField(default=0)
+    damage_to_players = models.PositiveIntegerField(default=0)
+    healing_done = models.PositiveIntegerField(default=0)
+
+    result_text = models.TextField(blank=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        return f"{self.encounter} · {self.get_action_type_display()}"
+
 class DungeonRunRoom(models.Model):
     class RoomType(models.TextChoices):
         TRAP = "TRAP", "Trap Room"
@@ -823,6 +1257,8 @@ class DungeonRunRoom(models.Model):
         related_name="generated_run_rooms",
     )
 
+    challenge_round = models.PositiveSmallIntegerField(default=1)
+    
     room_number = models.PositiveSmallIntegerField()
 
     name = models.CharField(max_length=150, blank=True)
@@ -954,6 +1390,8 @@ class RoomAttempt(models.Model):
         related_name="room_attempts",
     )
 
+    challenge_round = models.PositiveSmallIntegerField(default=1)
+    
     action_text = models.TextField(blank=True)
 
     die_roll = models.PositiveSmallIntegerField(

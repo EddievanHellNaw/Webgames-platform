@@ -106,6 +106,15 @@
     {% include "fantasy_roles/partials/_game_over_panel.html" %}
 
     {% include "fantasy_roles/partials/_activity_feed.html" %}
+
+  {% elif run.status == "BOSS_READY" %}
+    {% include "fantasy_roles/partials/_boss_ready_panel.html" %}
+
+    {% include "fantasy_roles/partials/_activity_feed.html" %}
+
+  {% elif run.status == "BOSS_ACTIVE" %}
+    {% include "fantasy_roles/partials/_boss_encounter_panel.html" %}
+
   {% else %}
     <section class="fr-game-grid fr-dungeon-play-layout">
       {% include "fantasy_roles/partials/_current_room_panel.html" %}

@@ -1,0 +1,67 @@
+<section class="fr-party-language-log">
+  <div class="fr-panel-heading">
+    <span class="fr-kicker">Language Log</span>
+    <strong>Room Actions</strong>
+  </div>
+
+  {% if card.attempt_log %}
+    <div class="fr-party-log-list">
+      {% for attempt in card.attempt_log %}
+        <article class="fr-party-log-entry {% if attempt.success %}is-success{% else %}is-failure{% endif %}">
+          <header>
+            <span class="fr-kicker">
+              Room {{ attempt.room.room_number }}
+              · {{ attempt.room.get_room_type_display }}
+              {% if attempt.challenge_round %}
+                · Round {{ attempt.challenge_round }}
+              {% endif %}
+            </span>
+
+            <strong>
+              {{ attempt.character.character_name }}
+              {% if attempt.success %}
+                succeeded
+              {% else %}
+                failed
+              {% endif %}
+            </strong>
+          </header>
+
+          {% if attempt.action_text %}
+            <p class="fr-party-log-sentence">
+              “{{ attempt.action_text }}”
+            </p>
+          {% endif %}
+
+          <div class="fr-teacher-log-meta">
+            {% if attempt.die_roll %}
+              <span>Roll: {{ attempt.die_roll }}</span>
+            {% endif %}
+
+            {% if attempt.final_roll_total %}
+              <span>Total: {{ attempt.final_roll_total }}</span>
+            {% endif %}
+
+            {% if attempt.difficulty_at_roll %}
+              <span>Difficulty: {{ attempt.difficulty_at_roll }}</span>
+            {% endif %}
+
+            {% if attempt.damage_taken %}
+              <span>Damage: {{ attempt.damage_taken }}</span>
+            {% endif %}
+          </div>
+
+          {% if attempt.result_text %}
+            <p class="fr-teacher-result-text">
+              {{ attempt.result_text }}
+            </p>
+          {% endif %}
+        </article>
+      {% endfor %}
+    </div>
+  {% else %}
+    <p class="fr-muted-text">
+      No room actions yet.
+    </p>
+  {% endif %}
+</section>
