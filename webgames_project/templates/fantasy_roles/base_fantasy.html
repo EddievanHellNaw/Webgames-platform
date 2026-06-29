@@ -1,0 +1,7 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block game_theme_css %}
+  <link rel="stylesheet" href="{% static 'fantasy_roles/css/fantasy-theme.css' %}">
+  {% block fantasy_extra_css %}{% endblock %}
+{% endblock %}

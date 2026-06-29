@@ -1,5 +1,5 @@
-{% extends "base.html" %}
-
+{% extends "fantasy_roles/base_fantasy.html" %}
+{% load static %}
 {% block title %}Choose Dungeon · Fantasy Roles{% endblock %}
 
 {% block content %}
@@ -85,106 +85,125 @@
       <div class="fr-dungeon-option-list">
         {% for card in dungeon_cards %}
           {% with dungeon=card.dungeon vocabulary_set=card.vocabulary_set %}
-            <article
-              class="fr-dungeon-option-card {% if not is_current_dm or existing_run %}is-disabled{% endif %}"
-              {% if is_current_dm and not existing_run %}
-                role="button"
-                tabindex="0"
-                data-dungeon-option
-                data-dungeon-id="{{ dungeon.id }}"
-                data-dungeon-name="{{ dungeon.name|escape }}"
-                data-dungeon-kingdom="{{ dungeon.kingdom|default:'Unknown Kingdom'|escape }}"
-                data-dungeon-difficulty="{{ dungeon.difficulty_rating }}"
-                data-dungeon-rooms="{{ dungeon.room_count }}"
-                data-dungeon-boss="{{ dungeon.final_boss_name|default:'Unknown Boss'|escape }}"
-                data-dungeon-play-style="{{ dungeon.get_play_style_display|default:'Unknown Style'|escape }}"
-                {% if dungeon.image %}
-                  data-dungeon-image="{{ dungeon.image.url }}"
-                {% else %}
-                  data-dungeon-image=""
-                {% endif %}
-              {% endif %}
-            >
-              <div class="fr-dungeon-option-image">
-                {% if dungeon.image %}
-                  <img src="{{ dungeon.image.url }}" alt="{{ dungeon.name }}">
-                {% else %}
-                  <span>◆</span>
-                {% endif %}
-              </div>
+              <article
+  class="fr-dungeon-option-card fr-dungeon-theme-{{ dungeon.name|slugify }} {% if not is_current_dm or existing_run %}is-disabled{% endif %}"
+  {% if is_current_dm and not existing_run %}
+    role="button"
+    tabindex="0"
+    data-dungeon-option
+    data-dungeon-id="{{ dungeon.id }}"
+    data-dungeon-slug="{{ dungeon.name|slugify }}"
+    data-dungeon-logo="{% static 'fantasy_roles/img/dungeons/logos/' %}{{ dungeon.name|slugify }}.png"
+    data-dungeon-name="{{ dungeon.name|escape }}"
+    data-dungeon-kingdom="{{ dungeon.kingdom|default:'Unknown Kingdom'|escape }}"
+    data-dungeon-description="{{ dungeon.description|default:''|escape }}"
+    data-dungeon-difficulty="{{ dungeon.difficulty_rating }}"
+    data-dungeon-rooms="{{ dungeon.room_count }}"
+    data-dungeon-combat="{{ dungeon.combat_room_count }}"
+    data-dungeon-traps="{{ dungeon.trap_room_count }}"
+    data-dungeon-treasure="{{ dungeon.treasure_room_count }}"
+    data-dungeon-special="{{ dungeon.special_room_count }}"
+    data-dungeon-boss="{{ dungeon.final_boss_name|default:'Unknown Boss'|escape }}"
+    data-dungeon-play-style="{{ dungeon.get_play_style_display|default:'Unknown Style'|escape }}"
+    {% if dungeon.image %}
+      data-dungeon-image="{{ dungeon.image.url }}"
+    {% else %}
+      data-dungeon-image=""
+    {% endif %}
+  {% endif %}
+>
+              <div class="fr-dungeon-option-media">
+  <div class="fr-dungeon-option-image">
+    {% if dungeon.image %}
+      <img src="{{ dungeon.image.url }}" alt="{{ dungeon.name }}">
+    {% else %}
+      <span>◆</span>
+    {% endif %}
+  </div>
+
+  <div
+    class="fr-difficulty-runes"
+    aria-label="Difficulty {{ dungeon.difficulty_rating }} out of 5"
+  >
+    {% for marker in "12345" %}
+      <span class="fr-difficulty-rune {% if forloop.counter <= dungeon.difficulty_rating %}is-filled{% endif %}">
+        {% include "fantasy_roles/partials/_png_icon.html" with name="difficulty" extra_class="fr-png-icon-xs" %}
+      </span>
+    {% endfor %}
+  </div>
+</div>
 
               <div class="fr-dungeon-option-body">
-                <div class="fr-dungeon-option-title">
-                  <div>
-                    {% if dungeon.kingdom %}
-                      <span class="fr-kicker">{{ dungeon.kingdom }}</span>
-                    {% else %}
-                      <span class="fr-kicker">Unknown Kingdom</span>
-                    {% endif %}
+  <header class="fr-dungeon-option-header">
+    <div class="fr-dungeon-title-lockup">
+  {% with dungeon_slug=dungeon.name|slugify %}
+    {% with logo_path="fantasy_roles/img/dungeons/logos/"|add:dungeon_slug|add:".png" %}
+      <img
+        class="fr-dungeon-logo"
+        src="{% static logo_path %}"
+        alt="{{ dungeon.name }} logo"
+        onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
+      >
 
-                    <h2>{{ dungeon.name }}</h2>
-                  </div>
+      <h2 class="fr-dungeon-logo-fallback" hidden>
+        {{ dungeon.name }}
+      </h2>
+    {% endwith %}
+  {% endwith %}
+</div>
 
-                  <span class="fr-difficulty-badge">
-                    Difficulty {{ dungeon.difficulty_rating }}/5
-                  </span>
-                </div>
+    
+  </header>
 
-                {% if dungeon.description %}
-                  <p class="fr-muted-text">
-                    {{ dungeon.description }}
-                  </p>
-                {% endif %}
+  {% if dungeon.description %}
+    <p class="fr-dungeon-description">
+      {{ dungeon.description }}
+    </p>
+  {% endif %}
 
-                <div class="fr-dungeon-meta-grid">
-                  <span>Rooms: {{ dungeon.room_count }}</span>
-                  <span>Combat: {{ dungeon.combat_room_count }}</span>
-                  <span>Traps: {{ dungeon.trap_room_count }}</span>
-                  <span>Treasure: {{ dungeon.treasure_room_count }}</span>
-                  <span>Special: {{ dungeon.special_room_count }}</span>
-                  <span>Style: {{ dungeon.get_play_style_display }}</span>
-                </div>
+  
 
-                {% if dungeon.final_boss_name %}
-                  <div class="fr-dungeon-boss-tag">
-                    Final Boss: <strong>{{ dungeon.final_boss_name }}</strong>
-                  </div>
-                {% endif %}
+  {% if dungeon.final_boss_name %}
+    <div class="fr-dungeon-boss-tag">
+      <span>Final Boss:</span>
+      <strong>{{ dungeon.final_boss_name }}</strong>
+    </div>
+  {% endif %}
 
-                {% if vocabulary_set %}
-                  <details class="fr-dungeon-vocab-details">
-                    <summary>Useful language for your level</summary>
+  {% if vocabulary_set %}
+    <details class="fr-dungeon-vocab-details">
+      <summary>Useful language for your level</summary>
 
-                    {% if vocabulary_set.useful_vocabulary %}
-                      <p>
-                        <strong>Vocabulary:</strong>
-                        {{ vocabulary_set.useful_vocabulary }}
-                      </p>
-                    {% endif %}
+      {% if vocabulary_set.useful_vocabulary %}
+        <p>
+          <strong>Vocabulary:</strong>
+          {{ vocabulary_set.useful_vocabulary }}
+        </p>
+      {% endif %}
 
-                    {% if vocabulary_set.sentence_frames %}
-                      <p>
-                        <strong>Sentence frames:</strong>
-                        {{ vocabulary_set.sentence_frames }}
-                      </p>
-                    {% endif %}
-                  </details>
-                {% endif %}
+      {% if vocabulary_set.sentence_frames %}
+        <p>
+          <strong>Sentence frames:</strong>
+          {{ vocabulary_set.sentence_frames }}
+        </p>
+      {% endif %}
+    </details>
+  {% endif %}
 
-                {% if is_current_dm and not existing_run %}
-                  <p class="fr-dungeon-click-hint">
-                    Click this card to choose this dungeon.
-                  </p>
-                {% elif existing_run %}
-                  <p class="fr-muted-text">
-                    A dungeon has already been selected.
-                  </p>
-                {% else %}
-                  <p class="fr-muted-text">
-                    Waiting for the DM to choose.
-                  </p>
-                {% endif %}
-              </div>
+  {% if is_current_dm and not existing_run %}
+    <p class="fr-dungeon-click-hint">
+      Click this card to choose this dungeon.
+    </p>
+  {% elif existing_run %}
+    <p class="fr-muted-text">
+      A dungeon has already been selected.
+    </p>
+  {% else %}
+    <p class="fr-muted-text">
+      Waiting for the DM to choose.
+    </p>
+  {% endif %}
+</div>
             </article>
           {% endwith %}
         {% endfor %}
@@ -215,53 +234,84 @@
   </section>
 
   {% if is_current_dm and not existing_run %}
-    <section class="fr-confirm-overlay" id="dungeon-confirmation" hidden>
-      <article class="fr-confirm-modal fr-dungeon-confirm-modal">
-        <div class="fr-panel-heading">
-          <span class="fr-kicker">Confirm Dungeon</span>
-          <strong>Choose Carefully</strong>
+    <section class="fr-confirm-overlay fr-dungeon-confirm-overlay" id="dungeon-confirmation" hidden>
+  <article class="fr-confirm-modal fr-dungeon-confirm-modal">
+    <div class="fr-panel-heading">
+      <span class="fr-kicker">Confirm Dungeon</span>
+      <strong>Choose Carefully</strong>
+    </div>
+
+    <div class="fr-dungeon-confirm-card">
+      <div class="fr-dungeon-confirm-media">
+        <div class="fr-dungeon-confirm-image">
+          <img id="confirm-dungeon-image" src="" alt="" hidden>
+          <span id="confirm-dungeon-fallback">◆</span>
         </div>
 
-        <div class="fr-dungeon-confirm-layout">
-          <div class="fr-dungeon-confirm-image">
-            <img id="confirm-dungeon-image" src="" alt="" hidden>
-            <span id="confirm-dungeon-fallback">◆</span>
-          </div>
+        <div
+          class="fr-difficulty-runes"
+          id="confirm-dungeon-difficulty-runes"
+          aria-label="Dungeon difficulty"
+        >
+          {% for marker in "12345" %}
+            <span class="fr-difficulty-rune" data-confirm-difficulty-rune>
+              {% include "fantasy_roles/partials/_png_icon.html" with name="difficulty" extra_class="fr-png-icon-xs" %}
+            </span>
+          {% endfor %}
+        </div>
+      </div>
 
-          <div class="fr-dungeon-confirm-body">
-            <span class="fr-kicker" id="confirm-dungeon-kingdom">Kingdom</span>
-            <h2 id="confirm-dungeon-name">Dungeon Name</h2>
+      <div class="fr-dungeon-confirm-body">
+        <div class="fr-dungeon-title-lockup">
+          <img
+            class="fr-dungeon-confirm-logo"
+            id="confirm-dungeon-logo"
+            src=""
+            alt=""
+            hidden
+          >
 
-            <div class="fr-dungeon-meta-grid">
-              <span id="confirm-dungeon-difficulty">Difficulty —</span>
-              <span id="confirm-dungeon-rooms">Rooms —</span>
-              <span id="confirm-dungeon-style">Style —</span>
-              <span id="confirm-dungeon-boss">Boss —</span>
-            </div>
-
-            <p class="fr-muted-text">
-              Once confirmed, this dungeon will be assigned to your party and
-              the dungeon run will be generated.
-            </p>
-          </div>
+          <h2 class="fr-dungeon-logo-fallback" id="confirm-dungeon-name">
+            Dungeon Name
+          </h2>
         </div>
 
-        <form method="post" id="dungeon-confirm-form">
-          {% csrf_token %}
-          <input type="hidden" name="dungeon_id" id="confirmed-dungeon-id">
+        <p class="fr-dungeon-description" id="confirm-dungeon-description">
+          Dungeon description.
+        </p>
 
-          <div class="fr-step-actions">
-            <button class="fr-btn" type="button" id="close-dungeon-confirmation">
-              Cancel
-            </button>
+        <div class="fr-dungeon-meta-grid">
+          <span id="confirm-dungeon-rooms">Rooms —</span>
+          <span id="confirm-dungeon-combat">Combat —</span>
+          <span id="confirm-dungeon-traps">Traps —</span>
+          <span id="confirm-dungeon-treasure">Treasure —</span>
+          <span id="confirm-dungeon-special">Special —</span>
+          <span id="confirm-dungeon-style">Style —</span>
+        </div>
 
-            <button class="fr-btn fr-btn-primary" type="submit">
-              Confirm Dungeon
-            </button>
-          </div>
-        </form>
-      </article>
-    </section>
+        <div class="fr-dungeon-boss-tag">
+          <span>Final Boss:</span>
+          <strong id="confirm-dungeon-boss">Unknown Boss</strong>
+        </div>
+      </div>
+    </div>
+
+    <form method="post" id="dungeon-confirm-form">
+      {% csrf_token %}
+      <input type="hidden" name="dungeon_id" id="confirmed-dungeon-id">
+
+      <div class="fr-step-actions">
+        <button class="fr-btn" type="button" id="close-dungeon-confirmation">
+          Cancel
+        </button>
+
+        <button class="fr-btn fr-btn-primary" type="submit">
+          Confirm Dungeon
+        </button>
+      </div>
+    </form>
+  </article>
+</section>
   {% endif %}
 </section>
 
@@ -280,35 +330,87 @@
     const image = document.getElementById("confirm-dungeon-image");
     const fallback = document.getElementById("confirm-dungeon-fallback");
 
+    const logo = document.getElementById("confirm-dungeon-logo");
     const name = document.getElementById("confirm-dungeon-name");
-    const kingdom = document.getElementById("confirm-dungeon-kingdom");
-    const difficulty = document.getElementById("confirm-dungeon-difficulty");
+    const description = document.getElementById("confirm-dungeon-description");
+
     const rooms = document.getElementById("confirm-dungeon-rooms");
+    const combat = document.getElementById("confirm-dungeon-combat");
+    const traps = document.getElementById("confirm-dungeon-traps");
+    const treasure = document.getElementById("confirm-dungeon-treasure");
+    const special = document.getElementById("confirm-dungeon-special");
     const style = document.getElementById("confirm-dungeon-style");
     const boss = document.getElementById("confirm-dungeon-boss");
 
-    function openModal(card) {
-      dungeonIdInput.value = card.dataset.dungeonId;
+    const difficultyRunes = Array.from(
+      document.querySelectorAll("[data-confirm-difficulty-rune]")
+    );
 
-      name.textContent = card.dataset.dungeonName || "Unknown Dungeon";
-      kingdom.textContent = card.dataset.dungeonKingdom || "Unknown Kingdom";
-      difficulty.textContent = `Difficulty ${card.dataset.dungeonDifficulty || "—"}/5`;
-      rooms.textContent = `Rooms ${card.dataset.dungeonRooms || "—"}`;
-      style.textContent = `Style ${card.dataset.dungeonPlayStyle || "—"}`;
-      boss.textContent = `Boss ${card.dataset.dungeonBoss || "—"}`;
-
-      if (card.dataset.dungeonImage) {
-        image.src = card.dataset.dungeonImage;
-        image.alt = card.dataset.dungeonName || "Dungeon image";
-        image.hidden = false;
-        fallback.hidden = true;
-      } else {
-        image.hidden = true;
-        fallback.hidden = false;
-      }
-
-      modal.hidden = false;
+    function clearDungeonThemeClasses(element) {
+  Array.from(element.classList).forEach(function (className) {
+    if (className.startsWith("fr-dungeon-theme-")) {
+      element.classList.remove(className);
     }
+  });
+}
+
+function openModal(card) {
+  dungeonIdInput.value = card.dataset.dungeonId;
+
+  const dungeonSlug = card.dataset.dungeonSlug || "";
+  const dungeonName = card.dataset.dungeonName || "Unknown Dungeon";
+  const dungeonDifficulty = Number(card.dataset.dungeonDifficulty || 0);
+
+  clearDungeonThemeClasses(modal);
+
+  if (dungeonSlug) {
+    modal.classList.add("fr-dungeon-theme-" + dungeonSlug);
+  }
+
+  name.textContent = dungeonName;
+
+  description.textContent =
+    card.dataset.dungeonDescription || "No dungeon description available.";
+
+  rooms.textContent = `Rooms: ${card.dataset.dungeonRooms || "—"}`;
+  combat.textContent = `Combat: ${card.dataset.dungeonCombat || "—"}`;
+  traps.textContent = `Traps: ${card.dataset.dungeonTraps || "—"}`;
+  treasure.textContent = `Treasure: ${card.dataset.dungeonTreasure || "—"}`;
+  special.textContent = `Special: ${card.dataset.dungeonSpecial || "—"}`;
+  style.textContent = `Style: ${card.dataset.dungeonPlayStyle || "—"}`;
+  boss.textContent = card.dataset.dungeonBoss || "Unknown Boss";
+
+  difficultyRunes.forEach(function (rune, index) {
+    rune.classList.toggle("is-filled", index < dungeonDifficulty);
+  });
+
+  if (card.dataset.dungeonLogo) {
+    logo.src = card.dataset.dungeonLogo;
+    logo.alt = dungeonName + " logo";
+    logo.hidden = false;
+    name.hidden = true;
+
+    logo.onerror = function () {
+      logo.hidden = true;
+      name.hidden = false;
+    };
+  } else {
+    logo.hidden = true;
+    name.hidden = false;
+  }
+
+  if (card.dataset.dungeonImage) {
+    image.src = card.dataset.dungeonImage;
+    image.alt = dungeonName;
+    image.hidden = false;
+    fallback.hidden = true;
+  } else {
+    image.hidden = true;
+    fallback.hidden = false;
+  }
+
+  modal.hidden = false;
+}
 
     function closeModal() {
       modal.hidden = true;

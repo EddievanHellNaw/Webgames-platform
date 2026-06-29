@@ -1,319 +1,293 @@
-<section class="fr-panel fr-current-room-panel">
+<section class="fr-panel fr-current-room-panel fr-room-stage-panel">
   {% if run.current_room %}
-    <div class="fr-panel-heading">
-      <span class="fr-kicker">Current Room</span>
-      <strong>
-        Room {{ run.current_room.room_number }}
-      </strong>
-    </div>
-
-    <div class="fr-room-visual">
-      {% if run.current_room.source_template and run.current_room.source_template.image %}
-        <img
-          src="{{ run.current_room.source_template.image.url }}"
-          alt="{{ run.current_room.name }}"
-        >
-      {% endif %}
-    </div>
-
-    <div class="fr-room-info">
-      <h2>
-        {% if run.current_room.name %}
-          {{ run.current_room.name }}
-        {% else %}
-          Unknown Room
+    {% with room_image=run.current_room.display_image %}
+      <article
+        class="fr-room-stage-card fr-room-type-{{ run.current_room.room_type|lower }}"
+        {% if room_image %}
+          style="--room-bg: url('{{ room_image.url }}');"
         {% endif %}
-      </h2>
+      >
+        <div class="fr-room-stage-overlay" aria-hidden="true"></div>
 
-      <div class="fr-room-meta">
-        <span>
-          {% if run.current_room.room_type == "TRAP" %}
-            ✦
-          {% elif run.current_room.room_type == "COMBAT" %}
-            ⚔
-          {% elif run.current_room.room_type == "TREASURE" %}
-            ◆
-          {% elif run.current_room.room_type == "SPECIAL" %}
-            ?
-          {% endif %}
+        <header class="fr-room-stage-top">
+          <div class="fr-room-stage-title">
+            <span class="fr-kicker">
+              Room {{ run.current_room.room_number }}
+            </span>
 
-          {{ run.current_room.get_room_type_display }}
-        </span>
+            <h2>
+              {% if run.current_room.name %}
+                {{ run.current_room.name }}
+              {% else %}
+                Unknown Room
+              {% endif %}
+            </h2>
 
-        <span>Difficulty {{ run.current_room.difficulty }}/5</span>
+            <div
+              class="fr-difficulty-runes fr-room-stage-difficulty"
+              aria-label="Difficulty {{ run.current_room.difficulty }} out of 5"
+            >
+              {% for marker in "12345" %}
+                <span class="fr-difficulty-rune {% if forloop.counter <= run.current_room.difficulty %}is-filled{% endif %}">
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="difficulty" extra_class="fr-png-icon-xs" %}
+                </span>
+              {% endfor %}
+            </div>
+          </div>
+
+          <div class="fr-room-stage-type">
+            <span class="fr-room-type-icon">
+              {% if run.current_room.room_type == "TRAP" %}
+                {% include "fantasy_roles/partials/_png_icon.html" with name="trap_room" extra_class="fr-room-type-art fr-png-icon-art" alt="Trap room" %}
+
+              {% elif run.current_room.room_type == "COMBAT" %}
+                {% include "fantasy_roles/partials/_png_icon.html" with name="combat_room" extra_class="fr-room-type-art fr-png-icon-art" alt="Combat room" %}
+
+              {% elif run.current_room.room_type == "TREASURE" %}
+                {% include "fantasy_roles/partials/_png_icon.html" with name="treasure" extra_class="fr-room-type-art fr-png-icon-art" alt="Treasure room" %}
+
+              {% elif run.current_room.room_type == "SPECIAL" %}
+                {% include "fantasy_roles/partials/_png_icon.html" with name="treasure" extra_class="fr-room-type-art fr-png-icon-art" alt="Special room" %}
+
+              {% else %}
+                ◆
+              {% endif %}
+            </span>
+
+            <span class="fr-room-type-label">
+              {{ run.current_room.get_room_type_display }}
+            </span>
+          </div>
+        </header>
 
         {% if run.current_room.is_cleared %}
-          <span class="fr-status-cleared">Cleared</span>
+          <div class="fr-room-stage-cleared">
+            <span class="fr-status-cleared">Cleared</span>
+            <p>Open the map to move to a connected room.</p>
+          </div>
+
+        {% elif run.status == "ACTIVE" %}
+          <div class="fr-room-stage-actions">
+            {% if run.current_room.room_type == "TRAP" %}
+              <button
+                class="fr-room-action-orb is-roll-action"
+                type="submit"
+                form="trap-action-form-{{ run.current_room.id }}"
+                title="Roll Action"
+                aria-label="Roll Action"
+                {% if not is_current_turn or has_attempted_current_trap_round %}disabled{% endif %}
+              >
+                {% include "fantasy_roles/partials/_png_icon.html" with name="roll_action" extra_class="fr-room-action-icon" alt="Roll action" %}
+              </button>
+
+            {% elif run.current_room.room_type == "COMBAT" %}
+              <form
+                method="post"
+                action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
+                class="fr-room-icon-action-form"
+              >
+                {% csrf_token %}
+                <input type="hidden" name="action_type" value="BASIC_ATTACK">
+
+                <button
+                  class="fr-room-action-orb is-basic-attack"
+                  type="submit"
+                  title="Roll Basic Attack"
+                  aria-label="Roll Basic Attack"
+                  {% if not is_current_turn %}disabled{% endif %}
+                >
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="basic_attack" extra_class="fr-room-action-icon" alt="Basic attack" %}
+                </button>
+              </form>
+
+            {% elif run.current_room.room_type == "TREASURE" or run.current_room.room_type == "SPECIAL" %}
+              <form
+                method="post"
+                action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
+                class="fr-room-treasure-actions"
+              >
+                {% csrf_token %}
+
+                <button
+                  class="fr-room-action-orb is-treasure"
+                  type="submit"
+                  name="action_type"
+                  value="OPEN_CHEST"
+                  title="Open Chest"
+                  aria-label="Open Chest"
+                  {% if not is_current_turn %}disabled{% endif %}
+                >
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="treasure" extra_class="fr-room-action-icon" alt="Open chest" %}
+                </button>
+
+                <button
+                  class="fr-room-action-orb is-leave"
+                  type="submit"
+                  name="action_type"
+                  value="LEAVE_TREASURE"
+                  title="Leave It"
+                  aria-label="Leave It"
+                  {% if not is_current_turn %}disabled{% endif %}
+                >
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="pass_turn" extra_class="fr-room-action-icon" alt="Leave treasure" %}
+                </button>
+              </form>
+            {% endif %}
+
+            {% if available_skills and run.current_room.room_type != "TREASURE" and run.current_room.room_type != "SPECIAL" %}
+              <details class="fr-corner-popover fr-room-skill-popover">
+                <summary
+                  class="fr-room-action-orb is-skill"
+                  title="Room Skills"
+                  aria-label="Room Skills"
+                >
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="skill" extra_class="fr-room-action-icon" alt="Skill" %}
+                </summary>
+
+                <div class="fr-corner-popover-panel fr-room-skill-popover-panel">
+                  <div class="fr-popover-heading">
+                    <span class="fr-kicker">Room Skills</span>
+                    <strong>Choose a skill</strong>
+                  </div>
+
+                  <div class="fr-room-skill-actions">
+                    {% for skill in available_skills %}
+                      <form
+                        method="post"
+                        action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
+                      >
+                        {% csrf_token %}
+
+                        <input type="hidden" name="action_type" value="SKILL">
+                        <input type="hidden" name="skill_id" value="{{ skill.id }}">
+
+                        <button
+                          class="fr-btn fr-btn-secondary"
+                          type="submit"
+                          {% if not is_current_turn %}disabled{% endif %}
+                        >
+                          {{ skill.name }} · {{ skill.ap_cost }} AP
+                        </button>
+                      </form>
+                    {% endfor %}
+                  </div>
+                </div>
+              </details>
+            {% endif %}
+
+            <button
+              class="fr-room-action-orb is-pass-turn"
+              type="submit"
+              form="pass-turn-form-{{ run.current_room.id }}"
+              title="Pass Turn"
+              aria-label="Pass Turn"
+              {% if not is_current_turn %}disabled{% endif %}
+            >
+              {% include "fantasy_roles/partials/_png_icon.html" with name="pass_turn" extra_class="fr-room-action-icon" alt="Pass turn" %}
+            </button>
+          </div>
         {% endif %}
-      </div>
-
-      {% if run.current_room.flavor_text %}
-        <p>{{ run.current_room.flavor_text }}</p>
-      {% endif %}
-
-      {% if run.current_room.failure_text %}
-        <p class="fr-muted-text">
-          <strong>Failure:</strong>
-          {{ run.current_room.failure_text }}
-        </p>
-      {% endif %}
-
-      {% if run.current_room.damage_on_failure %}
-        <p class="fr-danger-text">
-          Damage on failure:
-          <strong>{{ run.current_room.damage_on_failure }}</strong>
-        </p>
-      {% endif %}
-    </div>
+      </article>
+    {% endwith %}
 
     {% if run.status == "ACTIVE" and not run.current_room.is_cleared %}
-      <div class="fr-action-zone" id="action-zone-room-{{ run.current_room.id }}">
-        <h3>Take Action</h3>
+      <form
+        id="pass-turn-form-{{ run.current_room.id }}"
+        method="post"
+        action="{% url 'fantasy_roles:pass_room_turn' session.join_code %}"
+        class="fr-pass-turn-form fr-hidden-action-form"
+      >
+        {% csrf_token %}
+      </form>
+    {% endif %}
 
-        {% if run.current_turn_character %}
-          <div class="fr-turn-banner {% if is_current_turn %}is-your-turn{% endif %}">
-            <div class="fr-turn-character-card">
-              <div class="fr-turn-avatar">
-                {% with turn_portrait=run.current_turn_character.selected_image %}
-                  {% if turn_portrait %}
-                    <img
-                      src="{{ turn_portrait.url }}"
-                      alt="{{ run.current_turn_character.character_name }}"
-                    >
-                  {% else %}
-                    <span>{{ run.current_turn_character.character_name|slice:":1" }}</span>
-                  {% endif %}
-                {% endwith %}
+    {% if run.status == "ACTIVE" and not run.current_room.is_cleared and run.current_room.room_type == "TRAP" %}
+      <section class="fr-room-action-dock fr-trap-action-dock">
+        <div class="fr-action-zone-heading">
+          <h3>Describe Your Action</h3>
+
+          <div class="fr-action-corner-actions">
+            <details class="fr-corner-popover fr-action-help-popover">
+              <summary
+                class="fr-icon-btn"
+                aria-label="Action help"
+                title="Action help"
+              >
+                ?
+              </summary>
+
+              <div class="fr-corner-popover-panel fr-action-help-panel">
+                <div class="fr-popover-heading">
+                  <span class="fr-kicker">Turn Help</span>
+                  <strong>Trap Actions</strong>
+                </div>
+
+                <ul class="fr-help-list">
+                  <li>Write what your character tries to do.</li>
+                  <li>Normal room rolls cost <strong>1 AP</strong>.</li>
+                  <li>Taking any action ends your turn.</li>
+                  <li>You can only submit an action when it is your turn.</li>
+                  <li>You may pass your turn instead of acting.</li>
+                  <li>Trap rooms are group checks. Each living hero usually gets one attempt per round.</li>
+                </ul>
               </div>
+            </details>
+          </div>
+        </div>
 
-              <div class="fr-turn-details">
-                <span class="fr-kicker">Turn {{ run.turn_number }}</span>
+        {% if not is_current_turn %}
+          <p class="fr-muted-text fr-action-disabled-note">
+            Write your idea if you want, but only the current turn player can submit it.
+          </p>
+        {% endif %}
 
-                {% if is_current_turn %}
-                  <strong>Your turn</strong>
-                  <p>
-                    Take one action: use a room skill, make a normal roll,
-                    open treasure, or pass.
-                  </p>
-                {% else %}
-                  <strong>{{ run.current_turn_character.character_name }}'s turn</strong>
-                  <p>
-                    Wait for your party member to act.
-                  </p>
-                {% endif %}
-              </div>
-            </div>
+        {% if trap_progress %}
+          <div class="fr-trap-progress-card">
+            <span class="fr-kicker">Trap Group Check</span>
+
+            <strong>
+              Round {{ trap_progress.round }}
+            </strong>
+
+            <p>
+              Successes:
+              {{ trap_progress.success_count }}/{{ trap_progress.required_successes }}
+              needed
+            </p>
+
+            <p>
+              Attempts submitted:
+              {{ trap_progress.attempted_count }}/{{ trap_progress.living_count }}
+            </p>
           </div>
         {% endif %}
 
-        <p class="fr-action-cost-note">
-          Normal room rolls cost <strong>1 AP</strong>. Room skills use their listed cost.
-          Taking any action ends your turn.
-        </p>
-
-        {% if is_current_turn %}
-          {% if available_skills and run.current_room.room_type != "SPECIAL" %}
-            <section class="fr-room-skill-panel">
-              <span class="fr-kicker">Room Skill</span>
-
-              <p class="fr-muted-text">
-                Using a room skill counts as your action for this turn.
-              </p>
-
-              <div class="fr-room-skill-actions">
-                {% for skill in available_skills %}
-                  <form
-                    method="post"
-                    action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
-                  >
-                    {% csrf_token %}
-
-                    <input type="hidden" name="action_type" value="SKILL">
-                    <input type="hidden" name="skill_id" value="{{ skill.id }}">
-
-                    <button class="fr-btn fr-btn-secondary" type="submit">
-                      {{ skill.name }} · {{ skill.ap_cost }} AP
-
-                      {% if skill.effect_value %}
-                        · Effect {{ skill.effect_value }}
-                      {% endif %}
-                    </button>
-                  </form>
-                {% endfor %}
-              </div>
-
-              {% for skill in available_skills %}
-                {% if skill.description %}
-                  <p class="fr-skill-desc">
-                    <strong>{{ skill.name }}:</strong>
-                    {{ skill.description }}
-                  </p>
-                {% endif %}
-              {% endfor %}
-            </section>
-          {% endif %}
-
-          {% if run.current_room.room_type == "TRAP" %}
-          {% if trap_progress %}
-  <div class="fr-trap-progress-card">
-    <span class="fr-kicker">Trap Group Check</span>
-
-    <strong>
-      Round {{ trap_progress.round }}
-    </strong>
-
-    <p>
-      Successes:
-      {{ trap_progress.success_count }}/{{ trap_progress.required_successes }}
-      needed
-    </p>
-
-    <p>
-      Attempts submitted:
-      {{ trap_progress.attempted_count }}/{{ trap_progress.living_count }}
-    </p>
-  </div>
-{% endif %}
-{% if has_attempted_current_trap_round %}
-  <p class="fr-muted-text">
-    You already submitted your action for this trap round. Wait for your party.
-  </p>
-{% else %}
-            <form
-              method="post"
-              action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
-            >
-              {% csrf_token %}
-
-              <p class="fr-muted-text">
-                Describe what your character does to clear the trap.
-              </p>
-
-              <textarea
-                id="trap-action-text-{{ run.current_room.id }}"
-                name="action_text"
-                rows="4"
-                required
-                hx-preserve="true"
-                placeholder="Example: I jump over the lava and use my shield to protect myself."
-              ></textarea>
-
-              <input type="hidden" name="action_type" value="TRAP_ACTION">
-
-              <button class="fr-btn fr-btn-primary" type="submit">
-                Roll for Action
-              </button>
-            </form>
-{% endif %}
-
-          {% elif run.current_room.room_type == "COMBAT" %}
-            <p class="fr-muted-text">
-              An enemy blocks your way. You may make a basic attack or use one room skill.
-            </p>
-
-            <form
-              method="post"
-              action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
-            >
-              {% csrf_token %}
-
-              <input type="hidden" name="action_type" value="BASIC_ATTACK">
-
-              <button class="fr-btn fr-btn-primary" type="submit">
-                Roll Basic Attack
-              </button>
-            </form>
-
-          {% elif run.current_room.room_type == "SPECIAL" %}
-            <form
-              method="post"
-              action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
-            >
-              {% csrf_token %}
-
-              <p class="fr-muted-text">
-                A suspicious chest waits in the room. Open it carefully or leave it behind.
-              </p>
-
-              <div class="fr-button-row">
-                <button
-                  class="fr-btn fr-btn-primary"
-                  type="submit"
-                  name="action_type"
-                  value="OPEN_CHEST"
-                >
-                  Open Chest
-                </button>
-
-                <button
-                  class="fr-btn fr-btn-secondary"
-                  type="submit"
-                  name="action_type"
-                  value="LEAVE_TREASURE"
-                >
-                  Leave It
-                </button>
-              </div>
-            </form>
-
-          {% elif run.current_room.room_type == "TREASURE" %}
-            <form
-              method="post"
-              action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
-            >
-              {% csrf_token %}
-
-              <p class="fr-muted-text">
-                The party found treasure. Opening it costs your action. Leaving it also ends your turn.
-              </p>
-
-              <div class="fr-button-row">
-                <button
-                  class="fr-btn fr-btn-primary"
-                  type="submit"
-                  name="action_type"
-                  value="OPEN_CHEST"
-                >
-                  Open Chest
-                </button>
-
-                <button
-                  class="fr-btn fr-btn-secondary"
-                  type="submit"
-                  name="action_type"
-                  value="LEAVE_TREASURE"
-                >
-                  Leave It
-                </button>
-              </div>
-            </form>
-          {% endif %}
-
-          <form
-            method="post"
-            action="{% url 'fantasy_roles:pass_room_turn' session.join_code %}"
-            class="fr-pass-turn-form"
-          >
-            {% csrf_token %}
-
-            <button class="fr-btn" type="submit">
-              Pass Turn
-            </button>
-          </form>
-
-        {% else %}
+        {% if has_attempted_current_trap_round %}
           <p class="fr-muted-text">
-            You cannot act right now. Wait for your turn.
+            You already submitted your action for this trap round. Wait for your party.
           </p>
         {% endif %}
-      </div>
 
-    {% elif run.current_room.is_cleared %}
-      <div class="fr-action-zone">
-        <p class="fr-status-cleared">
-          This room has been cleared. The DM can move the party.
-        </p>
-      </div>
+        <form
+          id="trap-action-form-{{ run.current_room.id }}"
+          method="post"
+          action="{% url 'fantasy_roles:submit_room_action' session.join_code %}"
+          class="fr-room-action-form fr-trap-action-form"
+        >
+          {% csrf_token %}
+
+          <textarea
+            id="trap-action-text-{{ run.current_room.id }}"
+            name="action_text"
+            rows="4"
+            required
+            hx-preserve="true"
+            placeholder="Example: I jump over the lava and use my shield to protect myself."
+          ></textarea>
+
+          <input type="hidden" name="action_type" value="TRAP_ACTION">
+        </form>
+      </section>
     {% endif %}
 
   {% else %}

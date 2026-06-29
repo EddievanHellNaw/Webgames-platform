@@ -1,0 +1,211 @@
+<section class="fr-party-turn-bar">
+  <div class="fr-party-turn-head">
+    <div>
+      <span class="fr-kicker">Adventuring Party</span>
+
+      {% if run.current_turn_character %}
+        <strong>
+          Turn {{ run.turn_number }} · {{ run.current_turn_character.character_name }}
+        </strong>
+      {% else %}
+        <strong>
+          Party Status
+        </strong>
+      {% endif %}
+    </div>
+
+    <details class="fr-corner-popover fr-party-inventory-popover">
+      <summary
+        class="fr-icon-btn fr-inventory-icon-btn"
+        aria-label="Open inventory"
+        title="Open inventory"
+      >
+        {% include "fantasy_roles/partials/_png_icon.html" with name="inventory" extra_class="fr-png-icon-md" alt="Inventory" %}
+
+        {% if party_inventory %}
+          <span class="fr-inventory-count">
+            {{ party_inventory|length }}
+          </span>
+        {% endif %}
+      </summary>
+
+      <div class="fr-corner-popover-panel fr-party-inventory-panel">
+        <div class="fr-popover-heading">
+          <span class="fr-kicker">Party Inventory</span>
+          <strong>Items</strong>
+        </div>
+
+        {% if party_inventory %}
+          <div class="fr-party-inventory-list">
+            {% for inventory_item in party_inventory %}
+              <article class="fr-party-inventory-item">
+                {% if inventory_item.item.image %}
+                  <img
+                    src="{{ inventory_item.item.image.url }}"
+                    alt="{{ inventory_item.item.name }}"
+                  >
+                {% endif %}
+
+                <div>
+                  <strong>
+                    {{ inventory_item.item.name }}
+                    {% if inventory_item.quantity > 1 %}
+                      ×{{ inventory_item.quantity }}
+                    {% endif %}
+                  </strong>
+
+                  <p>
+                    {{ inventory_item.item.effect_text }}
+                  </p>
+                </div>
+              </article>
+            {% endfor %}
+          </div>
+        {% else %}
+          <p class="fr-muted-text">
+            The party does not have any items yet.
+          </p>
+        {% endif %}
+      </div>
+    </details>
+  </div>
+
+<div class="fr-party-turn-members">
+  {% for member in party_members %}
+    {% with hero=member.character %}
+      {% with portrait=hero.selected_image %}
+        <article
+          class="fr-party-turn-member fr-hero-showcase-card
+            {% if run.current_turn_character_id == hero.id %} is-current-turn{% endif %}
+            {% if membership.party.current_dm_id == hero.id %} is-dm{% endif %}
+            {% if hero.current_life <= 0 %} is-defeated{% endif %}"
+          data-character-id="{{ hero.id }}"
+          {% if portrait %}
+            style="--hero-bg: url('{{ portrait.url }}');"
+          {% endif %}
+        >
+          <div class="fr-hero-showcase-bg" aria-hidden="true"></div>
+
+          <header class="fr-hero-showcase-header">
+            <div class="fr-hero-showcase-name">
+              <strong>{{ hero.character_name }}</strong>
+              <span>{{ hero.character_class.name }}</span>
+            </div>
+
+            {% if membership.party.current_dm_id == hero.id %}
+              <div class="fr-hero-showcase-crown" title="Party master">
+                {% include "fantasy_roles/partials/_png_icon.html" with name="crown" extra_class="fr-hero-showcase-crown-icon" alt="Party master" %}
+              </div>
+            {% endif %}
+          </header>
+
+          {% if run.current_turn_character_id == hero.id %}
+            <span class="fr-party-turn-ribbon">
+              Turn
+            </span>
+          {% endif %}
+
+          <div class="fr-hero-showcase-stats">
+            <span
+              class="fr-hero-stat-card is-life"
+              title="Life"
+              data-stat="life"
+              data-current="{{ hero.current_life }}"
+              data-max="{{ hero.character_class.max_life }}"
+            >
+              {% include "fantasy_roles/partials/_png_icon.html" with name="life" extra_class="fr-hero-stat-bg-icon" alt="Life" %}
+
+              <strong class="fr-hero-stat-value">
+                {{ hero.current_life }}/{{ hero.character_class.max_life }}
+              </strong>
+            </span>
+
+            <span
+              class="fr-hero-stat-card is-attack"
+              title="Attack"
+              data-stat="attack"
+              data-current="{{ hero.character_class.attack }}"
+            >
+              {% include "fantasy_roles/partials/_png_icon.html" with name="attack" extra_class="fr-hero-stat-bg-icon" alt="Attack" %}
+
+              <strong class="fr-hero-stat-value">
+                {{ hero.character_class.attack }}
+              </strong>
+            </span>
+
+            <span
+              class="fr-hero-stat-card is-ap"
+              title="Action Points"
+              data-stat="ap"
+              data-current="{{ hero.current_action_points }}"
+              data-max="{{ hero.character_class.action_points }}"
+            >
+              {% include "fantasy_roles/partials/_png_icon.html" with name="ap" extra_class="fr-hero-stat-bg-icon" alt="Action points" %}
+
+              <strong class="fr-hero-stat-value">
+                {{ hero.current_action_points }}/{{ hero.character_class.action_points }}
+              </strong>
+            </span>
+          </div>
+        </article>
+      {% endwith %}
+    {% endwith %}
+  {% endfor %}
+</div>
+  <div class="fr-party-turn-mobile-list">
+  {% for member in party_members %}
+    {% with hero=member.character %}
+      {% with portrait=hero.selected_image %}
+        <article
+          class="fr-party-turn-mobile-card
+            {% if run.current_turn_character_id == hero.id %} is-current-turn{% endif %}
+            {% if membership.party.current_dm_id == hero.id %} is-dm{% endif %}
+            {% if hero.current_life <= 0 %} is-defeated{% endif %}"
+        >
+          <div class="fr-party-turn-mobile-avatar">
+            {% if portrait %}
+              <img src="{{ portrait.url }}" alt="{{ hero.character_name }}">
+            {% else %}
+              <span>{{ hero.character_name|slice:":1" }}</span>
+            {% endif %}
+
+            {% if run.current_turn_character_id == hero.id %}
+              <span class="fr-party-turn-mobile-badge">Turn</span>
+            {% endif %}
+          </div>
+
+          <div class="fr-party-turn-mobile-info">
+            <div class="fr-party-turn-mobile-name-row">
+              <div>
+                <strong>{{ hero.character_name }}</strong>
+                <span>{{ hero.character_class.name }}</span>
+              </div>
+
+              {% if membership.party.current_dm_id == hero.id %}
+                {% include "fantasy_roles/partials/_png_icon.html" with name="crown" extra_class="fr-party-turn-mobile-crown" alt="Party master" %}
+              {% endif %}
+            </div>
+
+            <div class="fr-party-turn-mobile-stats">
+              <span class="fr-mobile-stat is-life">
+                {% include "fantasy_roles/partials/_png_icon.html" with name="life" extra_class="fr-mobile-stat-icon" alt="Life" %}
+                <strong>{{ hero.current_life }}/{{ hero.character_class.max_life }}</strong>
+              </span>
+
+              <span class="fr-mobile-stat is-attack">
+                {% include "fantasy_roles/partials/_png_icon.html" with name="attack" extra_class="fr-mobile-stat-icon" alt="Attack" %}
+                <strong>{{ hero.character_class.attack }}</strong>
+              </span>
+
+              <span class="fr-mobile-stat is-ap">
+                {% include "fantasy_roles/partials/_png_icon.html" with name="ap" extra_class="fr-mobile-stat-icon" alt="Action points" %}
+                <strong>{{ hero.current_action_points }}/{{ hero.character_class.action_points }}</strong>
+              </span>
+            </div>
+          </div>
+        </article>
+      {% endwith %}
+    {% endwith %}
+  {% endfor %}
+</div>
+</section>

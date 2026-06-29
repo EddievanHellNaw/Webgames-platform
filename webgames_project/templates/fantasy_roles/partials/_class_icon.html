@@ -1,0 +1,19 @@
+{% load static %}
+
+{% if character_class.icon_key %}
+  {% with icon_path="fantasy_roles/img/icons/classes/"|add:character_class.icon_key|add:".png" %}
+    <img
+      class="fr-class-icon {{ extra_class|default:'' }}"
+      src="{% static icon_path %}"
+      alt="{{ character_class.name }} icon"
+    >
+  {% endwith %}
+{% elif character_class.image %}
+  <img
+    class="fr-class-icon {{ extra_class|default:'' }}"
+    src="{{ character_class.image.url }}"
+    alt="{{ character_class.name }} icon"
+  >
+{% else %}
+  <span class="fr-class-icon-fallback {{ extra_class|default:'' }}">◆</span>
+{% endif %}

@@ -31,6 +31,13 @@ class CharacterClass(models.Model):
         null=True,
     )
 
+    icon_key = models.CharField(
+        max_length=60,
+        blank=True,
+        default="",
+        help_text="PNG icon filename without extension. Example: assassin, bard, wizard.",
+    )
+
     female_image = models.ImageField(
         upload_to="character_classes/female/",
         blank=True,
@@ -42,6 +49,8 @@ class CharacterClass(models.Model):
         blank=True,
         null=True,
     )
+
+    
 
     max_life = models.PositiveIntegerField(default=10)
     action_points = models.PositiveIntegerField(default=3)
@@ -412,6 +421,36 @@ class Dungeon(models.Model):
     is_active = models.BooleanField(default=True)
     order = models.PositiveIntegerField(default=0)
 
+    def recalculate_difficulty_rating(self, save=True):
+        """
+        Updates the dungeon difficulty based on the average difficulty
+        of its designed dungeon rooms.
+
+        Boss rooms are ignored because boss difficulty is controlled by BossTemplate.
+        """
+        from django.db.models import Avg
+
+        average_difficulty = (
+            DungeonRoom.objects
+            .filter(dungeon=self)
+            .exclude(room_type=DungeonRoom.RoomType.BOSS)
+            .aggregate(avg_difficulty=Avg("difficulty"))
+            .get("avg_difficulty")
+        )
+
+        if average_difficulty is None:
+            return self.difficulty_rating
+
+        calculated_rating = round(average_difficulty)
+        calculated_rating = max(1, min(5, calculated_rating))
+
+        self.difficulty_rating = calculated_rating
+
+        if save:
+            self.save(update_fields=["difficulty_rating"])
+
+        return calculated_rating
+
     class Meta:
         ordering = ["order", "name"]
 
@@ -496,6 +535,17 @@ class DungeonRoom(models.Model):
 
     image = models.ImageField(
         upload_to="dungeon_rooms/",
+        blank=True,
+        null=True,
+    )
+
+    is_mimic_room = models.BooleanField(
+        default=False,
+        help_text="Mark this if this room begins as a special room but becomes a mimic encounter.",
+    )
+
+    mimic_image = models.ImageField(
+        upload_to="dungeon_rooms/mimics/",
         blank=True,
         null=True,
     )
@@ -622,6 +672,12 @@ class DungeonRoomTemplate(models.Model):
     is_mimic_room = models.BooleanField(
         default=False,
         help_text="Mark this if the special room is a mimic encounter.",
+    )
+
+    mimic_image = models.ImageField(
+        upload_to="fantasy_roles/rooms/mimics/",
+        blank=True,
+        null=True,
     )
 
     is_active = models.BooleanField(default=True)
@@ -1249,6 +1305,15 @@ class DungeonRunRoom(models.Model):
         on_delete=models.CASCADE,
         related_name="generated_rooms",
     )
+
+    source_room = models.ForeignKey(
+        DungeonRoom,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="generated_run_rooms",
+    )
+
     source_template = models.ForeignKey(
         DungeonRoomTemplate,
         on_delete=models.SET_NULL,
@@ -1278,6 +1343,41 @@ class DungeonRunRoom(models.Model):
         blank=True,
     )
 
+    @property
+    def display_image(self):
+        """
+        Image used by templates.
+
+        New source of truth:
+        - DungeonRoom image for normal rooms.
+        - DungeonRoom mimic_image after a mimic transforms.
+
+        Legacy fallback:
+        - DungeonRoomTemplate image / mimic_image.
+        """
+        if self.source_room:
+            if (
+                self.source_room.is_mimic_room
+                and self.room_type == self.RoomType.COMBAT
+                and self.source_room.mimic_image
+            ):
+                return self.source_room.mimic_image
+
+            if self.source_room.image:
+                return self.source_room.image
+
+        if self.source_template:
+            if (
+                self.source_template.is_mimic_room
+                and self.room_type == self.RoomType.COMBAT
+                and self.source_template.mimic_image
+            ):
+                return self.source_template.mimic_image
+
+            if self.source_template.image:
+                return self.source_template.image
+
+        return None
     is_cleared = models.BooleanField(default=False)
 
     grid_row = models.PositiveSmallIntegerField(default=1)
@@ -1428,3 +1528,41 @@ class RoomAttempt(models.Model):
 
     def __str__(self):
         return f"{self.character.character_name} - {self.room.name}"
+    
+class RoomSupportEffect(models.Model):
+    room = models.ForeignKey(
+        DungeonRunRoom,
+        on_delete=models.CASCADE,
+        related_name="support_effects",
+    )
+    source_character = models.ForeignKey(
+        PlayerCharacter,
+        on_delete=models.CASCADE,
+        related_name="room_support_effects_created",
+    )
+    target_character = models.ForeignKey(
+        PlayerCharacter,
+        on_delete=models.CASCADE,
+        related_name="room_support_effects_received",
+        blank=True,
+        null=True,
+    )
+    skill = models.ForeignKey(
+        ClassSkill,
+        on_delete=models.CASCADE,
+        related_name="room_support_effects",
+    )
+    effect_code = models.CharField(
+        max_length=60,
+        choices=ClassSkill.EffectCode.choices,
+    )
+    effect_value = models.SmallIntegerField(default=0)
+    secondary_value = models.SmallIntegerField(default=0)
+    uses_remaining = models.PositiveSmallIntegerField(default=1)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.skill.name} on {self.room.name}"

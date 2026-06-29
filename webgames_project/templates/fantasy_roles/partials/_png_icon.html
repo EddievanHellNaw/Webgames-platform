@@ -1,0 +1,62 @@
+{% load static %}
+
+{% if name == "life" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/life.png' %}" alt="{{ alt|default:'Life' }}">
+
+{% elif name == "attack" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/attack.png' %}" alt="{{ alt|default:'Attack' }}">
+
+{% elif name == "ap" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/ap.png' %}" alt="{{ alt|default:'Action points' }}">
+
+{% elif name == "inventory" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/inventory.png' %}" alt="{{ alt|default:'Inventory' }}">
+
+{% elif name == "crown" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/crown.png' %}" alt="{{ alt|default:'Party master' }}">
+
+{% elif name == "difficulty" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/difficulty.png' %}" alt="{{ alt|default:'Difficulty' }}">
+
+{% elif name == "boss_hp" or name == "boss_life" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/boss_hp.png' %}" alt="{{ alt|default:'Boss life' }}">
+
+{% elif name == "game_over" or name == "gameOver" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/gameOver_icon.png' %}" alt="{{ alt|default:'Game over' }}">
+
+{% elif name == "map" or name == "dungeon_map" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/map_icon.png' %}" alt="{{ alt|default:'Map' }}">
+
+{% elif name == "log" or name == "party_log" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/log_icon.png' %}" alt="{{ alt|default:'Log' }}">
+
+{% elif name == "turn" or name == "current_turn" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/turn.png' %}" alt="{{ alt|default:'Current turn' }}">
+
+{% elif name == "basic_action" or name == "b_attack" or name == "basic_attack" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/b_attack_icon.png' %}" alt="{{ alt|default:'Basic attack' }}">
+
+{% elif name == "skill" or name == "skills" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/skill_icon.png' %}" alt="{{ alt|default:'Skill' }}">
+
+{% elif name == "roll_action" or name == "roll" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/roll_action.png' %}" alt="{{ alt|default:'Roll action' }}">
+
+{% elif name == "pass_turn" or name == "pass" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/pass_turn.png' %}" alt="{{ alt|default:'Pass turn' }}">
+
+{% elif name == "use" or name == "use_item" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/use.png' %}" alt="{{ alt|default:'Use item' }}">
+
+{% elif name == "trap_room" or name == "trap" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/trap_icon.png' %}" alt="{{ alt|default:'Trap room' }}">
+
+{% elif name == "combat_room" or name == "combat" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/combat_icon.png' %}" alt="{{ alt|default:'Combat room' }}">
+
+{% elif name == "treasure_room" or name == "treasure" %}
+  <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/treasure_icon.png' %}" alt="{{ alt|default:'Treasure room' }}">
+
+{% else %}
+  <span class="fr-png-icon-fallback {{ extra_class|default:'' }}" aria-hidden="true">◆</span>
+{% endif %}

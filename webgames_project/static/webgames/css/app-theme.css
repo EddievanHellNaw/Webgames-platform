@@ -1,0 +1,412 @@
+:root {
+  --app-bg: #070b13;
+  --app-bg-2: #101522;
+  --app-panel: rgba(10, 17, 30, 0.94);
+  --app-panel-soft: rgba(14, 24, 41, 0.88);
+  --app-border: rgba(255, 255, 255, 0.16);
+  --app-border-strong: rgba(255, 255, 255, 0.28);
+  --app-text: #f4f6ff;
+  --app-muted: #aeb6c9;
+  --app-blue: #2f80ed;
+  --app-gold: #f3c45b;
+  --app-radius: 22px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--app-text);
+  font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background:
+    radial-gradient(circle at top center, rgba(47, 128, 237, 0.16), transparent 34rem),
+    linear-gradient(180deg, var(--app-bg), var(--app-bg-2));
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+img {
+  max-width: 100%;
+}
+
+.fr-app-shell {
+  width: min(1180px, 100%);
+  margin: 0 auto;
+  padding: 1rem;
+}
+
+.app-top-nav {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--app-border);
+  border-radius: var(--app-radius);
+  background:
+    linear-gradient(180deg, rgba(15, 25, 43, 0.96), rgba(6, 11, 20, 0.98));
+  box-shadow:
+    0 18px 44px rgba(0, 0, 0, 0.26),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.app-brand {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: var(--app-text);
+  font-weight: 900;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.app-brand-mark {
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 12px;
+  color: var(--app-gold);
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.app-nav-links {
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  flex-wrap: wrap;
+}
+
+.fr-muted-text {
+  color: var(--app-muted);
+}
+
+.app-btn,
+button.app-btn,
+input[type="submit"].app-btn {
+  display: inline-flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid var(--app-border-strong);
+  border-radius: 999px;
+  padding: 0.65rem 1rem;
+  color: var(--app-text);
+  background: rgba(255, 255, 255, 0.045);
+  cursor: pointer;
+  font-weight: 850;
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    background 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.app-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 255, 255, 0.38);
+  background: rgba(255, 255, 255, 0.075);
+}
+
+.app-btn-primary {
+  border-color: rgba(47, 128, 237, 0.62);
+  box-shadow: 0 0 18px rgba(47, 128, 237, 0.14);
+}
+
+.app-btn-secondary {
+  border-color: rgba(255, 255, 255, 0.22);
+}
+
+.app-btn-gold {
+  border-color: rgba(243, 196, 91, 0.7);
+  color: #fff3d1;
+  background:
+    linear-gradient(180deg, rgba(130, 78, 18, 0.72), rgba(48, 29, 8, 0.88));
+  box-shadow:
+    0 0 20px rgba(243, 196, 91, 0.18),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.fr-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.fr-dashboard-hero {
+  border: 1px solid var(--app-border);
+  border-radius: 26px;
+  padding: clamp(1.2rem, 4vw, 2rem);
+  background:
+    radial-gradient(circle at top right, rgba(47, 128, 237, 0.16), transparent 28rem),
+    linear-gradient(180deg, rgba(15, 25, 43, 0.96), rgba(6, 11, 20, 0.98));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+}
+
+.fr-dashboard-hero h1 {
+  margin: 0.25rem 0;
+  font-size: clamp(2rem, 7vw, 4rem);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.fr-dashboard-hero p {
+  max-width: 68ch;
+  color: var(--app-muted);
+}
+
+.fr-panel {
+  border: 1px solid var(--app-border);
+  border-radius: 24px;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgba(15, 25, 43, 0.94), rgba(6, 11, 20, 0.98));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+}
+
+.fr-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.fr-kicker,
+.app-kicker {
+  color: var(--app-muted);
+  font-size: 0.75rem;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  font-weight: 900;
+}
+
+.fr-game-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+.app-game-card {
+  position: relative;
+  overflow: hidden;
+  display: grid;
+  grid-template-columns: 76px 1fr;
+  gap: 1rem;
+  align-items: start;
+  border: 1px solid var(--app-border);
+  border-radius: 20px;
+  padding: 1rem;
+  background:
+    radial-gradient(circle at top left, rgba(47, 128, 237, 0.10), transparent 60%),
+    rgba(255, 255, 255, 0.035);
+  transition:
+    transform 0.16s ease,
+    border-color 0.16s ease,
+    box-shadow 0.16s ease,
+    background 0.16s ease;
+}
+
+.app-game-card:hover {
+  transform: translateY(-2px);
+  border-color: rgba(255, 255, 255, 0.28);
+  background:
+    radial-gradient(circle at top left, rgba(47, 128, 237, 0.16), transparent 60%),
+    rgba(255, 255, 255, 0.055);
+}
+
+.app-game-card-icon {
+  width: 76px;
+  height: 76px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--app-border);
+  border-radius: 20px;
+  color: var(--app-gold);
+  font-size: 2rem;
+  background: rgba(0, 0, 0, 0.28);
+}
+
+.app-game-card-body h2 {
+  margin: 0.2rem 0 0.35rem;
+  font-size: 1.4rem;
+}
+
+.app-game-card-body p {
+  margin: 0;
+  color: var(--app-muted);
+}
+
+.app-game-card-actions {
+  margin-top: 0.9rem;
+}
+
+/* Fantasy Roles card preview on global dashboard */
+.app-game-card-guildbound {
+  grid-template-columns: 1fr;
+  min-height: 220px;
+  border-color: rgba(243, 196, 91, 0.28);
+  background:
+    radial-gradient(circle at top center, rgba(243, 196, 91, 0.12), transparent 20rem),
+    radial-gradient(circle at bottom right, rgba(20, 80, 140, 0.18), transparent 24rem),
+    linear-gradient(180deg, rgba(4, 15, 29, 0.98), rgba(0, 4, 10, 0.99));
+  box-shadow:
+    0 0 24px rgba(243, 196, 91, 0.08),
+    0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.app-game-card-guildbound::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border: 1px solid rgba(243, 196, 91, 0.14);
+  border-radius: 14px;
+  pointer-events: none;
+}
+
+.app-game-card-guildbound-logo-wrap,
+.app-game-card-guildbound-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.app-game-card-guildbound-logo-wrap {
+  display: grid;
+  place-items: center;
+  min-height: 120px;
+  padding: 0.35rem;
+}
+
+.app-game-card-guildbound-logo {
+  width: min(100%, 520px);
+  max-height: 115px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 14px rgba(243, 196, 91, 0.24))
+    drop-shadow(0 0 26px rgba(20, 80, 140, 0.18));
+}
+
+.app-game-card-guildbound-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+@media (min-width: 860px) {
+  .fr-game-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .fr-app-shell {
+    padding: 0.65rem;
+  }
+
+  .app-top-nav {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .app-nav-links {
+    width: 100%;
+  }
+
+  .app-nav-links .app-btn,
+  .app-game-card .app-btn {
+    width: 100%;
+  }
+
+  .app-game-card {
+    grid-template-columns: 58px 1fr;
+    gap: 0.75rem;
+    padding: 0.8rem;
+  }
+
+  .app-game-card-icon {
+    width: 58px;
+    height: 58px;
+    border-radius: 16px;
+    font-size: 1.45rem;
+  }
+
+  .app-game-card-guildbound {
+    grid-template-columns: 1fr;
+  }
+
+  .app-game-card-guildbound-footer {
+    display: grid;
+  }
+}
+
+.app-dashboard {
+  display: grid;
+  gap: 1rem;
+}
+
+.app-dashboard-hero {
+  border: 1px solid var(--app-border);
+  border-radius: 26px;
+  padding: clamp(1.2rem, 4vw, 2rem);
+  background:
+    radial-gradient(circle at top right, rgba(47, 128, 237, 0.16), transparent 28rem),
+    linear-gradient(180deg, rgba(15, 25, 43, 0.96), rgba(6, 11, 20, 0.98));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.24);
+}
+
+.app-dashboard-hero h1 {
+  margin: 0.25rem 0;
+  font-size: clamp(2rem, 7vw, 4rem);
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.app-dashboard-hero p {
+  max-width: 68ch;
+  color: var(--app-muted);
+}
+
+.app-panel {
+  border: 1px solid var(--app-border);
+  border-radius: 24px;
+  padding: 1rem;
+  background:
+    linear-gradient(180deg, rgba(15, 25, 43, 0.94), rgba(6, 11, 20, 0.98));
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
+}
+
+.app-panel-heading {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 1rem;
+  margin-bottom: 0.75rem;
+}
+
+.app-muted-text {
+  color: var(--app-muted);
+}
+
+.app-game-card-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
+}
+
+@media (min-width: 860px) {
+  .app-game-card-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

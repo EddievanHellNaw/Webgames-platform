@@ -264,6 +264,7 @@ class AdventuringPartyAdmin(admin.ModelAdmin):
 class CharacterClassAdmin(admin.ModelAdmin):
     list_display = (
         "name",
+        "icon_key",
         "max_life",
         "action_points",
         "attack",
@@ -277,6 +278,7 @@ class CharacterClassAdmin(admin.ModelAdmin):
         "slug",
         "description",
         "image",
+        "icon_key",
         "female_image",
         "male_image",
         "max_life",
@@ -315,14 +317,18 @@ class PlayerCharacterAdmin(admin.ModelAdmin):
 @admin.register(DungeonRoomTemplate)
 class DungeonRoomTemplateAdmin(admin.ModelAdmin):
     list_display = (
-        "name",
         "dungeon",
+        "name",
         "room_type",
+        "image",
+        "mimic_image",
         "difficulty",
+        "flavor_text",
+        "failure_text",
         "damage_on_failure",
         "is_mimic_room",
         "is_active",
-    )
+        )
     list_filter = ("dungeon", "room_type", "difficulty", "is_mimic_room", "is_active")
     search_fields = ("name", "flavor_text", "failure_text")
 
@@ -388,7 +394,14 @@ class DungeonRoomAdmin(admin.ModelAdmin):
         "name",
         "room_type",
         "difficulty",
+        "flavor_text",
+        "failure_text",
         "damage_on_failure",
+        "image",
+        "is_mimic_room",
+        "mimic_image",
+        "grid_row",
+        "grid_col",
     )
     list_filter = ("dungeon", "room_type")
     search_fields = ("name", "flavor_text", "failure_text")

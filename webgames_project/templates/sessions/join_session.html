@@ -1,5 +1,11 @@
 {% extends "base.html" %}
+{% load static %}
 
+{% block game_theme_css %}
+  {% if session.game_template.code == "FANTASY_ROLES" %}
+    <link rel="stylesheet" href="{% static 'fantasy_roles/css/fantasy-theme.css' %}">
+  {% endif %}
+{% endblock %}
 {% block title %}Join Session · {{ session.title }}{% endblock %}
 
 {% block content %}

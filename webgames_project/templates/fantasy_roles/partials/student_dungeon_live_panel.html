@@ -1,3 +1,5 @@
+{% load static %}
+
 {% if not membership %}
   <section class="fr-panel">
     <div class="fr-panel-heading">
@@ -46,61 +48,133 @@
   </section>
 
 {% else %}
-  <section
-    class="fr-dungeon-hero"
-    {% if run.dungeon.image %}
-      style="--dungeon-hero-bg: url('{{ run.dungeon.image.url }}');"
-    {% endif %}
-  >
-    <div class="fr-dungeon-hero__icon">
-      {% if run.dungeon.image %}
+<section
+  class="fr-dungeon-hero-card fr-dungeon-theme-{{ run.dungeon.name|slugify }}"
+  {% if run.dungeon.image %}
+    style="--dungeon-hero-bg: url('{{ run.dungeon.image.url }}');"
+  {% endif %}
+>
+  <div class="fr-dungeon-hero-card-bg" aria-hidden="true"></div>
+
+  <div class="fr-dungeon-hero-card-content">
+    {% with dungeon_slug=run.dungeon.name|slugify %}
+      {% with logo_path="fantasy_roles/img/dungeons/logos/"|add:dungeon_slug|add:".png" %}
         <img
-          src="{{ run.dungeon.image.url }}"
-          alt="{{ run.dungeon.name }}"
+          class="fr-dungeon-hero-logo"
+          src="{% static logo_path %}"
+          alt="{{ run.dungeon.name }} logo"
+          onerror="this.hidden=true; this.nextElementSibling.hidden=false;"
         >
-      {% else %}
-        <span>◆</span>
-      {% endif %}
-    </div>
 
-    <div class="fr-dungeon-hero__content">
-      {% if run.dungeon.kingdom %}
-        <span class="fr-kicker">{{ run.dungeon.kingdom }}</span>
-      {% else %}
-        <span class="fr-kicker">Dungeon</span>
-      {% endif %}
+        <h1 class="fr-dungeon-hero-fallback-title" hidden>
+          {{ run.dungeon.name }}
+        </h1>
+      {% endwith %}
+    {% endwith %}
 
-      <h1>{{ run.dungeon.name }}</h1>
-
-      {% if run.dungeon.description %}
-        <p>{{ run.dungeon.description }}</p>
-      {% endif %}
-
-      <div class="fr-status-row">
-        <span class="fr-status-pill">
-          {{ run.get_status_display }}
+    <div
+      class="fr-difficulty-runes fr-dungeon-hero-difficulty"
+      aria-label="Difficulty {{ run.dungeon.difficulty_rating }} out of 5"
+    >
+      {% for marker in "12345" %}
+        <span class="fr-difficulty-rune {% if forloop.counter <= run.dungeon.difficulty_rating %}is-filled{% endif %}">
+          {% include "fantasy_roles/partials/_png_icon.html" with name="difficulty" extra_class="fr-png-icon-xs" %}
         </span>
-
-        {% if is_current_dm %}
-          <span class="fr-status-pill is-gold">
-            ◆ You are the DM
-          </span>
-        {% elif membership.party.current_dm %}
-          <span class="fr-status-pill">
-            DM: {{ membership.party.current_dm.character_name }}
-          </span>
-        {% endif %}
-
-        {% if run.current_turn_character %}
-          <span class="fr-status-pill is-gold">
-            Turn: {{ run.current_turn_character.character_name }}
-          </span>
-        {% endif %}
-      </div>
+      {% endfor %}
     </div>
-  </section>
+  </div>
+  {% if run.current_room %}
+  <div class="fr-dungeon-hero-tools">
+    <details class="fr-corner-popover fr-dungeon-header-tool is-info fr-dungeon-info-popover">
+      <summary
+        class="fr-room-action-orb is-info"
+        aria-label="Room information"
+        title="Room information"
+      >
+        <span class="fr-room-action-glyph">?</span>
+      </summary>
 
-  {% include "fantasy_roles/partials/_party_hud.html" %}
+      <div class="fr-corner-popover-panel fr-dungeon-header-popover-panel">
+        <div class="fr-popover-heading">
+          <span class="fr-kicker">Current Room</span>
+          <strong>Room {{ run.current_room.room_number }}</strong>
+        </div>
+
+        <div class="fr-dungeon-header-info">
+          <strong>
+            {% if run.current_room.name %}
+              {{ run.current_room.name }}
+            {% else %}
+              Unknown Room
+            {% endif %}
+          </strong>
+
+          <span>
+            {{ run.current_room.get_room_type_display }}
+            · Difficulty {{ run.current_room.difficulty }}/5
+          </span>
+
+          {% if run.current_room.flavor_text %}
+            <p>{{ run.current_room.flavor_text }}</p>
+          {% endif %}
+
+          {% if run.current_room.failure_text %}
+            <p>
+              <strong>Failure:</strong>
+              {{ run.current_room.failure_text }}
+            </p>
+          {% endif %}
+
+          {% if run.current_room.damage_on_failure %}
+            <p class="fr-danger-text">
+              Damage on failure:
+              <strong>{{ run.current_room.damage_on_failure }}</strong>
+            </p>
+          {% endif %}
+        </div>
+      </div>
+    </details>
+
+    <details class="fr-corner-popover fr-dungeon-header-tool is-map fr-map-popover">
+      <summary
+        class="fr-room-action-orb is-map"
+        aria-label="Open dungeon map"
+        title="Open dungeon map"
+      >
+        {% include "fantasy_roles/partials/_png_icon.html" with name="map" extra_class="fr-room-action-icon" alt="Map" %}
+      </summary>
+
+      <div class="fr-corner-popover-panel fr-dungeon-header-popover-panel fr-map-popover-panel">
+        <div class="fr-popover-heading">
+          <span class="fr-kicker">Dungeon Map</span>
+          <strong>{{ run.dungeon.name }}</strong>
+        </div>
+
+        {% include "fantasy_roles/partials/_dungeon_map_panel.html" %}
+      </div>
+    </details>
+
+    <details class="fr-corner-popover fr-dungeon-header-tool is-log fr-party-log-popover">
+      <summary
+        class="fr-room-action-orb is-log"
+        aria-label="Open party log"
+        title="Open party log"
+      >
+        {% include "fantasy_roles/partials/_png_icon.html" with name="log" extra_class="fr-room-action-icon" alt="Party log" %}
+      </summary>
+
+      <div class="fr-corner-popover-panel fr-dungeon-header-popover-panel fr-party-log-popover-panel">
+        <div class="fr-popover-heading">
+          <span class="fr-kicker">Party Log</span>
+          <strong>Recent Actions</strong>
+        </div>
+
+        {% include "fantasy_roles/partials/_activity_feed.html" %}
+      </div>
+    </details>
+  </div>
+{% endif %}
+</section>
 
   {% if run.status == "FAILED" %}
     {% include "fantasy_roles/partials/_game_over_panel.html" %}
@@ -116,30 +190,138 @@
     {% include "fantasy_roles/partials/_boss_encounter_panel.html" %}
 
   {% else %}
-    <section class="fr-game-grid fr-dungeon-play-layout">
-      {% include "fantasy_roles/partials/_current_room_panel.html" %}
-      {% include "fantasy_roles/partials/_dungeon_map_panel.html" %}
-    </section>
+<section class="fr-dungeon-play-stack fr-dungeon-room-layout">
+  <main class="fr-dungeon-room-main">
+    {% include "fantasy_roles/partials/_current_room_panel.html" %}
+  </main>
 
-    {% include "fantasy_roles/partials/_dm_controls.html" %}
-
-    {% include "fantasy_roles/partials/_activity_feed.html" %}
+  <aside class="fr-dungeon-room-side">
+    {% include "fantasy_roles/partials/_party_turn_bar.html" %}
+  </aside>
+</section>
   {% endif %}
 
   {% if latest_attempt %}
-    <div
-      id="latest-attempt-payload"
-      hidden
-      data-attempt-id="{{ latest_attempt.id }}"
-      data-character-id="{{ latest_attempt.character_id }}"
-      data-character-name="{{ latest_attempt.character.character_name }}"
-      data-success="{{ latest_attempt.success|yesno:'true,false' }}"
-      data-die-roll="{{ latest_attempt.die_roll|default:'' }}"
-      data-final-total="{{ latest_attempt.final_roll_total|default:'' }}"
-      data-difficulty="{{ latest_attempt.difficulty_at_roll|default:'' }}"
-      data-damage="{{ latest_attempt.damage_taken|default:'0' }}"
-      data-item="{% if latest_attempt.item_awarded %}{{ latest_attempt.item_awarded.name }}{% endif %}"
-      data-result-text="{{ latest_attempt.result_text|escape }}"
-    ></div>
+  {% with character_portrait=latest_attempt.character.selected_image %}
+    {% with attempt_room_image=latest_attempt.room.display_image %}
+      <div
+        id="latest-attempt-payload"
+        hidden
+        data-attempt-id="{{ latest_attempt.id }}"
+        data-action-type="{{ latest_attempt.action_type }}"
+        data-character-id="{{ latest_attempt.character_id }}"
+        data-character-name="{{ latest_attempt.character.character_name }}"
+        data-character-image="{% if character_portrait %}{{ character_portrait.url }}{% endif %}"
+        data-character-current-life="{{ latest_attempt.character.current_life }}"
+        data-character-max-life="{{ latest_attempt.character.character_class.max_life }}"
+        data-character-current-ap="{{ latest_attempt.character.current_action_points }}"
+        data-character-max-ap="{{ latest_attempt.character.character_class.action_points }}"
+        data-skill-name="{% if latest_attempt.skill_used %}{{ latest_attempt.skill_used.name|escape }}{% endif %}"
+        data-skill-ap-cost="{% if latest_attempt.skill_used %}{{ latest_attempt.skill_used.ap_cost }}{% else %}0{% endif %}"
+        data-success="{{ latest_attempt.success|yesno:'true,false' }}"
+        data-die-roll="{{ latest_attempt.die_roll|default:'' }}"
+        data-final-total="{{ latest_attempt.final_roll_total|default:'' }}"
+        data-difficulty="{{ latest_attempt.difficulty_at_roll|default:'' }}"
+        data-damage="{{ latest_attempt.damage_taken|default:'0' }}"
+        data-item="{% if latest_attempt.item_awarded %}{{ latest_attempt.item_awarded.name }}{% endif %}"
+        data-result-text="{{ latest_attempt.result_text|escape }}"
+        data-room-id="{{ latest_attempt.room_id }}"
+        data-room-name="{{ latest_attempt.room.name|escape }}"
+        data-room-number="{{ latest_attempt.room.room_number }}"
+        data-room-type="{{ latest_attempt.room.get_room_type_display|escape }}"
+        data-room-cleared="{{ latest_attempt.room.is_cleared|yesno:'true,false' }}"
+        data-room-image="{% if attempt_room_image %}{{ attempt_room_image.url }}{% endif %}"
+        data-run-status="{{ run.status }}"
+      ></div>
+    {% endwith %}
+  {% endwith %}
+{% endif %}
+
+  {% if run and run.status == "ACTIVE" and run.current_room and not run.current_room.is_cleared %}
+    {% with room_image=run.current_room.display_image %}
+      <div
+        id="current-room-entry-payload"
+        hidden
+        data-run-id="{{ run.id }}"
+        data-room-id="{{ run.current_room.id }}"
+        data-room-name="{{ run.current_room.name|escape }}"
+        data-room-number="{{ run.current_room.room_number }}"
+        data-room-type="{{ run.current_room.get_room_type_display|escape }}"
+        data-flavor-text="{{ run.current_room.flavor_text|escape }}"
+        data-image-url="{% if room_image %}{{ room_image.url }}{% endif %}"
+        data-run-status="{{ run.status }}"
+        data-room-cleared="{{ run.current_room.is_cleared|yesno:'true,false' }}"
+      ></div>
+    {% endwith %}
   {% endif %}
+
+  {% if latest_attempt and not latest_attempt.success and run.status == "ACTIVE" %}
+    {% with failure_room=latest_attempt.room %}
+      {% with failure_image=failure_room.display_image %}
+        <div
+          id="latest-room-failure-payload"
+          hidden
+          data-attempt-id="{{ latest_attempt.id }}"
+          data-room-name="{{ failure_room.name|escape }}"
+          data-room-number="{{ failure_room.room_number }}"
+          data-room-type="{{ failure_room.get_room_type_display|escape }}"
+          data-failure-text="{{ failure_room.failure_text|default:latest_attempt.result_text|escape }}"
+          data-image-url="{% if failure_image %}{{ failure_image.url }}{% endif %}"
+          data-damage="{{ latest_attempt.damage_taken|default:'0' }}"
+        ></div>
+      {% endwith %}
+    {% endwith %}
+  {% endif %}
+  {% if run and run.status == "BOSS_READY" and boss_template and latest_attempt and latest_attempt.success %}
+  <div
+    id="boss-reveal-payload"
+    hidden
+    data-run-id="{{ run.id }}"
+    data-boss-name="{{ boss_template.normal_name|escape }}"
+    data-boss-image="{% if boss_template.image %}{{ boss_template.image.url }}{% endif %}"
+    data-dungeon-name="{{ run.dungeon.name|escape }}"
+    data-dungeon-image="{% if run.dungeon.image %}{{ run.dungeon.image.url }}{% endif %}"
+  ></div>
+{% endif %}
+
+{% if run and run.status == "BOSS_ACTIVE" and boss_encounter %}
+  <div
+    id="boss-battle-intro-payload"
+    hidden
+    data-run-id="{{ run.id }}"
+    data-encounter-id="{{ boss_encounter.id }}"
+    data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
+  ></div>
+{% endif %}
+{% if boss_logs %}
+  {% with latest_boss_log=boss_logs.0 %}
+    {% if latest_boss_log.actor_type == "PLAYER" %}
+      <div
+        id="latest-boss-player-log-payload"
+        hidden
+        data-log-id="{{ latest_boss_log.id }}"
+        data-action-type="{{ latest_boss_log.action_type }}"
+        data-character-id="{{ latest_boss_log.character_id }}"
+        data-character-name="{{ latest_boss_log.character.character_name|escape }}"
+        data-character-current-life="{{ latest_boss_log.character.current_life }}"
+        data-character-max-life="{{ latest_boss_log.character.character_class.max_life }}"
+        data-character-current-ap="{{ latest_boss_log.character.current_action_points }}"
+        data-character-max-ap="{{ latest_boss_log.character.character_class.action_points }}"
+        data-skill-name="{% if latest_boss_log.player_skill %}{{ latest_boss_log.player_skill.name|escape }}{% endif %}"
+        data-skill-ap-cost="{% if latest_boss_log.player_skill %}{{ latest_boss_log.player_skill.ap_cost }}{% else %}0{% endif %}"
+        data-success="{{ latest_boss_log.success|yesno:'true,false' }}"
+        data-die-roll="{{ latest_boss_log.die_roll|default:'' }}"
+        data-final-total="{{ latest_boss_log.final_roll_total|default:'' }}"
+        data-difficulty="{{ latest_boss_log.difficulty_at_roll|default:'' }}"
+        data-damage-to-boss="{{ latest_boss_log.damage_to_boss|default:'0' }}"
+        data-damage-to-players="{{ latest_boss_log.damage_to_players|default:'0' }}"
+        data-healing="{{ latest_boss_log.healing_done|default:'0' }}"
+        data-result-text="{{ latest_boss_log.result_text|escape }}"
+        data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
+        data-boss-current-life="{{ boss_encounter.current_life }}"
+        data-boss-max-life="{{ boss_encounter.max_life_for_current_phase }}"
+      ></div>
+    {% endif %}
+  {% endwith %}
+{% endif %}
 {% endif %}

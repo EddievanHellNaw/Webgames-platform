@@ -1,71 +1,161 @@
-<section
-  class="fr-panel fr-map-panel"
-  {% if run.dungeon.image %}
-    style="--dungeon-bg: url('{{ run.dungeon.image.url }}');"
-  {% endif %}
->
-  <div class="fr-panel-heading">
-    <span class="fr-kicker">Dungeon Map</span>
-    <strong>{{ run.dungeon.name }}</strong>
-  </div>
-
+<section class="fr-map-panel-compact">
   {% if generated_rooms %}
-    <div class="fr-node-map">
-      {% for room in generated_rooms %}
-        <div
-          class="
-            fr-room-node
-            {% if run.current_room_id == room.id %}is-current{% endif %}
-            {% if room.is_cleared %}is-cleared{% endif %}
-            {% if room.id in connected_room_ids %}is-connected{% endif %}
-          "
-          style="grid-row: {{ room.grid_row }}; grid-column: {{ room.grid_col }};"
-          title="Room {{ room.room_number }} — {{ room.name }}"
-        >
-          <span>{{ room.room_number }}</span>
-        </div>
-      {% endfor %}
+    <div class="fr-map-help-row">
+      {% if is_current_dm and run.current_room.is_cleared and run.status == "ACTIVE" %}
+        <span class="fr-status-pill is-gold">
+          Click a connected room to move the party.
+        </span>
+      {% elif is_current_dm and run.status == "ACTIVE" %}
+        <span class="fr-status-pill">
+          Clear the current room before moving.
+        </span>
+      {% else %}
+        <span class="fr-status-pill">
+          Map view
+        </span>
+      {% endif %}
     </div>
 
     <div class="fr-map-legend">
-      <span><i class="legend-current"></i> Current</span>
-      <span><i class="legend-cleared"></i> Cleared</span>
-      <span><i class="legend-connected"></i> Connected</span>
+      <span class="fr-map-legend-item">
+        <i class="fr-map-legend-swatch is-current"></i>
+        Current room
+      </span>
+
+      <span class="fr-map-legend-item">
+        <i class="fr-map-legend-swatch is-connected"></i>
+        Connected room
+      </span>
+
+      <span class="fr-map-legend-item">
+        <i class="fr-map-legend-swatch is-cleared"></i>
+        Cleared room
+      </span>
+
+      {% if is_current_dm %}
+        <span class="fr-map-legend-item">
+          <i class="fr-map-legend-swatch is-movable"></i>
+          DM can move here
+        </span>
+      {% endif %}
     </div>
-  {% else %}
-    <p>No generated rooms exist for this run yet.</p>
-  {% endif %}
 
-  <div class="fr-connected-room-panel">
-    <h3>Connected Rooms</h3>
+    <div class="fr-dungeon-mini-map">
+      {% for room in generated_rooms %}
+        {% if is_current_dm and run.current_room.is_cleared and run.status == "ACTIVE" and room.id in connected_room_ids %}
+          <form
+            method="post"
+            action="{% url 'fantasy_roles:move_to_room' session.join_code room.id %}"
+            class="fr-map-room-node fr-map-room-form"
+            style="--map-row: {{ room.grid_row }}; --map-col: {{ room.grid_col }};"
+          >
+            {% csrf_token %}
 
-    {% if connected_rooms %}
-      <div class="fr-connected-list">
-        {% for room in connected_rooms %}
-          <article class="fr-connected-room">
-            <div>
-              <strong>
+            <button
+              type="submit"
+              class="fr-map-room-button is-movable {% if run.current_room_id == room.id %}is-current{% endif %} {% if room.is_cleared %}is-cleared{% endif %} {% if room.id in connected_room_ids %}is-connected{% endif %}"
+              title="Move to Room {{ room.room_number }}"
+            >
+              <span class="fr-map-room-number">
                 Room {{ room.room_number }}
-              </strong>
+              </span>
 
-              {% if room.name %}
-                <span>{{ room.name }}</span>
+              <span class="fr-map-room-icon">
+                {% if room.room_type == "TRAP" %}
+                  ✦
+                {% elif room.room_type == "COMBAT" %}
+                  ⚔
+                {% elif room.room_type == "TREASURE" %}
+                  ◆
+                {% elif room.room_type == "SPECIAL" %}
+                  ?
+                {% else %}
+                  ●
+                {% endif %}
+              </span>
+
+              <span class="fr-map-room-name">
+                {{ room.name|default:"Room" }}
+              </span>
+
+              <span class="fr-map-room-badges">
+                {% if run.current_room_id == room.id %}
+                  <em class="is-current">Current</em>
+                {% endif %}
+
+                {% if room.is_cleared %}
+                  <em class="is-cleared">Cleared</em>
+                {% endif %}
+
+                {% if room.id in connected_room_ids and run.current_room_id != room.id %}
+                  <em class="is-connected">Connected</em>
+                {% endif %}
+
+                <em class="is-movable">Move</em>
+              </span>
+            </button>
+          </form>
+        {% else %}
+          <div
+            class="fr-map-room-node fr-map-room-static {% if run.current_room_id == room.id %}is-current{% endif %} {% if room.is_cleared %}is-cleared{% endif %} {% if room.id in connected_room_ids %}is-connected{% endif %}"
+            style="--map-row: {{ room.grid_row }}; --map-col: {{ room.grid_col }};"
+          >
+            <span class="fr-map-room-number">
+              Room {{ room.room_number }}
+            </span>
+
+            <span class="fr-map-room-icon">
+              {% if room.room_type == "TRAP" %}
+                ✦
+              {% elif room.room_type == "COMBAT" %}
+                ⚔
+              {% elif room.room_type == "TREASURE" %}
+                ◆
+              {% elif room.room_type == "SPECIAL" %}
+                ?
+              {% else %}
+                ●
+              {% endif %}
+            </span>
+
+            <span class="fr-map-room-name">
+              {{ room.name|default:"Room" }}
+            </span>
+
+            <span class="fr-map-room-badges">
+              {% if run.current_room_id == room.id %}
+                <em class="is-current">Current</em>
               {% endif %}
 
-              <small>
-                {{ room.get_room_type_display }}
-                · Difficulty {{ room.difficulty }}/5
-              </small>
-            </div>
+              {% if room.is_cleared %}
+                <em class="is-cleared">Cleared</em>
+              {% endif %}
 
-            
-          </article>
-        {% endfor %}
+              {% if room.id in connected_room_ids and run.current_room_id != room.id %}
+                <em class="is-connected">Connected</em>
+              {% endif %}
+            </span>
+          </div>
+        {% endif %}
+      {% endfor %}
+    </div>
+
+    {% if connected_rooms %}
+      <div class="fr-connected-room-summary">
+        <span class="fr-kicker">Connected Rooms</span>
+
+        <div class="fr-connected-room-pills">
+          {% for room in connected_rooms %}
+            <span>
+              Room {{ room.room_number }} · {{ room.name|default:"Unknown" }}
+            </span>
+          {% endfor %}
+        </div>
       </div>
-    {% else %}
-      <p class="fr-muted-text">
-        No connected rooms are available from your current room.
-      </p>
     {% endif %}
-  </div>
+  {% else %}
+    <p class="fr-muted-text">
+      No generated rooms exist for this run yet.
+    </p>
+  {% endif %}
 </section>

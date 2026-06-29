@@ -2,10 +2,13 @@ import random
 
 from django.db import transaction
 
+from django.db import transaction
+
 from .models import (
+    DungeonRoom,
+    DungeonRoomConnection,
     DungeonRunConnection,
     DungeonRunRoom,
-    DungeonRoomTemplate,
     PartyDungeonRun,
 )
 
@@ -164,6 +167,8 @@ def generated_flavor_text(room_type, dungeon):
         )
 
     return "The party enters a mysterious room."
+
+
 def get_templates_for_type(dungeon, room_type):
     return list(
         DungeonRoomTemplate.objects.filter(
@@ -201,58 +206,132 @@ def choose_template_for_room(dungeon, room_type, used_template_ids):
 @transaction.atomic
 def generate_dungeon_run(run):
     """
-    Generates the randomized dungeon for one party run.
-    Safe to call once after PartyDungeonRun is created.
+    Generates a dungeon run from the designed DungeonRoom map.
+
+    The map structure stays readable:
+    - Room numbers, grid positions, and connections come from the designed slots.
+
+    The room contents are shuffled:
+    - Name, type, difficulty, text, images, and mimic data come from randomized DungeonRoom records.
+
+    This means the same dungeon layout can produce different runs.
     """
-    if run.generated_rooms.exists():
-        return run
+    run = (
+        PartyDungeonRun.objects
+        .select_for_update()
+        .select_related("dungeon")
+        .get(id=run.id)
+    )
 
     dungeon = run.dungeon
-    room_types = build_room_type_list(dungeon)
 
-    positions = GRID_POSITIONS[:]
+    DungeonRunConnection.objects.filter(run=run).delete()
+    DungeonRunRoom.objects.filter(run=run).delete()
 
-    position_to_room = {}
-    used_template_ids = set()
+    slot_rooms = list(
+        DungeonRoom.objects
+        .filter(dungeon=dungeon)
+        .exclude(room_type=DungeonRoom.RoomType.BOSS)
+        .order_by("number")
+    )
 
-    for index, position in enumerate(positions, start=1):
-        room_type = room_types[index - 1]
-        template = choose_template_for_room(
-            dungeon,
-            room_type,
-            used_template_ids,
+    if not slot_rooms:
+        raise ValueError(
+            f"{dungeon.name} has no designed DungeonRoom records."
         )
 
+    content_rooms = slot_rooms[:]
+    random.shuffle(content_rooms)
 
-        room = DungeonRunRoom.objects.create(
+    # Avoid an identical order when possible.
+    if (
+        len(content_rooms) > 1
+        and [room.id for room in content_rooms] == [room.id for room in slot_rooms]
+    ):
+        content_rooms = content_rooms[1:] + content_rooms[:1]
+
+    generated_by_slot_id = {}
+    generated_rooms = []
+
+    for slot_room, content_room in zip(slot_rooms, content_rooms):
+        generated_room = DungeonRunRoom.objects.create(
             run=run,
-            source_template=template,
-            room_number=index,
-            name=template.name,
-            room_type=room_type,
-            difficulty=template.difficulty,
-            flavor_text=template.flavor_text,
-            failure_text=template.failure_text,
-            damage_on_failure=template.damage_on_failure,
-            grid_row=position[0],
-            grid_col=position[1],
+            source_room=content_room,
+            source_template=None,
+
+            # Map slot identity
+            room_number=slot_room.number,
+            grid_row=slot_room.grid_row,
+            grid_col=slot_room.grid_col,
+
+            # Randomized room content
+            name=content_room.name or f"Room {slot_room.number}",
+            room_type=content_room.room_type,
+            difficulty=content_room.difficulty or dungeon.difficulty_rating or 3,
+            flavor_text=content_room.flavor_text,
+            failure_text=content_room.failure_text,
+            damage_on_failure=content_room.damage_on_failure,
+            is_cleared=False,
         )
-        # IMPORTANT:
-        # The key must be the grid position tuple, for example (1, 1).
-        position_to_room[position] = room
 
-    edges = generate_connected_grid_edges()
+        generated_by_slot_id[slot_room.id] = generated_room
+        generated_rooms.append(generated_room)
 
-    for position_a, position_b in edges:
-        DungeonRunConnection.objects.create(
+    source_connections = (
+        DungeonRoomConnection.objects
+        .filter(dungeon=dungeon)
+        .select_related("from_room", "to_room")
+        .order_by("from_room__number", "to_room__number")
+    )
+
+    created_connection_count = 0
+
+    for source_connection in source_connections:
+        from_generated_room = generated_by_slot_id.get(
+            source_connection.from_room_id
+        )
+        to_generated_room = generated_by_slot_id.get(
+            source_connection.to_room_id
+        )
+
+        if not from_generated_room or not to_generated_room:
+            continue
+
+        DungeonRunConnection.objects.get_or_create(
             run=run,
-            from_room=position_to_room[position_a],
-            to_room=position_to_room[position_b],
+            from_room=from_generated_room,
+            to_room=to_generated_room,
         )
 
-    starting_room = position_to_room[(1, 1)]
-    run.current_room = starting_room
+        created_connection_count += 1
+
+    # Fallback if no designed connections exist.
+    if created_connection_count == 0 and len(generated_rooms) > 1:
+        for index in range(len(generated_rooms) - 1):
+            DungeonRunConnection.objects.get_or_create(
+                run=run,
+                from_room=generated_rooms[index],
+                to_room=generated_rooms[index + 1],
+            )
+
+    first_room = generated_by_slot_id[slot_rooms[0].id]
+
+    run.current_room = first_room
+    run.current_turn_character = None
+    run.turn_number = 1
     run.status = PartyDungeonRun.Status.ACTIVE
-    run.save(update_fields=["current_room", "status", "updated_at"])
+    run.failure_reason = PartyDungeonRun.FailureReason.NONE
+    run.save(
+        update_fields=[
+            "current_room",
+            "current_turn_character",
+            "turn_number",
+            "status",
+            "failure_reason",
+            "updated_at",
+        ]
+    )
+
+    dungeon.recalculate_difficulty_rating(save=True)
 
     return run

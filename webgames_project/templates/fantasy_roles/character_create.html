@@ -1,11 +1,11 @@
-{% extends "base.html" %}
+{% extends "fantasy_roles/base_fantasy.html" %}
 
-{% block title %}Create Character · Fantasy Roles{% endblock %}
+{% block title %}Create Character · Guildbound: Trials of the Realm{% endblock %}
 
 {% block content %}
 <section class="fr-character-create-page">
   <section class="fr-character-hero">
-    <span class="fr-kicker">Fantasy Roles</span>
+    <span class="fr-kicker">Guildbound: Trials of the Realm</span>
 
     <h1>Create Your Hero</h1>
 
@@ -63,27 +63,34 @@
                 required
               >
 
-              <div class="fr-class-card-image">
-                {% if character_class.image %}
-                  <img src="{{ character_class.image.url }}" alt="{{ character_class.name }}">
-                {% else %}
-                  <span>◆</span>
-                {% endif %}
-              </div>
+              <div class="fr-class-card-image fr-class-card-icon-frame">
+  {% include "fantasy_roles/partials/_class_icon.html" with character_class=character_class extra_class="fr-class-select-icon" %}
+</div>
 
               <div class="fr-class-card-body">
-                <h2>{{ character_class.name }}</h2>
+  <h2>{{ character_class.name }}</h2>
 
-                {% if character_class.description %}
-                  <p>{{ character_class.description }}</p>
-                {% endif %}
+  {% if character_class.description %}
+    <p>{{ character_class.description }}</p>
+  {% endif %}
 
-                <div class="fr-class-stats">
-                  <span>♥ {{ character_class.max_life }}</span>
-                  <span>⚔ {{ character_class.attack }}</span>
-                  <span>✦ {{ character_class.action_points }}</span>
-                </div>
-              </div>
+  <div class="fr-class-stats">
+    <span class="fr-stat-with-icon">
+      {% include "fantasy_roles/partials/_png_icon.html" with name="life" extra_class="fr-png-icon-sm" %}
+      {{ character_class.max_life }}
+    </span>
+
+    <span class="fr-stat-with-icon">
+      {% include "fantasy_roles/partials/_png_icon.html" with name="attack" extra_class="fr-png-icon-sm" %}
+      {{ character_class.attack }}
+    </span>
+
+    <span class="fr-stat-with-icon">
+      {% include "fantasy_roles/partials/_png_icon.html" with name="ap" extra_class="fr-png-icon-sm" %}
+      {{ character_class.action_points }}
+    </span>
+  </div>
+</div>
             </label>
           {% endfor %}
         </div>

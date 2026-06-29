@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "fantasy_roles/base_fantasy.html" %}
 
 {% block title %}Party Setup · {{ session.title }}{% endblock %}
 
@@ -137,7 +137,13 @@
                         <span>◆</span>
                       {% endif %}
                     {% endwith %}
-                  </div>
+
+                    {% if party.current_dm == member.character %}
+                      <span class="fr-dm-crown-badge" title="Dungeon Master">
+                        {% include "fantasy_roles/partials/_png_icon.html" with name="crown" extra_class="fr-png-icon-sm" %}
+                      </span>
+                    {% endif %}
+                  </div>>
 
                   <div class="fr-party-member-body">
                     <div class="fr-party-member-title">
@@ -150,8 +156,11 @@
                       </div>
 
                       {% if party.current_dm == member.character %}
-                        <span class="fr-status-pill is-gold">DM</span>
-                      {% endif %}
+                          <span class="fr-status-pill is-gold fr-dm-pill">
+                            {% include "fantasy_roles/partials/_png_icon.html" with name="crown" extra_class="fr-png-icon-xs" %}
+                            DM
+                          </span>
+                        {% endif %}
                     </div>
 
                     <div class="fr-character-stat-row">

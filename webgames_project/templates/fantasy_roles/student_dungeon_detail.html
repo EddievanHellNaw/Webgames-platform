@@ -1,12 +1,14 @@
-{% extends "base.html" %}
+{% extends "fantasy_roles/base_fantasy.html" %}
+{% load static %}
+
+{% block fantasy_extra_css %}
+  <link rel="stylesheet" href="{% static 'fantasy_roles/css/fantasy-dungeon.css' %}">
+{% endblock %}
 
 {% block content %}
 <section class="student-dungeon">
  {% include "fantasy_roles/partials/_student_dungeon_live_shell.html" %}
 
-  {% if membership %}
-    {% include "fantasy_roles/partials/_inventory_drawer.html" %}
-  {% endif %}
 </section>
 <section class="fr-roll-overlay" id="roll-result-overlay" hidden>
   <article class="fr-roll-card" id="roll-result-card">
@@ -56,6 +58,183 @@
     </button>
   </div>
 </div>
+<div id="boss-turn-moment" class="fr-boss-turn-moment" hidden>
+  <article class="fr-boss-turn-moment-card">
+    <span class="fr-kicker" id="boss-turn-moment-kicker">Boss Turn</span>
+
+    <h2 id="boss-turn-moment-title">
+      Boss's turn!
+    </h2>
+
+    <strong id="boss-turn-moment-ability">
+      Boss Ability
+    </strong>
+
+    <p id="boss-turn-moment-effect">
+      The boss acts.
+    </p>
+
+    <div class="fr-boss-turn-moment-meta" id="boss-turn-moment-meta"></div>
+  </article>
+</div>
+<div id="dungeon-event-overlay" class="fr-dungeon-event-overlay" hidden>
+  <article class="fr-party-event-card" id="dungeon-event-card">
+    <div class="fr-party-event-header">
+      <span class="fr-kicker" id="dungeon-event-kicker">
+        Dungeon Event
+      </span>
+
+      <h2 id="dungeon-event-title">
+        Event
+      </h2>
+
+      <p id="dungeon-event-text">
+        Something happened.
+      </p>
+    </div>
+
+    <div
+      id="dungeon-event-skill-banner"
+      class="fr-party-event-skill-banner"
+      hidden
+    >
+      <span class="fr-kicker">Skill Used</span>
+      <strong id="dungeon-event-skill-name">Skill</strong>
+    </div>
+
+    <div
+      id="dungeon-event-party-snapshot"
+      class="fr-party-event-snapshot"
+    ></div>
+
+    <div class="fr-dungeon-event-meta" id="dungeon-event-meta"></div>
+
+    <button
+      type="button"
+      class="fr-btn fr-btn-primary"
+      id="dungeon-event-close"
+    >
+      Continue
+    </button>
+  </article>
+</div>
+<div
+  id="room-story-overlay"
+  class="fr-room-story-overlay {% if run and run.dungeon %}fr-dungeon-theme-{{ run.dungeon.name|slugify }}{% endif %}"
+  hidden
+>
+  <article class="fr-room-story-card">
+    <div class="fr-room-story-image-wrap" id="room-story-image-wrap">
+      <img id="room-story-image" alt="" hidden>
+      <span id="room-story-fallback">◆</span>
+    </div>
+
+    <div class="fr-room-story-body">
+      <span class="fr-kicker" id="room-story-kicker">
+        Room
+      </span>
+
+      <h2 id="room-story-title">
+        Room Name
+      </h2>
+
+      <p id="room-story-text">
+        Room text appears here.
+      </p>
+
+      <div class="fr-room-story-meta" id="room-story-meta"></div>
+
+      <button
+        type="button"
+        class="fr-btn fr-btn-primary"
+        id="room-story-close"
+      >
+        Continue
+      </button>
+    </div>
+  </article>
+</div>
+<div id="boss-reveal-overlay" class="fr-boss-reveal-overlay" hidden>
+  <article class="fr-boss-reveal-card">
+    <div class="fr-boss-reveal-stage">
+      <div class="fr-boss-reveal-dungeon" id="boss-reveal-dungeon">
+        <img id="boss-reveal-dungeon-image" alt="" hidden>
+        <span id="boss-reveal-dungeon-fallback">◆</span>
+      </div>
+
+      <div class="fr-boss-reveal-blackout"></div>
+
+      <div class="fr-boss-reveal-boss" id="boss-reveal-boss">
+        <img id="boss-reveal-boss-image" alt="" hidden>
+        <span id="boss-reveal-boss-fallback">♛</span>
+
+        <div class="fr-boss-reveal-nameplate">
+          <span class="fr-kicker">Dungeon Boss</span>
+          <h2 id="boss-reveal-boss-name">Boss Name</h2>
+        </div>
+      </div>
+    </div>
+
+    <div class="fr-boss-reveal-footer">
+      <p id="boss-reveal-text">
+        The final room falls silent. Something awakens below...
+      </p>
+
+      <button
+        type="button"
+        class="fr-btn fr-btn-primary"
+        id="boss-reveal-close"
+      >
+        Face the Boss
+      </button>
+    </div>
+  </article>
+</div>
+
+<div id="boss-battle-intro-overlay" class="fr-boss-battle-intro-overlay" hidden>
+  <article class="fr-boss-battle-intro-card">
+    <span class="fr-kicker">Boss Encounter</span>
+    <h2 id="boss-battle-intro-title">The boss attacks first.</h2>
+    <p>Prepare yourselves.</p>
+  </article>
+</div>
+<div id="boss-transformation-overlay" class="fr-boss-transformation-overlay" hidden>
+  <article class="fr-boss-transformation-card">
+    <span class="fr-kicker" id="boss-transformation-kicker">Boss Transformation</span>
+
+    <h2 id="boss-transformation-title">The boss transforms!</h2>
+
+    <p id="boss-transformation-text">
+      The boss shatters its old form.
+    </p>
+
+    <div class="fr-boss-transform-stage">
+      <div class="fr-boss-transform-form is-rage" id="boss-transform-rage-card">
+        <img id="boss-transform-rage-image" alt="Rage form" hidden>
+        <span id="boss-transform-rage-fallback">♛</span>
+      </div>
+
+      <div class="fr-boss-transform-form is-normal" id="boss-transform-normal-card">
+        <img id="boss-transform-normal-image" alt="Normal form" hidden>
+        <span id="boss-transform-normal-fallback">♛</span>
+      </div>
+
+      <div id="boss-transform-shard-layer" class="fr-boss-transform-shard-layer"></div>
+    </div>
+
+    <strong id="boss-transformation-rage-name" class="fr-boss-transformation-name">
+      Rage Form
+    </strong>
+
+    <div class="fr-boss-transformation-meta" id="boss-transformation-meta"></div>
+  </article>
+</div>
+<script>
+  window.frBossAnimationTiming = {
+    retryDelay: 1000,
+    afterPlayerAnimationDelay: 1000,
+  };
+</script>
 <script>
   (function () {
     const overlay = document.getElementById("roll-result-overlay");
@@ -381,18 +560,36 @@
 <script>
   (function () {
     const SEEN_BOSS_LOG_PREFIX = "fantasy_roles_seen_boss_log_";
+    let bossMomentIsShowing = false;
+
+    function getBossAnimationTiming() {
+      return window.frBossAnimationTiming || {
+        retryDelay: 1000,
+        afterPlayerAnimationDelay: 2800,
+      };
+    }
 
     function getBossPayload() {
       return document.getElementById("latest-boss-log-payload");
     }
 
-    function getOverlay() {
-      return document.getElementById("boss-attack-overlay");
+    function getMoment() {
+      return document.getElementById("boss-turn-moment");
     }
 
-    function bossOverlayIsOpen() {
-      const overlay = getOverlay();
-      return overlay && !overlay.hidden;
+    function isOpen(id) {
+      const element = document.getElementById(id);
+      return element && !element.hidden;
+    }
+
+    function anotherOverlayIsOpen() {
+      return (
+        isOpen("roll-result-overlay") ||
+        isOpen("room-story-overlay") ||
+        isOpen("dungeon-event-overlay") ||
+        isOpen("boss-reveal-overlay") ||
+        isOpen("boss-battle-intro-overlay")
+      );
     }
 
     function markBossLogSeen(logId) {
@@ -403,67 +600,216 @@
       return sessionStorage.getItem(SEEN_BOSS_LOG_PREFIX + logId) === "true";
     }
 
-    function showBossAttackPopup(payload) {
-      const overlay = getOverlay();
+    function getBossAttackWaitTimeAfterPlayerAnimation() {
+      const timing = getBossAnimationTiming();
+      const playerPayload = document.getElementById("latest-boss-player-log-payload");
 
-      if (!overlay || !payload) return;
+      if (!playerPayload) {
+        return 0;
+      }
+
+      if (!window.frBossPlayerEventGate) {
+        return timing.retryDelay;
+      }
+
+      if (!window.frBossPlayerEventGate.isComplete()) {
+        return timing.retryDelay;
+      }
+
+      const lastAdvancedAt = window.frBossPlayerEventGate.getLastAdvancedAt
+        ? window.frBossPlayerEventGate.getLastAdvancedAt()
+        : 0;
+
+      if (!lastAdvancedAt) {
+        return 0;
+      }
+
+      const elapsed = performance.now() - lastAdvancedAt;
+      const remaining = timing.afterPlayerAnimationDelay - elapsed;
+
+      return Math.max(0, remaining);
+    }
+
+    function scheduleBossLogCheck(delay) {
+      window.setTimeout(function () {
+        checkForNewBossLog();
+      }, delay);
+    }
+
+    function getDamageTargetElements(payload) {
+      const ids = (payload.dataset.targetCharacterIds || "")
+        .split(",")
+        .map((id) => id.trim())
+        .filter(Boolean);
+
+      const elements = [];
+
+      if (ids.length) {
+        ids.forEach(function (id) {
+          document
+            .querySelectorAll(
+              `.fr-boss-roster-row[data-character-id="${id}"], ` +
+              `.fr-party-turn-member[data-character-id="${id}"]`
+            )
+            .forEach((element) => elements.push(element));
+        });
+      } else {
+        document
+          .querySelectorAll(
+            ".fr-boss-roster-row[data-character-id]:not(.is-defeated), " +
+            ".fr-party-turn-member[data-character-id]"
+          )
+          .forEach((element) => elements.push(element));
+      }
+
+      return [...new Set(elements)];
+    }
+
+    function showFloatingIndicator(target, text, type) {
+      if (!target) return;
+
+      target.classList.add("fr-damage-anchor");
+
+      const indicator = document.createElement("span");
+      indicator.className = "fr-floating-damage";
+
+      if (type === "healing") {
+        indicator.classList.add("is-healing");
+      }
+
+      indicator.textContent = text;
+
+      target.appendChild(indicator);
+
+      window.setTimeout(function () {
+        indicator.remove();
+      }, 1250);
+    }
+
+    function pulseDamageTarget(target) {
+      if (!target) return;
+
+      target.classList.remove("is-boss-damage-pulse");
+      void target.offsetWidth;
+      target.classList.add("is-boss-damage-pulse");
+
+      window.setTimeout(function () {
+        target.classList.remove("is-boss-damage-pulse");
+      }, 800);
+    }
+
+    function showBossDamageIndicators(payload) {
+      const damage = Number(payload.dataset.damage || 0);
+      const healing = Number(payload.dataset.healing || 0);
+
+      if (damage > 0) {
+        const targets = getDamageTargetElements(payload);
+
+        targets.forEach(function (target, index) {
+          window.setTimeout(function () {
+            pulseDamageTarget(target);
+            showFloatingIndicator(target, "-" + damage, "damage");
+          }, index * 120);
+        });
+      }
+
+      if (healing > 0) {
+        const bossCard = document.querySelector("[data-boss-card]");
+
+        if (bossCard) {
+          bossCard.classList.remove("is-boss-heal-pulse");
+          void bossCard.offsetWidth;
+          bossCard.classList.add("is-boss-heal-pulse");
+
+          showFloatingIndicator(bossCard, "+" + healing, "healing");
+
+          window.setTimeout(function () {
+            bossCard.classList.remove("is-boss-heal-pulse");
+          }, 1000);
+        }
+      }
+    }
+
+    function setMomentMeta(items) {
+      const meta = document.getElementById("boss-turn-moment-meta");
+
+      if (!meta) return;
+
+      meta.innerHTML = "";
+
+      items.filter(Boolean).forEach(function (item) {
+        const pill = document.createElement("span");
+        pill.textContent = item;
+        meta.appendChild(pill);
+      });
+    }
+
+    function showBossTurnMoment(payload) {
+      const moment = getMoment();
+
+      if (!moment || !payload || anotherOverlayIsOpen() || bossMomentIsShowing) {
+        return false;
+      }
 
       const logId = payload.dataset.logId;
 
-      if (!logId || bossLogWasSeen(logId)) return;
+      if (!logId || bossLogWasSeen(logId)) {
+        return true;
+      }
 
       const bossName = payload.dataset.bossName || "The Boss";
-      const phase = payload.dataset.phase || "Boss Turn";
       const abilityName = payload.dataset.abilityName || "Boss Ability";
       const resultText = payload.dataset.resultText || "";
       const damage = Number(payload.dataset.damage || 0);
       const healing = Number(payload.dataset.healing || 0);
       const dieRoll = payload.dataset.dieRoll || "";
 
-      const phaseElement = document.getElementById("boss-attack-phase");
-      const titleElement = document.getElementById("boss-attack-title");
-      const resultElement = document.getElementById("boss-attack-result");
-      const metaElement = document.getElementById("boss-attack-meta");
+      const kicker = document.getElementById("boss-turn-moment-kicker");
+      const title = document.getElementById("boss-turn-moment-title");
+      const ability = document.getElementById("boss-turn-moment-ability");
+      const effect = document.getElementById("boss-turn-moment-effect");
 
-      phaseElement.textContent = bossName + " · " + phase;
-      titleElement.textContent = abilityName;
-      resultElement.textContent = resultText || bossName + " uses " + abilityName + ".";
-
-      const metaParts = [];
-
-      if (dieRoll) {
-        metaParts.push("Roll: " + dieRoll);
+      if (!kicker || !title || !ability || !effect) {
+        return false;
       }
 
-      if (damage > 0) {
-        metaParts.push("Damage: " + damage);
-      }
+      kicker.textContent = "Boss Turn";
+      title.textContent = bossName + "'s turn!";
+      ability.textContent = abilityName;
+      effect.textContent = resultText || bossName + " uses " + abilityName + ".";
 
-      if (healing > 0) {
-        metaParts.push("Healing: " + healing);
-      }
+      setMomentMeta([
+        dieRoll ? "Roll: " + dieRoll : "",
+        damage > 0 ? "Damage: " + damage : "",
+        healing > 0 ? "Healing: " + healing : "",
+      ]);
 
-      metaElement.innerHTML = "";
+      bossMomentIsShowing = true;
 
-      metaParts.forEach(function (text) {
-        const pill = document.createElement("span");
-        pill.textContent = text;
-        metaElement.appendChild(pill);
+      moment.hidden = false;
+      moment.removeAttribute("hidden");
+
+      requestAnimationFrame(function () {
+        moment.classList.add("is-showing");
       });
 
-      overlay.hidden = false;
-      document.body.classList.add("fr-modal-open");
-
       markBossLogSeen(logId);
-    }
 
-    function closeBossAttackPopup() {
-      const overlay = getOverlay();
+      window.setTimeout(function () {
+        showBossDamageIndicators(payload);
+      }, 900);
 
-      if (!overlay) return;
+      window.setTimeout(function () {
+        moment.classList.remove("is-showing");
 
-      overlay.hidden = true;
-      document.body.classList.remove("fr-modal-open");
+        window.setTimeout(function () {
+          moment.hidden = true;
+          moment.setAttribute("hidden", "");
+          bossMomentIsShowing = false;
+        }, 260);
+      }, 3400);
+
+      return true;
     }
 
     function checkForNewBossLog() {
@@ -471,34 +817,59 @@
 
       if (!payload) return;
 
-      showBossAttackPopup(payload);
-    }
+      const waitTime = getBossAttackWaitTimeAfterPlayerAnimation();
 
-    document.addEventListener("click", function (event) {
-      if (event.target && event.target.id === "boss-attack-close") {
-        closeBossAttackPopup();
+      if (waitTime > 0) {
+        scheduleBossLogCheck(waitTime);
+        return;
       }
 
       if (
-        event.target &&
-        event.target.id === "boss-attack-overlay"
+        window.frBossBattleIntro &&
+        window.frBossBattleIntro.shouldPlayIntro()
       ) {
-        closeBossAttackPopup();
-      }
-    });
+        window.frBossBattleIntro.playIntro(function () {
+          scheduleBossLogCheck(450);
+        });
 
-    document.addEventListener("keydown", function (event) {
-      if (event.key === "Escape" && bossOverlayIsOpen()) {
-        closeBossAttackPopup();
+        return;
       }
-    });
+
+      if (
+          window.frBossTransformationGate &&
+          !window.frBossTransformationGate.isComplete()
+        ) {
+          const timing = getBossAnimationTiming();
+          scheduleBossLogCheck(timing.retryDelay);
+          return;
+        }
+
+      const shown = showBossTurnMoment(payload);
+
+      if (!shown) {
+        const timing = getBossAnimationTiming();
+        scheduleBossLogCheck(timing.retryDelay);
+      }
+    }
+
+    
+
+    window.addEventListener("fr:boss-transformation-finished", function () {
+  scheduleBossLogCheck(900);
+});
 
     document.addEventListener("DOMContentLoaded", function () {
-      checkForNewBossLog();
+      scheduleBossLogCheck(900);
     });
 
     document.body.addEventListener("htmx:afterSettle", function () {
-      checkForNewBossLog();
+      const timing = getBossAnimationTiming();
+      scheduleBossLogCheck(timing.retryDelay);
+    });
+
+    window.addEventListener("fr:boss-player-animation-advanced", function () {
+      const timing = getBossAnimationTiming();
+      scheduleBossLogCheck(timing.afterPlayerAnimationDelay);
     });
 
     document.body.addEventListener("htmx:beforeRequest", function (event) {
@@ -508,10 +879,1914 @@
 
       if (!requestElement || requestElement.id !== "dungeon-live-panel") return;
 
-      if (bossOverlayIsOpen()) {
+      if (bossMomentIsShowing) {
         event.preventDefault();
       }
     });
+
+    window.frBossAttackDebug = {
+      checkForNewBossLog,
+      clearBossLogMemory: function () {
+        Object.keys(sessionStorage)
+          .filter((key) => key.startsWith(SEEN_BOSS_LOG_PREFIX))
+          .forEach((key) => sessionStorage.removeItem(key));
+
+        return "Boss attack memory cleared.";
+      },
+    };
+  })();
+</script>
+<script>
+  (function () {
+    const ROOM_SEEN_PREFIX = "fantasy_roles_seen_room_";
+    const ROOM_FAILURE_SEEN_PREFIX = "fantasy_roles_seen_room_failure_";
+
+    function getOverlay() {
+      return document.getElementById("room-story-overlay");
+    }
+
+    function isOpen(id) {
+      const element = document.getElementById(id);
+      return element && !element.hidden;
+    }
+
+    function anotherOverlayIsOpen() {
+      return (
+        isOpen("roll-result-overlay") ||
+        isOpen("boss-attack-overlay") ||
+        isOpen("dungeon-event-overlay")
+      );
+    }
+
+    function setImage(imageUrl, title) {
+      const image = document.getElementById("room-story-image");
+      const fallback = document.getElementById("room-story-fallback");
+
+      if (!image || !fallback) return;
+
+      if (imageUrl) {
+        image.src = imageUrl;
+        image.alt = title || "Room image";
+        image.hidden = false;
+        fallback.hidden = true;
+      } else {
+        image.removeAttribute("src");
+        image.hidden = true;
+        fallback.hidden = false;
+      }
+    }
+
+    function showRoomStory(options) {
+      const overlay = getOverlay();
+
+      if (!overlay) {
+        console.warn("Room story overlay not found.");
+        return false;
+      }
+
+      if (anotherOverlayIsOpen()) {
+        return false;
+      }
+
+      const kicker = document.getElementById("room-story-kicker");
+      const title = document.getElementById("room-story-title");
+      const text = document.getElementById("room-story-text");
+      const meta = document.getElementById("room-story-meta");
+
+      if (!kicker || !title || !text || !meta) {
+        console.warn("Room story modal elements are missing.");
+        return false;
+      }
+
+      kicker.textContent = options.kicker || "Room";
+      title.textContent = options.title || "Room";
+      text.textContent = options.text || "The party enters a new room.";
+
+      meta.innerHTML = "";
+
+      (options.meta || []).forEach(function (item) {
+        if (!item) return;
+
+        const pill = document.createElement("span");
+        pill.textContent = item;
+        meta.appendChild(pill);
+      });
+
+      setImage(options.imageUrl, options.title);
+
+      overlay.hidden = false;
+      overlay.removeAttribute("hidden");
+      document.body.classList.add("fr-modal-open");
+
+      return true;
+    }
+
+    function closeRoomStory() {
+      const overlay = getOverlay();
+
+      if (!overlay) return;
+
+      overlay.hidden = true;
+      document.body.classList.remove("fr-modal-open");
+
+      window.setTimeout(function () {
+        checkRoomFailure();
+        checkRoomEntry();
+      }, 180);
+    }
+
+    function checkRoomEntry() {
+    const payload = document.getElementById("current-room-entry-payload");
+
+    if (!payload) {
+      return false;
+    }
+
+    if (anotherOverlayIsOpen()) {
+      return false;
+    }
+
+    if (payload.dataset.runStatus !== "ACTIVE") {
+      return false;
+    }
+
+    if (payload.dataset.roomCleared === "true") {
+      return false;
+    }
+
+    const runId = payload.dataset.runId;
+    const roomId = payload.dataset.roomId;
+
+    if (!runId || !roomId) {
+      return false;
+    }
+
+    const storageKey = ROOM_SEEN_PREFIX + runId + "_" + roomId;
+
+    if (sessionStorage.getItem(storageKey) === "true") {
+      return false;
+    }
+
+    const shown = showRoomStory({
+      kicker: "Room " + payload.dataset.roomNumber + " · " + payload.dataset.roomType,
+      title: payload.dataset.roomName,
+      text: payload.dataset.flavorText || "The party enters a new room.",
+      imageUrl: payload.dataset.imageUrl,
+      meta: ["New Room"],
+    });
+
+    if (shown) {
+      sessionStorage.setItem(storageKey, "true");
+    }
+
+    return shown;
+  }
+
+    function checkRoomFailure() {
+      const payload = document.getElementById("latest-room-failure-payload");
+
+      if (!payload || anotherOverlayIsOpen()) {
+        return false;
+      }
+
+      const attemptId = payload.dataset.attemptId;
+
+      if (!attemptId) {
+        return false;
+      }
+
+      const storageKey = ROOM_FAILURE_SEEN_PREFIX + attemptId;
+
+      if (sessionStorage.getItem(storageKey) === "true") {
+        return false;
+      }
+
+      const damage = Number(payload.dataset.damage || 0);
+      const meta = ["Failure"];
+
+      if (damage > 0) {
+        meta.push("Damage: " + damage);
+      }
+
+      const shown = showRoomStory({
+        kicker: "Room " + payload.dataset.roomNumber + " · " + payload.dataset.roomType,
+        title: payload.dataset.roomName,
+        text: payload.dataset.failureText || "The room reacts badly.",
+        imageUrl: payload.dataset.imageUrl,
+        meta: meta,
+      });
+
+      if (shown) {
+        sessionStorage.setItem(storageKey, "true");
+      }
+
+      return shown;
+    }
+
+    document.addEventListener("click", function (event) {
+      if (event.target && event.target.id === "room-story-close") {
+        closeRoomStory();
+      }
+
+      if (event.target && event.target.id === "room-story-overlay") {
+        closeRoomStory();
+      }
+
+      if (event.target && event.target.id === "close-roll-result") {
+        window.setTimeout(checkRoomFailure, 220);
+      }
+
+      if (event.target && event.target.id === "boss-attack-close") {
+        window.setTimeout(checkRoomEntry, 220);
+      }
+    });
+
+
+function scheduleRoomStoryCheck(delay) {
+  window.setTimeout(function () {
+    if (checkRoomFailure() || checkRoomEntry()) {
+      return;
+    }
+
+    window.setTimeout(function () {
+      if (checkRoomFailure() || checkRoomEntry()) {
+        return;
+      }
+
+      window.setTimeout(function () {
+        checkRoomFailure() || checkRoomEntry();
+      }, 700);
+    }, 700);
+  }, delay);
+}
+
+document.addEventListener("DOMContentLoaded", function () {
+  scheduleRoomStoryCheck(500);
+});
+
+document.body.addEventListener("htmx:afterSettle", function () {
+  scheduleRoomStoryCheck(500);
+});
+
+    document.body.addEventListener("htmx:beforeRequest", function (event) {
+      const requestElement = event.detail && event.detail.elt
+        ? event.detail.elt
+        : event.target;
+
+      if (!requestElement || requestElement.id !== "dungeon-live-panel") return;
+
+      if (isOpen("room-story-overlay")) {
+        event.preventDefault();
+      }
+    });
+
+    window.frRoomStoryDebug = {
+  checkRoomEntry,
+  checkRoomFailure,
+  showRoomStory,
+  closeRoomStory,
+
+  state: function () {
+    const payload = document.getElementById("current-room-entry-payload");
+    const overlay = document.getElementById("room-story-overlay");
+    const rollOverlay = document.getElementById("roll-result-overlay");
+    const bossOverlay = document.getElementById("boss-attack-overlay");
+
+    let storageKey = null;
+    let seen = null;
+
+    if (payload) {
+      storageKey =
+        "fantasy_roles_seen_room_" +
+        payload.dataset.runId +
+        "_" +
+        payload.dataset.roomId;
+
+      seen = sessionStorage.getItem(storageKey);
+    }
+
+    return {
+      payloadExists: !!payload,
+      payloadDataset: payload ? { ...payload.dataset } : null,
+      overlayExists: !!overlay,
+      overlayHidden: overlay ? overlay.hidden : null,
+      rollOverlayHidden: rollOverlay ? rollOverlay.hidden : null,
+      bossOverlayHidden: bossOverlay ? bossOverlay.hidden : null,
+      storageKey: storageKey,
+      seen: seen,
+      overlayCount: document.querySelectorAll("#room-story-overlay").length,
+      payloadCount: document.querySelectorAll("#current-room-entry-payload").length,
+    };
+  },
+
+  clearRoomMemory: function () {
+    Object.keys(sessionStorage)
+      .filter((key) =>
+        key.startsWith("fantasy_roles_seen_room_") ||
+        key.startsWith("fantasy_roles_seen_room_failure_")
+      )
+      .forEach((key) => sessionStorage.removeItem(key));
+
+    return "Room memory cleared.";
+  },
+
+  forceRoomEntry: function () {
+    const payload = document.getElementById("current-room-entry-payload");
+
+    if (!payload) {
+      return "No current-room-entry-payload found.";
+    }
+
+    return showRoomStory({
+      kicker: "Room " + payload.dataset.roomNumber + " · " + payload.dataset.roomType,
+      title: payload.dataset.roomName,
+      text: payload.dataset.flavorText || "The party enters a new room.",
+      imageUrl: payload.dataset.imageUrl,
+      meta: ["New Room"],
+    });
+  },
+};
+  })();
+</script>
+<script>
+  (function () {
+    const DAMAGE_SEEN_PREFIX = "fantasy_roles_damage_seen_";
+    const ROOM_CLEAR_SEEN_PREFIX = "fantasy_roles_room_clear_seen_";
+    const SKILL_SEEN_PREFIX = "fantasy_roles_skill_seen_";
+
+    function getAttemptPayload() {
+      return document.getElementById("latest-attempt-payload");
+    }
+
+    function getOverlay() {
+      return document.getElementById("dungeon-event-overlay");
+    }
+
+    function getCard() {
+      return document.getElementById("dungeon-event-card");
+    }
+
+    function isOpen(id) {
+      const element = document.getElementById(id);
+      return element && !element.hidden;
+    }
+
+    function anotherOverlayIsOpen() {
+      return (
+        isOpen("roll-result-overlay") ||
+        isOpen("boss-attack-overlay") ||
+        isOpen("room-story-overlay")
+      );
+    }
+
+    function getRealPartyBar() {
+      return document.querySelector(".fr-party-turn-members");
+    }
+
+    function clonePartyBar() {
+      const source = getRealPartyBar();
+      const target = document.getElementById("dungeon-event-party-snapshot");
+
+      if (!target) return null;
+
+      target.innerHTML = "";
+
+      if (!source) {
+        target.innerHTML = `
+          <p class="fr-muted-text">
+            Party status is not available for this event.
+          </p>
+        `;
+        return null;
+      }
+
+      const clone = source.cloneNode(true);
+      clone.classList.add("fr-party-event-members");
+
+      target.appendChild(clone);
+
+      return clone;
+    }
+
+    function findHeroCard(container, characterId) {
+      if (!container || !characterId) return null;
+
+      return container.querySelector(
+        `.fr-party-turn-member[data-character-id="${characterId}"]`
+      );
+    }
+
+function setLife(heroCard, value, maxValue) {
+  const stat = heroCard.querySelector('.fr-hero-stat-value[data-stat="life"]');
+
+  if (!stat) return;
+
+  stat.dataset.current = String(value);
+  stat.textContent = value + "/" + maxValue;
+}
+
+function setAp(heroCard, value, maxValue) {
+  const stat = heroCard.querySelector('.fr-hero-stat-value[data-stat="ap"]');
+
+  if (!stat) return;
+
+  stat.dataset.current = String(value);
+  stat.textContent = value + "/" + maxValue;
+}
+
+    function setAp(heroCard, value, maxValue) {
+      const stat = heroCard.querySelector('[data-stat="ap"]');
+
+      if (!stat) return;
+
+      stat.dataset.current = String(value);
+      stat.textContent = "✦ " + value + "/" + maxValue;
+    }
+
+    function animateNumber(options) {
+      const {
+        from,
+        to,
+        duration,
+        onUpdate,
+      } = options;
+
+      const start = performance.now();
+
+      function step(now) {
+        const elapsed = now - start;
+        const progress = Math.min(1, elapsed / duration);
+        const current = Math.round(from + (to - from) * progress);
+
+        onUpdate(current);
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        }
+      }
+
+      requestAnimationFrame(step);
+    }
+
+    function pulseRealHero(characterId, className) {
+      const realHero = document.querySelector(
+        `.fr-party-turn-member[data-character-id="${characterId}"]`
+      );
+
+      if (!realHero) return;
+
+      realHero.classList.remove(className);
+      void realHero.offsetWidth;
+      realHero.classList.add(className);
+
+      window.setTimeout(function () {
+        realHero.classList.remove(className);
+      }, 1300);
+    }
+
+    function setMeta(items) {
+      const meta = document.getElementById("dungeon-event-meta");
+
+      if (!meta) return;
+
+      meta.innerHTML = "";
+
+      (items || []).forEach(function (item) {
+        if (!item) return;
+
+        const pill = document.createElement("span");
+        pill.textContent = item;
+        meta.appendChild(pill);
+      });
+    }
+
+    function setSkillBanner(skillName) {
+      const banner = document.getElementById("dungeon-event-skill-banner");
+      const name = document.getElementById("dungeon-event-skill-name");
+
+      if (!banner || !name) return;
+
+      if (skillName) {
+        name.textContent = skillName;
+        banner.hidden = false;
+
+        banner.classList.remove("is-skill-flash");
+        void banner.offsetWidth;
+        banner.classList.add("is-skill-flash");
+      } else {
+        banner.hidden = true;
+        name.textContent = "";
+      }
+    }
+
+    function showPartyEvent(options) {
+      const overlay = getOverlay();
+      const card = getCard();
+
+      if (!overlay || !card || anotherOverlayIsOpen()) {
+        return false;
+      }
+
+      const kicker = document.getElementById("dungeon-event-kicker");
+      const title = document.getElementById("dungeon-event-title");
+      const text = document.getElementById("dungeon-event-text");
+
+      if (!kicker || !title || !text) {
+        return false;
+      }
+
+      card.classList.remove("is-damage", "is-cleared", "is-skill");
+      card.classList.add("is-" + options.type);
+
+      kicker.textContent = options.kicker || "Dungeon Event";
+      title.textContent = options.title || "Event";
+      text.textContent = options.text || "";
+
+      setSkillBanner(options.skillName || "");
+      setMeta(options.meta || []);
+
+      const clonedPartyBar = clonePartyBar();
+
+      overlay.hidden = false;
+      overlay.removeAttribute("hidden");
+
+      document.body.classList.add("fr-modal-open");
+      document.documentElement.classList.add("fr-modal-open");
+
+      if (options.afterShow) {
+        window.setTimeout(function () {
+          options.afterShow(clonedPartyBar);
+        }, 220);
+      }
+
+      return true;
+    }
+
+    function closeDungeonEvent() {
+      const overlay = getOverlay();
+
+      if (!overlay) return;
+
+      overlay.hidden = true;
+      overlay.setAttribute("hidden", "");
+
+      document.body.classList.remove("fr-modal-open");
+      document.documentElement.classList.remove("fr-modal-open");
+    }
+
+    function showDamageEvent(payload) {
+      const attemptId = payload.dataset.attemptId;
+      const storageKey = DAMAGE_SEEN_PREFIX + attemptId;
+
+      if (sessionStorage.getItem(storageKey) === "true") {
+        return false;
+      }
+
+      const characterId = payload.dataset.characterId;
+      const characterName = payload.dataset.characterName || "A hero";
+      const damage = Number(payload.dataset.damage || 0);
+      const afterLife = Number(payload.dataset.characterCurrentLife || 0);
+      const maxLife = Number(payload.dataset.characterMaxLife || 0);
+
+      const beforeLife = Math.min(maxLife, afterLife + damage);
+
+      const shown = showPartyEvent({
+        type: "damage",
+        kicker: "Damage Taken",
+        title: characterName,
+        text: characterName + " received " + damage + " damage.",
+        meta: [
+          "Damage: " + damage,
+          "Life: " + beforeLife + " → " + afterLife,
+        ],
+        afterShow: function (partyBar) {
+          const heroCard = findHeroCard(partyBar, characterId);
+
+          if (!heroCard) return;
+
+          setLife(heroCard, beforeLife, maxLife);
+
+          heroCard.classList.remove("is-damage-pulse");
+          void heroCard.offsetWidth;
+          heroCard.classList.add("is-damage-pulse");
+
+          pulseRealHero(characterId, "is-damage-pulse");
+
+          window.setTimeout(function () {
+            animateNumber({
+              from: beforeLife,
+              to: afterLife,
+              duration: 700,
+              onUpdate: function (value) {
+                setLife(heroCard, value, maxLife);
+              },
+            });
+          }, 420);
+        },
+      });
+
+      if (shown) {
+        sessionStorage.setItem(storageKey, "true");
+      }
+
+      return shown;
+    }
+
+    function showSkillEvent(payload) {
+      const attemptId = payload.dataset.attemptId;
+      const storageKey = SKILL_SEEN_PREFIX + attemptId;
+
+      if (sessionStorage.getItem(storageKey) === "true") {
+        return false;
+      }
+
+      const skillName = payload.dataset.skillName;
+
+      if (!skillName) {
+        return false;
+      }
+
+      const characterId = payload.dataset.characterId;
+      const characterName = payload.dataset.characterName || "A hero";
+      const afterAp = Number(payload.dataset.characterCurrentAp || 0);
+      const maxAp = Number(payload.dataset.characterMaxAp || 0);
+      const skillCost = Number(payload.dataset.skillApCost || 0);
+      const beforeAp = Math.min(maxAp, afterAp + skillCost);
+
+      const shown = showPartyEvent({
+        type: "skill",
+        kicker: "Skill Used",
+        title: characterName,
+        text: characterName + " used " + skillName + ".",
+        skillName: skillName,
+        meta: [
+          "AP: " + beforeAp + " → " + afterAp,
+        ],
+        afterShow: function (partyBar) {
+          const heroCard = findHeroCard(partyBar, characterId);
+
+          if (!heroCard) return;
+
+          heroCard.classList.remove("is-skill-pulse");
+          void heroCard.offsetWidth;
+          heroCard.classList.add("is-skill-pulse");
+
+          pulseRealHero(characterId, "is-skill-pulse");
+
+          setAp(heroCard, beforeAp, maxAp);
+
+          window.setTimeout(function () {
+            animateNumber({
+              from: beforeAp,
+              to: afterAp,
+              duration: 700,
+              onUpdate: function (value) {
+                setAp(heroCard, value, maxAp);
+              },
+            });
+          }, 420);
+        },
+      });
+
+      if (shown) {
+        sessionStorage.setItem(storageKey, "true");
+      }
+
+      return shown;
+    }
+
+    function showRoomClearedEvent(payload) {
+      const attemptId = payload.dataset.attemptId;
+      const storageKey = ROOM_CLEAR_SEEN_PREFIX + attemptId;
+
+      if (sessionStorage.getItem(storageKey) === "true") {
+        return false;
+      }
+
+      const roomName = payload.dataset.roomName || "Room Cleared";
+      const roomNumber = payload.dataset.roomNumber || "";
+      const roomType = payload.dataset.roomType || "";
+
+      const shown = showPartyEvent({
+        type: "cleared",
+        kicker: "Room Cleared",
+        title: roomName,
+        text: "Room " + roomNumber + " was cleared.",
+        meta: [
+          roomType,
+          "Cleared",
+        ],
+        afterShow: function () {
+          const roomPanel = document.querySelector(".fr-current-room-panel");
+
+          if (!roomPanel) return;
+
+          roomPanel.classList.remove("is-room-cleared-pulse");
+          void roomPanel.offsetWidth;
+          roomPanel.classList.add("is-room-cleared-pulse");
+
+          window.setTimeout(function () {
+            roomPanel.classList.remove("is-room-cleared-pulse");
+          }, 1300);
+        },
+      });
+
+      if (shown) {
+        sessionStorage.setItem(storageKey, "true");
+      }
+
+      return shown;
+    }
+
+    function checkLatestAttemptEvent() {
+      const payload = getAttemptPayload();
+
+      if (!payload || anotherOverlayIsOpen() || isOpen("dungeon-event-overlay")) {
+        return false;
+      }
+
+      const attemptId = payload.dataset.attemptId;
+
+      if (!attemptId) {
+        return false;
+      }
+
+      const actionType = payload.dataset.actionType;
+      const damage = Number(payload.dataset.damage || 0);
+      const success = payload.dataset.success === "true";
+      const roomCleared = payload.dataset.roomCleared === "true";
+
+      if (actionType === "SKILL" && payload.dataset.skillName) {
+        return showSkillEvent(payload);
+      }
+
+      if (damage > 0) {
+        return showDamageEvent(payload);
+      }
+
+      if (success && roomCleared) {
+        return showRoomClearedEvent(payload);
+      }
+
+      return false;
+    }
+
+    function scheduleLatestAttemptEventCheck(delay) {
+      window.setTimeout(function () {
+        if (checkLatestAttemptEvent()) return;
+
+        window.setTimeout(function () {
+          checkLatestAttemptEvent();
+        }, 550);
+      }, delay);
+    }
+
+    document.addEventListener("click", function (event) {
+      const closeButton = event.target.closest
+        ? event.target.closest("#dungeon-event-close")
+        : null;
+
+      if (closeButton) {
+        event.preventDefault();
+        closeDungeonEvent();
+        return;
+      }
+
+      if (event.target && event.target.id === "dungeon-event-overlay") {
+        closeDungeonEvent();
+        return;
+      }
+
+      if (event.target && event.target.id === "close-roll-result") {
+        scheduleLatestAttemptEventCheck(300);
+      }
+
+      if (event.target && event.target.id === "room-story-close") {
+        scheduleLatestAttemptEventCheck(300);
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && isOpen("dungeon-event-overlay")) {
+        closeDungeonEvent();
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+      scheduleLatestAttemptEventCheck(800);
+    });
+
+    document.body.addEventListener("htmx:afterSettle", function () {
+      scheduleLatestAttemptEventCheck(800);
+    });
+
+    document.body.addEventListener("htmx:beforeRequest", function (event) {
+      const requestElement = event.detail && event.detail.elt
+        ? event.detail.elt
+        : event.target;
+
+      if (!requestElement || requestElement.id !== "dungeon-live-panel") return;
+
+      if (isOpen("dungeon-event-overlay")) {
+        event.preventDefault();
+      }
+    });
+
+    window.frDungeonEventDebug = {
+      checkLatestAttemptEvent,
+      showDamageEvent,
+      showSkillEvent,
+      showRoomClearedEvent,
+      clearEventMemory: function () {
+        Object.keys(sessionStorage)
+          .filter((key) =>
+            key.startsWith(DAMAGE_SEEN_PREFIX) ||
+            key.startsWith(ROOM_CLEAR_SEEN_PREFIX) ||
+            key.startsWith(SKILL_SEEN_PREFIX)
+          )
+          .forEach((key) => sessionStorage.removeItem(key));
+
+        return "Dungeon event memory cleared.";
+      },
+    };
+  })();
+</script>
+
+<script>
+  (function () {
+    const BOSS_REVEAL_SEEN_PREFIX = "fantasy_roles_boss_reveal_seen_";
+
+    function isOpen(id) {
+      const element = document.getElementById(id);
+      return element && !element.hidden;
+    }
+
+    function anotherOverlayIsOpen() {
+      return (
+        isOpen("roll-result-overlay") ||
+        isOpen("room-story-overlay") ||
+        isOpen("dungeon-event-overlay") ||
+        isOpen("boss-attack-overlay") ||
+        isOpen("boss-battle-intro-overlay")
+      );
+    }
+
+    function getPayload() {
+      return document.getElementById("boss-reveal-payload");
+    }
+
+    function getOverlay() {
+      return document.getElementById("boss-reveal-overlay");
+    }
+
+    function setRevealImage(imageId, fallbackId, imageUrl, altText) {
+      const image = document.getElementById(imageId);
+      const fallback = document.getElementById(fallbackId);
+
+      if (!image || !fallback) return;
+
+      if (imageUrl) {
+        image.src = imageUrl;
+        image.alt = altText || "";
+        image.hidden = false;
+        fallback.hidden = true;
+      } else {
+        image.removeAttribute("src");
+        image.hidden = true;
+        fallback.hidden = false;
+      }
+    }
+
+    function showBossReveal() {
+      const payload = getPayload();
+      const overlay = getOverlay();
+
+      if (!payload || !overlay || anotherOverlayIsOpen()) {
+        return false;
+      }
+
+      const runId = payload.dataset.runId;
+      const bossName = payload.dataset.bossName || "The Boss";
+      const dungeonName = payload.dataset.dungeonName || "The Dungeon";
+
+      if (!runId) {
+        return false;
+      }
+
+      const storageKey = BOSS_REVEAL_SEEN_PREFIX + runId;
+
+      if (sessionStorage.getItem(storageKey) === "true") {
+        return false;
+      }
+
+      setRevealImage(
+        "boss-reveal-dungeon-image",
+        "boss-reveal-dungeon-fallback",
+        payload.dataset.dungeonImage,
+        dungeonName
+      );
+
+      setRevealImage(
+        "boss-reveal-boss-image",
+        "boss-reveal-boss-fallback",
+        payload.dataset.bossImage,
+        bossName
+      );
+
+      document.getElementById("boss-reveal-boss-name").textContent = bossName;
+      document.getElementById("boss-reveal-text").textContent =
+        dungeonName + " has been cleared. " + bossName + " has awakened.";
+
+      overlay.hidden = false;
+      overlay.removeAttribute("hidden");
+
+      document.body.classList.add("fr-modal-open");
+      document.documentElement.classList.add("fr-modal-open");
+
+      sessionStorage.setItem(storageKey, "true");
+
+      return true;
+    }
+
+    function closeBossReveal() {
+      const overlay = getOverlay();
+
+      if (!overlay) return;
+
+      overlay.hidden = true;
+      overlay.setAttribute("hidden", "");
+
+      document.body.classList.remove("fr-modal-open");
+      document.documentElement.classList.remove("fr-modal-open");
+    }
+
+    function scheduleBossReveal(delay) {
+      window.setTimeout(function () {
+        if (showBossReveal()) return;
+
+        window.setTimeout(function () {
+          if (showBossReveal()) return;
+
+          window.setTimeout(showBossReveal, 800);
+        }, 800);
+      }, delay);
+    }
+
+    document.addEventListener("click", function (event) {
+      const closeButton = event.target.closest
+        ? event.target.closest("#boss-reveal-close")
+        : null;
+
+      if (closeButton) {
+        event.preventDefault();
+        closeBossReveal();
+        return;
+      }
+
+      if (event.target && event.target.id === "boss-reveal-overlay") {
+        closeBossReveal();
+      }
+
+      if (
+        event.target &&
+        (
+          event.target.id === "close-roll-result" ||
+          event.target.id === "dungeon-event-close" ||
+          event.target.id === "room-story-close"
+        )
+      ) {
+        scheduleBossReveal(400);
+      }
+    });
+
+    document.addEventListener("keydown", function (event) {
+      if (event.key === "Escape" && isOpen("boss-reveal-overlay")) {
+        closeBossReveal();
+      }
+    });
+
+    document.addEventListener("DOMContentLoaded", function () {
+      scheduleBossReveal(900);
+    });
+
+    document.body.addEventListener("htmx:afterSettle", function () {
+      scheduleBossReveal(900);
+    });
+
+    window.frBossRevealDebug = {
+      showBossReveal,
+      closeBossReveal,
+      clearBossRevealMemory: function () {
+        Object.keys(sessionStorage)
+          .filter((key) => key.startsWith(BOSS_REVEAL_SEEN_PREFIX))
+          .forEach((key) => sessionStorage.removeItem(key));
+
+        return "Boss reveal memory cleared.";
+      },
+    };
+  })();
+</script>
+<script>
+  (function () {
+    const BOSS_BATTLE_INTRO_SEEN_PREFIX = "fantasy_roles_boss_battle_intro_seen_";
+    let introIsPlaying = false;
+
+    function getPayload() {
+      return document.getElementById("boss-battle-intro-payload");
+    }
+
+    function getOverlay() {
+      return document.getElementById("boss-battle-intro-overlay");
+    }
+
+    function shouldPlayIntro() {
+      const payload = getPayload();
+
+      if (!payload) return false;
+
+      const encounterId = payload.dataset.encounterId;
+
+      if (!encounterId) return false;
+
+      return (
+        sessionStorage.getItem(BOSS_BATTLE_INTRO_SEEN_PREFIX + encounterId)
+        !== "true"
+      );
+    }
+
+    function playIntro(callback) {
+      const payload = getPayload();
+      const overlay = getOverlay();
+
+      if (!payload || !overlay || introIsPlaying) {
+        return false;
+      }
+
+      const encounterId = payload.dataset.encounterId;
+      const bossName = payload.dataset.bossName || "The boss";
+
+      if (!encounterId) {
+        return false;
+      }
+
+      introIsPlaying = true;
+
+      sessionStorage.setItem(
+        BOSS_BATTLE_INTRO_SEEN_PREFIX + encounterId,
+        "true"
+      );
+
+      const title = document.getElementById("boss-battle-intro-title");
+
+      if (title) {
+        title.textContent = bossName + " attacks first.";
+      }
+
+      document.body.classList.add("fr-boss-battle-arrival");
+
+      window.setTimeout(function () {
+        overlay.hidden = false;
+        overlay.removeAttribute("hidden");
+        document.body.classList.add("fr-modal-open");
+        document.documentElement.classList.add("fr-modal-open");
+      }, 850);
+
+      window.setTimeout(function () {
+        overlay.hidden = true;
+        overlay.setAttribute("hidden", "");
+
+        document.body.classList.remove("fr-modal-open");
+        document.documentElement.classList.remove("fr-modal-open");
+        document.body.classList.remove("fr-boss-battle-arrival");
+
+        introIsPlaying = false;
+
+        if (callback) {
+          callback();
+        }
+      }, 2400);
+
+      return true;
+    }
+
+    window.frBossBattleIntro = {
+      shouldPlayIntro,
+      playIntro,
+      clearBossBattleIntroMemory: function () {
+        Object.keys(sessionStorage)
+          .filter((key) => key.startsWith(BOSS_BATTLE_INTRO_SEEN_PREFIX))
+          .forEach((key) => sessionStorage.removeItem(key));
+
+        return "Boss battle intro memory cleared.";
+      },
+    };
+  })();
+</script>
+<script>
+  (function () {
+    const BOSS_TRANSFORM_SEEN_PREFIX = "fantasy_roles_boss_transform_seen_";
+    let transformationIsShowing = false;
+
+    function getPayload() {
+      return document.getElementById("boss-transformation-payload");
+    }
+
+    function getOverlay() {
+      return document.getElementById("boss-transformation-overlay");
+    }
+
+    function isOpen(id) {
+      const element = document.getElementById(id);
+      return element && !element.hidden;
+    }
+
+    function anotherOverlayIsOpen() {
+      return (
+        isOpen("roll-result-overlay") ||
+        isOpen("room-story-overlay") ||
+        isOpen("dungeon-event-overlay") ||
+        isOpen("boss-reveal-overlay") ||
+        isOpen("boss-battle-intro-overlay") ||
+        isOpen("boss-turn-moment")
+      );
+    }
+
+    function markSeen(logId) {
+      sessionStorage.setItem(BOSS_TRANSFORM_SEEN_PREFIX + logId, "true");
+    }
+
+    function wasSeen(logId) {
+      return sessionStorage.getItem(BOSS_TRANSFORM_SEEN_PREFIX + logId) === "true";
+    }
+
+    function transformationIsComplete() {
+      const payload = getPayload();
+
+      if (!payload) return true;
+
+      const logId = payload.dataset.logId;
+
+      if (!logId) return true;
+
+      return wasSeen(logId) && !transformationIsShowing;
+    }
+
+    function setImage(imageId, fallbackId, imageUrl, altText) {
+      const image = document.getElementById(imageId);
+      const fallback = document.getElementById(fallbackId);
+
+      if (!image || !fallback) return;
+
+      if (imageUrl) {
+        image.src = imageUrl;
+        image.alt = altText || "";
+        image.hidden = false;
+        fallback.hidden = true;
+      } else {
+        image.removeAttribute("src");
+        image.hidden = true;
+        fallback.hidden = false;
+      }
+    }
+
+    function setMeta(items) {
+      const meta = document.getElementById("boss-transformation-meta");
+
+      if (!meta) return;
+
+      meta.innerHTML = "";
+
+      items.filter(Boolean).forEach(function (item) {
+        const pill = document.createElement("span");
+        pill.textContent = item;
+        meta.appendChild(pill);
+      });
+    }
+
+    function createShards(imageUrl) {
+      const layer = document.getElementById("boss-transform-shard-layer");
+
+      if (!layer) return;
+
+      layer.innerHTML = "";
+
+      if (!imageUrl) return;
+
+      const columns = 4;
+      const rows = 3;
+
+      for (let row = 0; row < rows; row += 1) {
+        for (let column = 0; column < columns; column += 1) {
+          const shard = document.createElement("span");
+          const width = 100 / columns;
+          const height = 100 / rows;
+
+          const directionX = column < columns / 2 ? -1 : 1;
+          const randomX = directionX * (80 + Math.random() * 110);
+          const randomY = -80 + Math.random() * 210;
+          const rotation = directionX * (25 + Math.random() * 65);
+
+          shard.className = "fr-boss-transform-shard";
+          shard.style.left = (column * width) + "%";
+          shard.style.top = (row * height) + "%";
+          shard.style.width = width + "%";
+          shard.style.height = height + "%";
+          shard.style.backgroundImage = "url('" + imageUrl + "')";
+          shard.style.backgroundSize = (columns * 100) + "% " + (rows * 100) + "%";
+          shard.style.backgroundPosition =
+            (columns === 1 ? 0 : (column / (columns - 1)) * 100) + "% " +
+            (rows === 1 ? 0 : (row / (rows - 1)) * 100) + "%";
+          shard.style.setProperty("--tx", randomX + "px");
+          shard.style.setProperty("--ty", randomY + "px");
+          shard.style.setProperty("--rot", rotation + "deg");
+          shard.style.setProperty("--delay", ((row + column) * 35) + "ms");
+
+          layer.appendChild(shard);
+        }
+      }
+    }
+
+    function showBossTransformation() {
+      const payload = getPayload();
+      const overlay = getOverlay();
+
+      if (!payload || !overlay || transformationIsShowing || anotherOverlayIsOpen()) {
+        return false;
+      }
+
+      const logId = payload.dataset.logId;
+
+      if (!logId || wasSeen(logId)) {
+        return false;
+      }
+
+      const normalName = payload.dataset.bossNormalName || "The Boss";
+      const rageName = payload.dataset.bossRageName || "Rage Form";
+      const transformationName = payload.dataset.transformationName || "Rage Form";
+      const resultText = payload.dataset.resultText || (
+        normalName + " shatters its old form and becomes " + rageName + "!"
+      );
+
+      const title = document.getElementById("boss-transformation-title");
+      const text = document.getElementById("boss-transformation-text");
+      const kicker = document.getElementById("boss-transformation-kicker");
+      const rageNameElement = document.getElementById("boss-transformation-rage-name");
+
+      if (kicker) kicker.textContent = transformationName;
+      if (title) title.textContent = normalName + " transforms!";
+      if (text) text.textContent = resultText;
+      if (rageNameElement) rageNameElement.textContent = rageName;
+
+      setImage(
+        "boss-transform-normal-image",
+        "boss-transform-normal-fallback",
+        payload.dataset.normalImage,
+        normalName
+      );
+
+      setImage(
+        "boss-transform-rage-image",
+        "boss-transform-rage-fallback",
+        payload.dataset.rageImage,
+        rageName
+      );
+
+      setMeta([
+        "Threshold: " + (payload.dataset.thresholdLife || "—"),
+        "Current HP: " + (payload.dataset.currentLife || "—"),
+      ]);
+
+      createShards(payload.dataset.normalImage || payload.dataset.rageImage);
+
+      transformationIsShowing = true;
+      markSeen(logId);
+
+      overlay.classList.remove("is-showing", "is-shattering", "is-revealed");
+      overlay.hidden = false;
+      overlay.removeAttribute("hidden");
+
+      document.body.classList.add("fr-modal-open");
+      document.documentElement.classList.add("fr-modal-open");
+
+      requestAnimationFrame(function () {
+        overlay.classList.add("is-showing");
+      });
+
+      window.setTimeout(function () {
+        overlay.classList.add("is-shattering");
+      }, 850);
+
+      window.setTimeout(function () {
+        overlay.classList.add("is-revealed");
+      }, 1450);
+
+      window.setTimeout(function () {
+        overlay.classList.remove("is-showing");
+
+        window.setTimeout(function () {
+          overlay.hidden = true;
+          overlay.setAttribute("hidden", "");
+          overlay.classList.remove("is-shattering", "is-revealed");
+
+          document.body.classList.remove("fr-modal-open");
+          document.documentElement.classList.remove("fr-modal-open");
+
+          transformationIsShowing = false;
+
+          window.dispatchEvent(
+            new CustomEvent("fr:boss-transformation-finished")
+          );
+        }, 280);
+      }, 4600);
+
+      return true;
+    }
+
+    function scheduleBossTransformationCheck(delay) {
+      window.setTimeout(function () {
+        if (showBossTransformation()) return;
+
+        window.setTimeout(function () {
+          showBossTransformation();
+        }, 700);
+      }, delay);
+    }
+
+    document.addEventListener("DOMContentLoaded", function () {
+      scheduleBossTransformationCheck(900);
+    });
+
+    document.body.addEventListener("htmx:afterSettle", function () {
+      scheduleBossTransformationCheck(900);
+    });
+
+    window.addEventListener("fr:boss-player-animation-advanced", function () {
+      scheduleBossTransformationCheck(450);
+    });
+
+    document.body.addEventListener("htmx:beforeRequest", function (event) {
+      const requestElement = event.detail && event.detail.elt
+        ? event.detail.elt
+        : event.target;
+
+      if (!requestElement || requestElement.id !== "dungeon-live-panel") return;
+
+      if (transformationIsShowing) {
+        event.preventDefault();
+      }
+    });
+
+    window.frBossTransformationGate = {
+      isComplete: transformationIsComplete,
+      isShowing: function () {
+        return transformationIsShowing;
+      },
+    };
+
+    window.frBossTransformationDebug = {
+      showBossTransformation,
+      clearTransformationMemory: function () {
+        Object.keys(sessionStorage)
+          .filter((key) => key.startsWith(BOSS_TRANSFORM_SEEN_PREFIX))
+          .forEach((key) => sessionStorage.removeItem(key));
+
+        return "Boss transformation memory cleared.";
+      },
+    };
+  })();
+</script>
+<script>
+  (function () {
+    const BOSS_PLAYER_ROLL_SEEN_PREFIX = "fantasy_roles_boss_player_roll_seen_";
+    const BOSS_PLAYER_EVENT_SEEN_PREFIX = "fantasy_roles_boss_player_event_seen_";
+    
+    function isOpen(id) {
+      const element = document.getElementById(id);
+      return element && !element.hidden;
+    }
+
+    function anotherOverlayIsOpen() {
+      return (
+        isOpen("roll-result-overlay") ||
+        isOpen("boss-attack-overlay") ||
+        isOpen("room-story-overlay") ||
+        isOpen("dungeon-event-overlay") ||
+        isOpen("boss-reveal-overlay") ||
+        isOpen("boss-battle-intro-overlay") ||
+        isOpen("boss-transformation-overlay") 
+      );
+    }
+
+    function getPayload() {
+      return document.getElementById("latest-boss-player-log-payload");
+    }
+
+    function getRollOverlayParts() {
+      return {
+        overlay: document.getElementById("roll-result-overlay"),
+        card: document.getElementById("roll-result-card"),
+        dice: document.getElementById("roll-dice"),
+        diceWrap: document.getElementById("roll-dice-wrap"),
+        title: document.getElementById("roll-result-title"),
+        kicker: document.getElementById("roll-result-kicker"),
+        main: document.getElementById("roll-result-main"),
+        detail: document.getElementById("roll-result-detail"),
+      };
+    }
+
+    function setBossEventMeta(items) {
+      const meta = document.getElementById("dungeon-event-meta");
+
+      if (!meta) return;
+
+      meta.innerHTML = "";
+
+      (items || []).forEach(function (item) {
+        if (!item) return;
+
+        const pill = document.createElement("span");
+        pill.textContent = item;
+        meta.appendChild(pill);
+      });
+    }
+
+    function setBossSkillBanner(skillName) {
+      const banner = document.getElementById("dungeon-event-skill-banner");
+      const name = document.getElementById("dungeon-event-skill-name");
+
+      if (!banner || !name) return;
+
+      if (skillName) {
+        name.textContent = skillName;
+        banner.hidden = false;
+
+        banner.classList.remove("is-skill-flash");
+        void banner.offsetWidth;
+        banner.classList.add("is-skill-flash");
+      } else {
+        banner.hidden = true;
+        name.textContent = "";
+      }
+    }
+
+    function clonePartyBarIntoEvent() {
+      const source = document.querySelector(".fr-party-turn-members");
+      const target = document.getElementById("dungeon-event-party-snapshot");
+
+      if (!target) return null;
+
+      target.innerHTML = "";
+
+      if (!source) {
+        return null;
+      }
+
+      const clone = source.cloneNode(true);
+      clone.classList.add("fr-party-event-members");
+      target.appendChild(clone);
+
+      return clone;
+    }
+
+    function findHeroCard(container, characterId) {
+      if (!container || !characterId) return null;
+
+      return container.querySelector(
+        `.fr-party-turn-member[data-character-id="${characterId}"]`
+      );
+    }
+
+    function setAp(heroCard, value, maxValue) {
+      const stat = heroCard.querySelector('[data-stat="ap"]');
+
+      if (!stat) return;
+
+      stat.dataset.current = String(value);
+      stat.textContent = "✦ " + value + "/" + maxValue;
+    }
+
+    function animateNumber(options) {
+      const start = performance.now();
+      const from = options.from;
+      const to = options.to;
+      const duration = options.duration || 700;
+
+      function step(now) {
+        const progress = Math.min(1, (now - start) / duration);
+        const value = Math.round(from + (to - from) * progress);
+
+        options.onUpdate(value);
+
+        if (progress < 1) {
+          requestAnimationFrame(step);
+        }
+      }
+
+      requestAnimationFrame(step);
+    }
+
+    function pulseBossPanel() {
+      const bossPanel = document.querySelector(
+        ".fr-boss-encounter-panel, .fr-boss-board-panel, .fr-boss-card, .fr-panel"
+      );
+
+      if (!bossPanel) return;
+
+      bossPanel.classList.remove("is-boss-damage-pulse");
+      void bossPanel.offsetWidth;
+      bossPanel.classList.add("is-boss-damage-pulse");
+
+      window.setTimeout(function () {
+        bossPanel.classList.remove("is-boss-damage-pulse");
+      }, 1200);
+    }
+
+    function showBossPlayerRoll(payload) {
+      if (!payload || anotherOverlayIsOpen()) {
+        return false;
+      }
+
+      const logId = payload.dataset.logId;
+      const dieRoll = payload.dataset.dieRoll;
+      const actionType = payload.dataset.actionType;
+
+      if (!logId) {
+        return false;
+      }
+
+      if (actionType === "PASS") {
+        return false;
+      }
+
+      if (!dieRoll && actionType === "BASIC_ATTACK") {
+        console.warn(
+          "Boss basic attack log has no die roll. Check boss_basic_attack backend.",
+          payload.dataset
+        );
+        return false;
+      }
+      const storageKey = BOSS_PLAYER_ROLL_SEEN_PREFIX + logId;
+
+      if (sessionStorage.getItem(storageKey) === "true") {
+        return false;
+      }
+
+      const parts = getRollOverlayParts();
+
+      if (
+        !parts.overlay ||
+        !parts.card ||
+        !parts.dice ||
+        !parts.diceWrap ||
+        !parts.title ||
+        !parts.kicker ||
+        !parts.main ||
+        !parts.detail
+      ) {
+        return false;
+      }
+
+      const success = payload.dataset.success === "true";
+      
+      const skillName = payload.dataset.skillName;
+      const damageToBoss = Number(payload.dataset.damageToBoss || 0);
+      const damageToPlayers = Number(payload.dataset.damageToPlayers || 0);
+
+      parts.card.classList.remove("is-success", "is-failure", "has-item");
+      parts.card.classList.add(success ? "is-success" : "is-failure");
+
+      parts.kicker.textContent = payload.dataset.characterName || "Hero";
+
+      if (actionType === "BOSS_SKILL" && skillName) {
+  parts.title.textContent = skillName;
+} else if (success) {
+  parts.title.textContent = "Boss Hit!";
+} else {
+  parts.title.textContent = "Miss!";
+}
+
+      parts.main.textContent = payload.dataset.resultText || "The boss action resolves.";
+
+      if (dieRoll) {
+  parts.detail.textContent =
+    "Roll " + dieRoll +
+    " · Total " + (payload.dataset.finalTotal || dieRoll) +
+    " · Difficulty " + (payload.dataset.difficulty || "—");
+} else if (damageToBoss > 0) {
+        parts.detail.textContent = "Damage to boss: " + damageToBoss;
+      } else if (damageToPlayers > 0) {
+        parts.detail.textContent = "Damage taken: " + damageToPlayers;
+      } else {
+        parts.detail.textContent = "Skill resolved.";
+      }
+
+      parts.dice.textContent = dieRoll;
+      parts.overlay.hidden = false;
+      parts.overlay.removeAttribute("hidden");
+
+      parts.diceWrap.classList.add("is-rolling");
+
+      let ticks = 0;
+      const interval = window.setInterval(function () {
+        ticks += 1;
+        parts.dice.textContent = String(Math.floor(Math.random() * 6) + 1);
+
+        if (ticks >= 10) {
+          window.clearInterval(interval);
+          parts.dice.textContent = dieRoll;
+          parts.diceWrap.classList.remove("is-rolling");
+          parts.diceWrap.classList.add(success ? "is-success-pop" : "is-failure-pop");
+
+          window.setTimeout(function () {
+            parts.diceWrap.classList.remove("is-success-pop", "is-failure-pop");
+          }, 800);
+        }
+      }, 70);
+
+      document.body.classList.add("fr-modal-open");
+      document.documentElement.classList.add("fr-modal-open");
+
+      sessionStorage.setItem(storageKey, "true");
+
+      return true;
+    }
+
+    function showBossPlayerEvent(payload) {
+      if (!payload || anotherOverlayIsOpen()) {
+        return false;
+      }
+
+      const logId = payload.dataset.logId;
+
+      if (!logId) {
+        return false;
+      }
+
+      const storageKey = BOSS_PLAYER_EVENT_SEEN_PREFIX + logId;
+
+      if (sessionStorage.getItem(storageKey) === "true") {
+        return false;
+      }
+
+      const overlay = document.getElementById("dungeon-event-overlay");
+      const card = document.getElementById("dungeon-event-card");
+      const kicker = document.getElementById("dungeon-event-kicker");
+      const title = document.getElementById("dungeon-event-title");
+      const text = document.getElementById("dungeon-event-text");
+      const snapshot = document.getElementById("dungeon-event-party-snapshot");
+
+      if (!overlay || !card || !kicker || !title || !text || !snapshot) {
+        return false;
+      }
+
+      const actionType = payload.dataset.actionType;
+      const skillName = payload.dataset.skillName;
+      const characterName = payload.dataset.characterName || "A hero";
+      const damageToBoss = Number(payload.dataset.damageToBoss || 0);
+      const damageToPlayers = Number(payload.dataset.damageToPlayers || 0);
+      const healing = Number(payload.dataset.healing || 0);
+      const bossName = payload.dataset.bossName || "The Boss";
+
+      card.classList.remove("is-damage", "is-cleared", "is-skill");
+
+      if (actionType === "BOSS_SKILL") {
+        card.classList.add("is-skill");
+        setBossSkillBanner(skillName);
+      } else {
+        setBossSkillBanner("");
+      }
+
+      kicker.textContent = actionType === "BOSS_SKILL" ? "Boss Skill" : "Boss Attack";
+
+      if (damageToBoss > 0) {
+        title.textContent = bossName + " takes damage!";
+        text.textContent = payload.dataset.resultText || (
+          characterName + " dealt " + damageToBoss + " damage."
+        );
+
+        const bossAfter = Number(payload.dataset.bossCurrentLife || 0);
+        const bossMax = Number(payload.dataset.bossMaxLife || 0);
+        const bossBefore = Math.min(bossMax, bossAfter + damageToBoss);
+
+        snapshot.innerHTML = `
+          <div class="fr-boss-event-hp">
+            <span class="fr-kicker">${bossName}</span>
+            <strong>Boss Life</strong>
+            <div class="fr-boss-event-hp-track">
+              <div class="fr-boss-event-hp-fill" style="--boss-event-hp: ${(bossBefore / bossMax) * 100}%"></div>
+            </div>
+            <p>${bossBefore}/${bossMax} → ${bossAfter}/${bossMax}</p>
+          </div>
+        `;
+
+        window.setTimeout(function () {
+          const fill = snapshot.querySelector(".fr-boss-event-hp-fill");
+
+          if (fill && bossMax > 0) {
+            fill.style.setProperty(
+              "--boss-event-hp",
+              ((bossAfter / bossMax) * 100) + "%"
+            );
+          }
+
+          pulseBossPanel();
+        }, 350);
+
+        setBossEventMeta([
+          "Damage: " + damageToBoss,
+          "Boss HP: " + bossBefore + " → " + bossAfter,
+        ]);
+
+      } else {
+        title.textContent = skillName || "Boss action resolved";
+        text.textContent = payload.dataset.resultText || "The action resolves.";
+
+        const partyBar = clonePartyBarIntoEvent();
+
+        if (actionType === "BOSS_SKILL" && partyBar) {
+          const heroCard = findHeroCard(partyBar, payload.dataset.characterId);
+
+          if (heroCard) {
+            const afterAp = Number(payload.dataset.characterCurrentAp || 0);
+            const maxAp = Number(payload.dataset.characterMaxAp || 0);
+            const skillCost = Number(payload.dataset.skillApCost || 0);
+            const beforeAp = Math.min(maxAp, afterAp + skillCost);
+
+            setAp(heroCard, beforeAp, maxAp);
+
+            heroCard.classList.remove("is-skill-pulse");
+            void heroCard.offsetWidth;
+            heroCard.classList.add("is-skill-pulse");
+
+            window.setTimeout(function () {
+              animateNumber({
+                from: beforeAp,
+                to: afterAp,
+                duration: 700,
+                onUpdate: function (value) {
+                  setAp(heroCard, value, maxAp);
+                },
+              });
+            }, 420);
+          }
+        }
+
+        setBossEventMeta([
+          healing > 0 ? "Healing: " + healing : "",
+          damageToPlayers > 0 ? "Damage taken: " + damageToPlayers : "",
+        ]);
+      }
+
+      overlay.hidden = false;
+      overlay.removeAttribute("hidden");
+
+      document.body.classList.add("fr-modal-open");
+      document.documentElement.classList.add("fr-modal-open");
+
+      sessionStorage.setItem(storageKey, "true");
+
+      return true;
+    }
+
+    function checkBossPlayerLog() {
+      const payload = getPayload();
+
+      if (!payload) return false;
+
+      if (showBossPlayerRoll(payload)) {
+        return true;
+      }
+
+      return showBossPlayerEvent(payload);
+    }
+
+    function scheduleBossPlayerLogCheck(delay) {
+      window.setTimeout(function () {
+        if (checkBossPlayerLog()) return;
+
+        window.setTimeout(function () {
+          checkBossPlayerLog();
+        }, 550);
+      }, delay);
+    }
+
+    document.addEventListener("click", function (event) {
+  if (event.target && event.target.id === "close-roll-result") {
+    document.body.classList.remove("fr-modal-open");
+    document.documentElement.classList.remove("fr-modal-open");
+
+    window.setTimeout(function () {
+      scheduleBossPlayerLogCheck(300);
+      notifyBossPlayerAnimationAdvanced();
+    }, 350);
+  }
+
+  if (event.target && event.target.id === "dungeon-event-close") {
+    window.setTimeout(function () {
+      scheduleBossPlayerLogCheck(300);
+      notifyBossPlayerAnimationAdvanced();
+    }, 350);
+  }
+});
+
+    document.addEventListener("DOMContentLoaded", function () {
+      scheduleBossPlayerLogCheck(900);
+    });
+
+    document.body.addEventListener("htmx:afterSettle", function () {
+      scheduleBossPlayerLogCheck(900);
+    });
+
+    function latestPlayerPayloadNeedsRoll(payload) {
+  if (!payload) return false;
+
+  const actionType = payload.dataset.actionType;
+
+  if (actionType === "PASS") {
+    return false;
+  }
+
+  return Boolean(payload.dataset.dieRoll);
+}
+
+function latestPlayerPayloadNeedsEvent(payload) {
+  if (!payload) return false;
+
+  const actionType = payload.dataset.actionType;
+  const skillName = payload.dataset.skillName;
+  const damageToBoss = Number(payload.dataset.damageToBoss || 0);
+  const damageToPlayers = Number(payload.dataset.damageToPlayers || 0);
+  const healing = Number(payload.dataset.healing || 0);
+
+  if (actionType === "BOSS_SKILL" && skillName) {
+    return true;
+  }
+
+  return (
+    damageToBoss > 0 ||
+    damageToPlayers > 0 ||
+    healing > 0
+  );
+}
+
+function latestPlayerAnimationIsComplete() {
+  const payload = getPayload();
+
+  if (!payload) {
+    return true;
+  }
+
+  const logId = payload.dataset.logId;
+
+  if (!logId) {
+    return true;
+  }
+
+  const rollNeeded = latestPlayerPayloadNeedsRoll(payload);
+  const eventNeeded = latestPlayerPayloadNeedsEvent(payload);
+
+  const rollDone = !rollNeeded || (
+    sessionStorage.getItem(BOSS_PLAYER_ROLL_SEEN_PREFIX + logId) === "true"
+  );
+
+  const eventDone = !eventNeeded || (
+    sessionStorage.getItem(BOSS_PLAYER_EVENT_SEEN_PREFIX + logId) === "true"
+  );
+
+  return rollDone && eventDone;
+}
+
+let lastPlayerAnimationAdvancedAt = 0;
+
+function notifyBossPlayerAnimationAdvanced() {
+  lastPlayerAnimationAdvancedAt = performance.now();
+
+  window.dispatchEvent(
+    new CustomEvent("fr:boss-player-animation-advanced")
+  );
+}
+window.frBossPlayerEventGate = {
+  isComplete: latestPlayerAnimationIsComplete,
+  notifyAdvanced: notifyBossPlayerAnimationAdvanced,
+  getLastAdvancedAt: function () {
+    return lastPlayerAnimationAdvancedAt;
+  },
+};
+
+window.frBossPlayerEventDebug = {
+  checkBossPlayerLog,
+  latestPlayerAnimationIsComplete,
+  clearBossPlayerEventMemory: function () {
+    Object.keys(sessionStorage)
+      .filter((key) =>
+        key.startsWith(BOSS_PLAYER_ROLL_SEEN_PREFIX) ||
+        key.startsWith(BOSS_PLAYER_EVENT_SEEN_PREFIX)
+      )
+      .forEach((key) => sessionStorage.removeItem(key));
+
+    return "Boss player event memory cleared.";
+  },
+};
   })();
 </script>
 {% endblock %}

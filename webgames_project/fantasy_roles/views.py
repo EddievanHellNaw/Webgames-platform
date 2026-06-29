@@ -32,6 +32,8 @@ from .models import (
     PartyMember,
     PlayerCharacter,
     RoomAttempt,
+    RoomSupportEffect,
+    DungeonRoom,
 )
 
 # ============================================================
@@ -209,20 +211,55 @@ def check_dungeon_failure_state(run):
     return False
 
 def update_run_status_after_room_result(run):
-    if check_dungeon_failure_state(run):
-        return
+    """
+    Updates the dungeon run after a room action.
+
+    Important order:
+    1. Party defeated still means failed.
+    2. If all non-boss rooms are cleared, boss becomes ready.
+    3. Out-of-AP failure only matters if rooms remain.
+
+    This prevents the party from failing because they spent their last AP
+    clearing the final room.
+    """
+    run.refresh_from_db()
+
     if party_is_defeated(run.party):
         run.status = PartyDungeonRun.Status.FAILED
-        run.save(update_fields=["status", "updated_at"])
+        run.failure_reason = PartyDungeonRun.FailureReason.PARTY_DEFEATED
+        run.current_turn_character = None
+        run.save(
+            update_fields=[
+                "status",
+                "failure_reason",
+                "current_turn_character",
+                "updated_at",
+            ]
+        )
         return
 
-    uncleared_rooms_exist = run.generated_rooms.filter(
-        is_cleared=False,
-    ).exists()
+    uncleared_rooms_exist = (
+        run.generated_rooms
+        .exclude(room_type=DungeonRunRoom.RoomType.BOSS)
+        .filter(is_cleared=False)
+        .exists()
+    )
 
     if not uncleared_rooms_exist:
         run.status = PartyDungeonRun.Status.BOSS_READY
-        run.save(update_fields=["status", "updated_at"])
+        run.current_turn_character = None
+        run.failure_reason = PartyDungeonRun.FailureReason.NONE
+        run.save(
+            update_fields=[
+                "status",
+                "current_turn_character",
+                "failure_reason",
+                "updated_at",
+            ]
+        )
+        return
+
+    check_dungeon_failure_state(run)
 
 # ============================================================
 # Room skill / weakness helpers
@@ -282,30 +319,72 @@ def clear_next_room_skill_penalty(character):
     character.room_skill_ap_penalty = 0
     character.save(update_fields=["room_skill_ap_penalty", "updated_at"])
 
+def room_is_mimic(room):
+    if room.source_room_id:
+        return room.source_room.is_mimic_room
+
+    if room.source_template_id:
+        return room.source_template.is_mimic_room
+
+    return False
+
 def transform_special_room_into_mimic(room):
+    """
+    Turns a special mimic room into a combat room.
+    The image changes automatically through room.display_image.
+    """
+    room = (
+        DungeonRunRoom.objects
+        .select_related("source_room", "source_template")
+        .get(id=room.id)
+    )
+
     if room.room_type != DungeonRunRoom.RoomType.SPECIAL:
-        return
+        return False
 
-    original_name = room.name or "Suspicious Chest"
-
-    if not original_name.lower().startswith("mimic"):
-        room.name = f"Mimic Ambush — {original_name}"
+    if not room_is_mimic(room):
+        return False
 
     room.room_type = DungeonRunRoom.RoomType.COMBAT
+    room.is_cleared = False
 
-    if not room.flavor_text:
-        room.flavor_text = (
-            "The chest twists open with teeth and claws. "
-            "It was a Mimic waiting for the perfect moment to attack!"
+    if room.source_room:
+        room.name = room.source_room.name or room.name or "Mimic Ambush"
+        room.difficulty = room.source_room.difficulty or room.difficulty
+        room.failure_text = room.source_room.failure_text or room.failure_text
+        room.damage_on_failure = (
+            room.source_room.damage_on_failure
+            or room.damage_on_failure
+            or room.difficulty
         )
+
+    elif room.source_template:
+        room.name = room.source_template.name or room.name or "Mimic Ambush"
+        room.difficulty = room.source_template.difficulty or room.difficulty
+        room.failure_text = room.source_template.failure_text or room.failure_text
+        room.damage_on_failure = (
+            room.source_template.damage_on_failure
+            or room.damage_on_failure
+            or room.difficulty
+        )
+
+    room.flavor_text = (
+        "The chest snaps open with teeth and claws. It was a mimic!"
+    )
 
     room.save(
         update_fields=[
-            "name",
             "room_type",
+            "is_cleared",
+            "name",
+            "difficulty",
             "flavor_text",
+            "failure_text",
+            "damage_on_failure",
         ]
     )
+
+    return True
 
 def award_random_item_to_party(party, dungeon, room):
     eligible_items = (
@@ -341,6 +420,188 @@ def award_random_item_to_party(party, dungeon, room):
     inventory_item.save()
 
     return item
+
+def create_room_support_effect(
+    room,
+    character,
+    skill,
+    effect_code=None,
+    effect_value=None,
+    secondary_value=None,
+    target_character=None,
+):
+    return RoomSupportEffect.objects.create(
+        room=room,
+        source_character=character,
+        target_character=target_character,
+        skill=skill,
+        effect_code=effect_code or skill.effect_code,
+        effect_value=skill.effect_value if effect_value is None else effect_value,
+        secondary_value=skill.secondary_value if secondary_value is None else secondary_value,
+        uses_remaining=1,
+    )
+
+def get_applicable_room_support_effects(room, character):
+    return list(
+        RoomSupportEffect.objects
+        .filter(
+            room=room,
+            uses_remaining__gt=0,
+        )
+        .filter(
+            models.Q(target_character__isnull=True)
+            | models.Q(target_character=character)
+        )
+        .select_related("skill", "source_character")
+        .order_by("created_at")
+    )
+
+def consume_room_support_effects(effects):
+    for effect in effects:
+        effect.uses_remaining = max(0, effect.uses_remaining - 1)
+        effect.save(update_fields=["uses_remaining"])
+
+def submit_room_skill_action(request, session, run, room, character, membership):
+    skill_id = request.POST.get("skill_id")
+
+    skill = get_object_or_404(
+        ClassSkill,
+        id=skill_id,
+        character_class=character.character_class,
+        skill_scope=ClassSkill.SkillScope.ROOM,
+    )
+
+    if not skill_can_be_used_in_room(skill, room):
+        messages.warning(request, "This skill cannot be used in this room.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    room_weaknesses = get_room_weaknesses(character)
+
+    ap_cost = skill.ap_cost + character.room_skill_ap_penalty
+    life_cost = 0
+
+    if has_weakness(
+        room_weaknesses,
+        ClassWeakness.EffectCode.ROOM_SKILLS_COST_LIFE,
+    ):
+        life_cost = ap_cost
+        ap_cost = 0
+
+    if not spend_character_ap(character, ap_cost):
+        messages.warning(
+            request,
+            f"You need {ap_cost} AP to use {skill.name}.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if not spend_character_life(character, life_cost):
+        messages.warning(
+            request,
+            f"You need more than {life_cost} Life to use {skill.name}.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    clear_next_room_skill_penalty(character)
+
+    result_parts = [
+        f"{character.character_name} used {skill.name}."
+    ]
+
+    die_roll = None
+    final_roll_total = None
+
+    if skill.effect_code == ClassSkill.EffectCode.ROOM_REDUCE_DIFFICULTY:
+        create_room_support_effect(room, character, skill)
+        result_parts.append(
+            f"The next room roll gets difficulty -{skill.effect_value}."
+        )
+
+    elif skill.effect_code == ClassSkill.EffectCode.ROOM_ROLL_BONUS:
+        create_room_support_effect(room, character, skill)
+        result_parts.append(
+            f"The next room roll gets +{skill.effect_value or skill.roll_bonus}."
+        )
+
+    elif skill.effect_code == ClassSkill.EffectCode.ROOM_REDUCE_FAILURE_DAMAGE:
+        create_room_support_effect(room, character, skill)
+        result_parts.append(
+            f"The next failed room roll reduces damage by {skill.effect_value}."
+        )
+
+    elif skill.effect_code == ClassSkill.EffectCode.ROOM_REROLL_AFTER_FAIL:
+        create_room_support_effect(room, character, skill)
+        result_parts.append(
+            "The next failed room roll may be rerolled once."
+        )
+
+    elif skill.effect_code == ClassSkill.EffectCode.ROOM_RANDOM_ROLL_BONUS:
+        die_roll = random.randint(1, 6)
+        final_roll_total = die_roll
+
+        if die_roll >= 4:
+            create_room_support_effect(
+                room,
+                character,
+                skill,
+                effect_code=ClassSkill.EffectCode.ROOM_ROLL_BONUS,
+                effect_value=skill.effect_value,
+            )
+            result_parts.append(
+                f"Quick Invention rolled {die_roll}. The next room roll gets +{skill.effect_value}."
+            )
+        else:
+            result_parts.append(
+                f"Quick Invention rolled {die_roll}. No bonus was created."
+            )
+
+    elif skill.effect_code == ClassSkill.EffectCode.ROOM_RECOVER_LIFE_ON_SUCCESS:
+        create_room_support_effect(room, character, skill)
+        result_parts.append(
+            f"The next room roll gets difficulty -{skill.effect_value}. "
+            f"If it succeeds, {character.character_name} recovers {skill.secondary_value} Life."
+        )
+
+    elif skill.effect_code == ClassSkill.EffectCode.ROOM_FIELD_AID:
+        create_room_support_effect(room, character, skill)
+        result_parts.append(
+            f"The next failed room roll reduces damage by {skill.effect_value}."
+        )
+
+    else:
+        result_parts.append(
+            "The skill has no implemented room effect yet."
+        )
+
+    result_text = " ".join(result_parts)
+
+    attempt = RoomAttempt.objects.create(
+        room=room,
+        character=character,
+        action_type=RoomAttempt.ActionType.SKILL,
+        skill_used=skill,
+        action_text="",
+        die_roll=die_roll,
+        roll_bonus=0,
+        final_roll_total=final_roll_total,
+        difficulty_at_roll=room.difficulty,
+        success=True,
+        damage_taken=0,
+        result_text=result_text,
+        challenge_round=room.challenge_round,
+    )
+
+    if run.status == PartyDungeonRun.Status.ACTIVE:
+        next_character = advance_room_turn(run)
+
+        if next_character:
+            attempt.result_text = (
+                f"{attempt.result_text} Next turn: {next_character.character_name}."
+            )
+            attempt.save(update_fields=["result_text"])
+
+    messages.info(request, attempt.result_text)
+
+    return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
 # ============================================================
 # Trap / turn room group-check helpers
@@ -744,6 +1005,152 @@ def apply_boss_damage_to_character(encounter, character, base_damage):
     apply_damage(character, damage)
 
     return damage
+
+def boss_ability_already_resolved_for_current_state(encounter):
+    """
+    Prevents the same boss turn from resolving more than once.
+
+    This protects against double-clicks, HTMX refreshes, and accidental repeated
+    calls while the page is settling after Start Boss Fight.
+    """
+    return BossActionLog.objects.filter(
+        encounter=encounter,
+        actor_type=BossActionLog.ActorType.BOSS,
+        action_type=BossActionLog.ActionType.BOSS_ABILITY,
+        phase=encounter.phase,
+        round_number=encounter.round_number,
+        player_phase_number=encounter.player_phase_number,
+    ).exists()
+
+def resolve_boss_ability_once(encounter):
+    """
+    Resolves exactly one boss ability, then passes control to the player phase.
+
+    Safe to call from Start Boss Fight or from the DM's boss ability button.
+    It will not resolve the same boss state twice.
+    """
+    encounter = (
+        BossEncounter.objects
+        .select_for_update()
+        .select_related("run", "run__party", "boss")
+        .get(id=encounter.id)
+    )
+
+    if encounter.status != BossEncounter.Status.ACTIVE:
+        return None
+
+    if encounter.current_actor != BossEncounter.CurrentActor.BOSS:
+        return None
+
+    if boss_ability_already_resolved_for_current_state(encounter):
+        return (
+            BossActionLog.objects
+            .filter(
+                encounter=encounter,
+                actor_type=BossActionLog.ActorType.BOSS,
+                action_type=BossActionLog.ActionType.BOSS_ABILITY,
+                phase=encounter.phase,
+                round_number=encounter.round_number,
+                player_phase_number=encounter.player_phase_number,
+            )
+            .order_by("-created_at")
+            .first()
+        )
+
+    pending_result = resolve_boss_pending_effects(encounter)
+    ability = get_current_boss_ability(encounter)
+
+    boss_damage_bonus_effect_ids = list(
+        get_active_boss_effects(
+            encounter,
+            target_type=BossCombatEffect.TargetType.PARTY,
+            effect_code=BossCombatEffect.EffectCode.PARTY_EXTRA_BOSS_DAMAGE_TAKEN,
+        ).values_list("id", flat=True)
+    )
+
+    previous_slot = encounter.next_boss_ability_slot
+
+    if ability:
+        ability_result = apply_boss_ability_effect(encounter, ability)
+
+        combined_result_text = " ".join(
+            text
+            for text in [
+                pending_result.get("result_text", ""),
+                ability_result.get("result_text", ""),
+            ]
+            if text
+        )
+
+        boss_log = BossActionLog.objects.create(
+            encounter=encounter,
+            actor_type=BossActionLog.ActorType.BOSS,
+            action_type=BossActionLog.ActionType.BOSS_ABILITY,
+            boss_ability=ability,
+            phase=encounter.phase,
+            round_number=encounter.round_number,
+            player_phase_number=encounter.player_phase_number,
+            die_roll=ability_result.get("die_roll"),
+            success=True,
+            damage_to_players=(
+                pending_result.get("damage_to_players", 0)
+                + ability_result.get("damage_to_players", 0)
+            ),
+            healing_done=ability_result.get("healing_done", 0),
+            result_text=combined_result_text,
+        )
+    else:
+        combined_result_text = pending_result.get("result_text", "")
+
+        if not combined_result_text:
+            combined_result_text = (
+                f"{encounter.current_boss_name} has no ability in this slot."
+            )
+
+        boss_log = BossActionLog.objects.create(
+            encounter=encounter,
+            actor_type=BossActionLog.ActorType.BOSS,
+            action_type=BossActionLog.ActionType.BOSS_ABILITY,
+            phase=encounter.phase,
+            round_number=encounter.round_number,
+            player_phase_number=encounter.player_phase_number,
+            success=True,
+            damage_to_players=pending_result.get("damage_to_players", 0),
+            result_text=combined_result_text,
+        )
+
+    consume_boss_damage_bonus_effects(
+        encounter,
+        boss_damage_bonus_effect_ids,
+    )
+
+    if check_boss_party_defeat_state(encounter):
+        return boss_log
+
+    if previous_slot == BossAbility.Slot.FIRST:
+        encounter.next_boss_ability_slot = BossAbility.Slot.SECOND
+    else:
+        encounter.next_boss_ability_slot = BossAbility.Slot.FIRST
+        encounter.round_number += 1
+
+    encounter.player_phase_number += 1
+    encounter.current_actor = BossEncounter.CurrentActor.PLAYER
+    encounter.current_turn_character = None
+    encounter.save(
+        update_fields=[
+            "next_boss_ability_slot",
+            "round_number",
+            "player_phase_number",
+            "current_actor",
+            "current_turn_character",
+            "updated_at",
+        ]
+    )
+
+    set_next_boss_player_turn_or_boss(encounter)
+
+    return boss_log
+
 # ============================================================
 # Boss turn-cycle / combat / victory helpers
 # ============================================================
@@ -863,15 +1270,18 @@ def check_boss_party_defeat_state(encounter):
 def check_boss_transformation_or_victory(encounter, triggering_character=None):
     encounter.refresh_from_db()
 
-    if encounter.current_life > 0:
-        return False
+    rage_threshold = encounter.boss.phase_two_life
 
     if (
-        encounter.phase == BossEncounter.Phase.NORMAL
+        encounter.status == BossEncounter.Status.ACTIVE
+        and encounter.phase == BossEncounter.Phase.NORMAL
         and not encounter.has_transformed
+        and encounter.current_life <= rage_threshold
     ):
+        kept_life = max(1, encounter.current_life)
+
         encounter.phase = BossEncounter.Phase.RAGE
-        encounter.current_life = encounter.boss.phase_two_life
+        encounter.current_life = kept_life
         encounter.has_transformed = True
         encounter.transformed_by_character = triggering_character
 
@@ -900,12 +1310,21 @@ def check_boss_transformation_or_victory(encounter, triggering_character=None):
             round_number=encounter.round_number,
             player_phase_number=encounter.player_phase_number,
             success=True,
+            damage_to_boss=0,
+            damage_to_players=0,
+            healing_done=0,
             result_text=(
                 encounter.boss.transformation_text
-                or f"{encounter.boss.normal_name} transforms into {encounter.current_boss_name}!"
+                or (
+                    f"{encounter.boss.normal_name} shatters its old form "
+                    f"and becomes {encounter.current_boss_name}!"
+                )
             ),
         )
 
+        return False
+
+    if encounter.current_life > 0:
         return False
 
     encounter.status = BossEncounter.Status.WON
@@ -997,79 +1416,134 @@ def finish_boss_player_phase(encounter):
 
     resolve_boss_turn(encounter)
 
+def get_living_boss_turn_characters(encounter):
+    """
+    Returns the living party characters in stable party order.
+    Uses the actual PartyMember related name: party.members.
+    """
+    members = (
+        encounter.run.party.members
+        .select_related("character", "character__character_class")
+        .order_by("order", "joined_at")
+    )
+
+    characters = []
+
+    for member in members:
+        if member.character and member.character.current_life > 0:
+            characters.append(member.character)
+
+    return characters
+
+def advance_boss_after_player_action(encounter):
+    """
+    Called after a player acts during the boss fight.
+
+    If there are still living players who have not acted in this player phase,
+    it moves to the next player.
+
+    If all living players have acted, it resolves exactly one boss ability
+    and then starts the next player phase.
+    """
+    encounter = set_next_boss_player_turn_or_boss(encounter)
+
+    if (
+        encounter.status == BossEncounter.Status.ACTIVE
+        and encounter.current_actor == BossEncounter.CurrentActor.BOSS
+    ):
+        resolve_boss_ability_once(encounter)
+
+        encounter.refresh_from_db()
+
+    return encounter
+
 def set_next_boss_player_turn_or_boss(encounter):
-    encounter.refresh_from_db()
+    """
+    Advances the boss encounter turn order.
 
-    if check_boss_party_defeat_state(encounter):
-        return
+    Correct cycle:
+    Boss ability
+    -> every living party member acts once
+    -> boss ability
+    -> every living party member acts once
+    -> repeat
 
-    party_skip_effect = party_has_boss_skip_effect(encounter)
+    Important:
+    - This function does NOT increment player_phase_number.
+    - player_phase_number should only increment when the boss resolves a new ability.
+    """
+    encounter = (
+        BossEncounter.objects
+        .select_related("run", "run__party")
+        .get(id=encounter.id)
+    )
 
-    if party_skip_effect:
-        BossActionLog.objects.create(
-            encounter=encounter,
-            actor_type=BossActionLog.ActorType.SYSTEM,
-            action_type=BossActionLog.ActionType.PASS,
-            phase=encounter.phase,
-            round_number=encounter.round_number,
-            player_phase_number=encounter.player_phase_number,
-            success=True,
-            result_text="The whole party loses this player phase.",
+    if encounter.status != BossEncounter.Status.ACTIVE:
+        return encounter
+
+    living_characters = get_living_boss_turn_characters(encounter)
+
+    if not living_characters:
+        encounter.status = BossEncounter.Status.LOST
+        encounter.current_actor = BossEncounter.CurrentActor.NONE
+        encounter.current_turn_character = None
+        encounter.run.status = PartyDungeonRun.Status.FAILED
+        encounter.run.failure_reason = PartyDungeonRun.FailureReason.PARTY_DEFEATED
+
+        encounter.run.save(
+            update_fields=[
+                "status",
+                "failure_reason",
+                "updated_at",
+            ]
         )
 
-        consume_boss_effect(party_skip_effect)
-        finish_boss_player_phase(encounter)
-        return
+        encounter.save(
+            update_fields=[
+                "status",
+                "current_actor",
+                "current_turn_character",
+                "updated_at",
+            ]
+        )
 
-    living_members = get_living_party_members(encounter.run.party)
+        return encounter
 
     acted_character_ids = set(
         BossActionLog.objects
         .filter(
             encounter=encounter,
             actor_type=BossActionLog.ActorType.PLAYER,
+            round_number=encounter.round_number,
             player_phase_number=encounter.player_phase_number,
         )
-        .exclude(character=None)
+        .exclude(character__isnull=True)
         .values_list("character_id", flat=True)
     )
 
-    for member in living_members:
-        character = member.character
+    next_character = None
 
-        if character.id in acted_character_ids:
-            continue
+    for character in living_characters:
+        if character.id not in acted_character_ids:
+            next_character = character
+            break
 
-        skip_effect = character_has_boss_skip_effect(encounter, character)
-
-        if skip_effect:
-            BossActionLog.objects.create(
-                encounter=encounter,
-                actor_type=BossActionLog.ActorType.PLAYER,
-                action_type=BossActionLog.ActionType.PASS,
-                character=character,
-                phase=encounter.phase,
-                round_number=encounter.round_number,
-                player_phase_number=encounter.player_phase_number,
-                success=True,
-                result_text=f"{character.character_name} is unable to act this turn.",
-            )
-
-            consume_boss_effect(skip_effect)
-            continue
-
+    if next_character:
         encounter.current_actor = BossEncounter.CurrentActor.PLAYER
-        encounter.current_turn_character = character
-        encounter.save(
-            update_fields=[
-                "current_actor",
-                "current_turn_character",
-                "updated_at",
-            ]
-        )
-        return
+        encounter.current_turn_character = next_character
+    else:
+        encounter.current_actor = BossEncounter.CurrentActor.BOSS
+        encounter.current_turn_character = None
 
-    finish_boss_player_phase(encounter)
+    encounter.save(
+        update_fields=[
+            "current_actor",
+            "current_turn_character",
+            "updated_at",
+        ]
+    )
+
+    return encounter
 
 def can_character_basic_attack_boss(encounter, character):
     boss_untargetable = get_active_boss_effects(
@@ -1719,6 +2193,144 @@ def resolve_direct_boss_skill(encounter, character, skill):
         "healing_done": healing_done,
     }
 
+def skill_can_be_used_in_boss(skill):
+    return skill.skill_scope == ClassSkill.SkillScope.BOSS
+
+def damage_boss(encounter, amount):
+    if amount <= 0:
+        return 0
+
+    before_life = encounter.current_life
+
+    encounter.current_life = max(
+        0,
+        encounter.current_life - amount,
+    )
+    encounter.save(update_fields=["current_life", "updated_at"])
+
+    return before_life - encounter.current_life
+
+def restore_character_ap(character, amount):
+    if amount <= 0:
+        return 0
+
+    before_ap = character.current_action_points
+
+    character.current_action_points = min(
+        character.character_class.action_points,
+        character.current_action_points + amount,
+    )
+    character.save(update_fields=["current_action_points", "updated_at"])
+
+    return character.current_action_points - before_ap
+
+def apply_boss_player_skill_effect(encounter, character, skill):
+    """
+    First working version of player boss skills.
+
+    Supported now:
+    - BOSS_FIXED_DAMAGE
+    - BOSS_D6_DAMAGE
+    - BOSS_D6_PLUS_DAMAGE
+    - BOSS_DOUBLE_ATTACK
+    - BOSS_HEAL
+    - BOSS_RESTORE_AP
+    - BOSS_LIFESTEAL
+
+    Other boss skill codes will safely log that they are not implemented yet.
+    """
+    code = skill.effect_code
+
+    die_roll = None
+    damage_to_boss = 0
+    healing_done = 0
+    ap_restored = 0
+
+    result_text = ""
+
+    if code == ClassSkill.EffectCode.BOSS_FIXED_DAMAGE:
+        damage = skill.effect_value or character.character_class.attack
+        damage_to_boss = damage_boss(encounter, damage)
+
+        result_text = (
+            f"{character.character_name} used {skill.name} and dealt "
+            f"{damage_to_boss} damage to {encounter.current_boss_name}."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_D6_DAMAGE:
+        die_roll = random.randint(1, 6)
+        damage_to_boss = damage_boss(encounter, die_roll)
+
+        result_text = (
+            f"{character.character_name} used {skill.name}. "
+            f"They rolled {die_roll} and dealt {damage_to_boss} damage."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_D6_PLUS_DAMAGE:
+        die_roll = random.randint(1, 6)
+        bonus = skill.secondary_value or skill.effect_value
+        damage = die_roll + bonus
+
+        damage_to_boss = damage_boss(encounter, damage)
+
+        result_text = (
+            f"{character.character_name} used {skill.name}. "
+            f"They rolled {die_roll} + {bonus} and dealt "
+            f"{damage_to_boss} damage."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_DOUBLE_ATTACK:
+        damage = character.character_class.attack * 2
+        damage_to_boss = damage_boss(encounter, damage)
+
+        result_text = (
+            f"{character.character_name} used {skill.name} and struck twice, "
+            f"dealing {damage_to_boss} damage."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_HEAL:
+        healing_done = skill.effect_value
+        recover_character_life(character, healing_done)
+
+        result_text = (
+            f"{character.character_name} used {skill.name} and recovered "
+            f"{healing_done} life."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_RESTORE_AP:
+        ap_restored = restore_character_ap(character, skill.effect_value)
+
+        result_text = (
+            f"{character.character_name} used {skill.name} and recovered "
+            f"{ap_restored} AP."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_LIFESTEAL:
+        damage = skill.effect_value or character.character_class.attack
+        damage_to_boss = damage_boss(encounter, damage)
+
+        healing_done = damage_to_boss
+        recover_character_life(character, healing_done)
+
+        result_text = (
+            f"{character.character_name} used {skill.name}, dealt "
+            f"{damage_to_boss} damage, and recovered {healing_done} life."
+        )
+
+    else:
+        result_text = (
+            f"{character.character_name} used {skill.name}, but this boss skill "
+            f"effect is not implemented yet."
+        )
+
+    return {
+        "die_roll": die_roll,
+        "damage_to_boss": damage_to_boss,
+        "healing_done": healing_done,
+        "ap_restored": ap_restored,
+        "result_text": result_text,
+    }
+
 # ============================================================
 # Context builders
 # ============================================================
@@ -1862,6 +2474,13 @@ def build_student_dungeon_context(request, session):
     boss_attack_block_reason = ""
     available_boss_skills = []
     latest_boss_log = None
+    latest_boss_ability_log = None
+    latest_boss_player_animation_log = None
+    latest_boss_skip_log = Nonelatest_boss_log = None
+    latest_boss_ability_log = None
+    latest_boss_player_animation_log = None
+    latest_boss_skip_log = None
+    latest_boss_transformation_log = None
 
     if membership:
         is_current_dm = membership.party.current_dm_id == character.id
@@ -1872,6 +2491,7 @@ def build_student_dungeon_context(request, session):
             .select_related(
                 "dungeon",
                 "current_room",
+                "current_room__source_room",
                 "current_room__source_template",
                 "party",
                 "party__current_dm",
@@ -1899,7 +2519,7 @@ def build_student_dungeon_context(request, session):
         if run:
             generated_rooms = (
                 run.generated_rooms
-                .select_related("source_template")
+                .select_related("source_room","source_template")
                 .all()
             )
             current_turn_character = run.current_turn_character
@@ -1919,6 +2539,8 @@ def build_student_dungeon_context(request, session):
                 .select_related(
                     "from_room",
                     "to_room",
+                    "from_room__source_room",
+                    "to_room__source_room",
                     "from_room__source_template",
                     "to_room__source_template",
                 )
@@ -1987,6 +2609,7 @@ def build_student_dungeon_context(request, session):
                 boss_encounter.action_logs
                 .select_related(
                     "character",
+                    "character__character_class",
                     "boss_ability",
                     "player_skill",
                 )
@@ -2000,7 +2623,57 @@ def build_student_dungeon_context(request, session):
                 .order_by("-created_at")
                 .first()
             )
+
+            latest_boss_transformation_log = next(
+                (
+                    log for log in boss_logs
+                    if (
+                        log.actor_type == BossActionLog.ActorType.SYSTEM
+                        and log.action_type == BossActionLog.ActionType.TRANSFORMATION
+                    )
+                ),
+                None,
+            )
+
             current_boss_ability = get_current_boss_ability(boss_encounter)
+
+            latest_boss_log = boss_logs[0] if boss_logs else None
+
+            latest_boss_ability_log = next(
+                (
+                    log for log in boss_logs
+                    if (
+                        log.actor_type == BossActionLog.ActorType.BOSS
+                        and log.action_type == BossActionLog.ActionType.BOSS_ABILITY
+                    )
+                ),
+                None,
+            )
+
+            latest_boss_player_animation_log = next(
+                (
+                    log for log in boss_logs
+                    if (
+                        log.actor_type == BossActionLog.ActorType.PLAYER
+                        and log.action_type in [
+                            BossActionLog.ActionType.BASIC_ATTACK,
+                            BossActionLog.ActionType.BOSS_SKILL,
+                        ]
+                    )
+                ),
+                None,
+            )
+
+            latest_boss_skip_log = next(
+                (
+                    log for log in boss_logs
+                    if (
+                        log.actor_type == BossActionLog.ActorType.PLAYER
+                        and log.action_type == BossActionLog.ActionType.PASS
+                    )
+                ),
+                None,
+            )
 
             if (
                 character
@@ -2013,6 +2686,12 @@ def build_student_dungeon_context(request, session):
                     boss_encounter,
                     character,
                 )
+            
+            available_boss_skills = list(
+                character.character_class.skills.filter(
+                    skill_scope=ClassSkill.SkillScope.BOSS,
+                ).order_by("ap_cost", "name")
+            )
             if character:
                 available_boss_skills = get_available_direct_boss_skills(character)
 
@@ -2045,6 +2724,10 @@ def build_student_dungeon_context(request, session):
         "boss_attack_block_reason": boss_attack_block_reason,
         "available_boss_skills": available_boss_skills,
         "latest_boss_log": latest_boss_log,
+        "latest_boss_ability_log": latest_boss_ability_log,
+        "latest_boss_player_animation_log": latest_boss_player_animation_log,
+        "latest_boss_skip_log": latest_boss_skip_log,
+        "latest_boss_transformation_log": latest_boss_transformation_log,
     }
 
 # ============================================================
@@ -2746,6 +3429,15 @@ def submit_room_action(request, join_code):
    
     action_text = request.POST.get("action_text", "").strip()
     submitted_action_type = request.POST.get("action_type", "").strip()
+    if submitted_action_type == RoomAttempt.ActionType.SKILL:
+        return submit_room_skill_action(
+            request=request,
+            session=session,
+            run=run,
+            room=room,
+            character=character,
+            membership=membership,
+        )
 
     skill = None
     room_weaknesses = get_room_weaknesses(character)
@@ -2760,6 +3452,69 @@ def submit_room_action(request, join_code):
     reroll_after_fail = False
     random_bonus_roll = None
     random_bonus_applied = False
+
+    support_effects = get_applicable_room_support_effects(room, character)
+    support_effect_texts = []
+
+    for support_effect in support_effects:
+        effect_code = support_effect.effect_code
+        source_name = support_effect.skill.name
+
+        if effect_code == ClassSkill.EffectCode.ROOM_REDUCE_DIFFICULTY:
+            effective_difficulty = max(
+                0,
+                effective_difficulty - support_effect.effect_value,
+            )
+            result_prefix = f"{source_name}: room difficulty -{support_effect.effect_value}."
+            support_effect_texts.append(
+                    f"{source_name}: room difficulty -{support_effect.effect_value}."
+                )
+        elif effect_code == ClassSkill.EffectCode.ROOM_ROLL_BONUS:
+            roll_modifier += support_effect.effect_value
+            result_prefix = f"{source_name}: roll bonus +{support_effect.effect_value}."
+            support_effect_texts.append(
+                    f"{source_name}: room difficulty -{support_effect.effect_value}."
+                )
+        elif effect_code == ClassSkill.EffectCode.ROOM_REDUCE_FAILURE_DAMAGE:
+            failure_damage_reduction += support_effect.effect_value
+            result_prefix = f"{source_name}: failure damage -{support_effect.effect_value}."
+            support_effect_texts.append(
+                    f"{source_name}: room difficulty -{support_effect.effect_value}."
+                )
+        elif effect_code == ClassSkill.EffectCode.ROOM_FIELD_AID:
+            failure_damage_reduction += support_effect.effect_value
+            result_prefix = f"{source_name}: failure damage -{support_effect.effect_value}."
+            support_effect_texts.append(
+                    f"{source_name}: room difficulty -{support_effect.effect_value}."
+                )
+            
+        elif effect_code == ClassSkill.EffectCode.ROOM_REROLL_AFTER_FAIL:
+            reroll_after_fail = True
+            result_prefix = f"{source_name}: reroll available."
+            support_effect_texts.append(
+                    f"{source_name}: room difficulty -{support_effect.effect_value}."
+                )
+            
+        elif effect_code == ClassSkill.EffectCode.ROOM_RECOVER_LIFE_ON_SUCCESS:
+            effective_difficulty = max(
+                0,
+                effective_difficulty - support_effect.effect_value,
+            )
+            recover_life_on_success += support_effect.secondary_value
+            result_prefix = (
+                f"{source_name}: room difficulty -{support_effect.effect_value}; "
+                f"recover {support_effect.secondary_value} Life on success."
+            )
+            support_effect_texts.append(
+                    f"{source_name}: room difficulty -{support_effect.effect_value}."
+                )
+
+        else:
+            result_prefix = ""
+
+        if result_prefix:
+            # We store these messages later after result_text_parts exists.
+            pass
 
     action_type = submitted_action_type
 
@@ -2861,6 +3616,7 @@ def submit_room_action(request, join_code):
     damage_taken = 0
     item_awarded = None
     result_text_parts = []
+    result_text_parts.extend(support_effect_texts)
 
     if skill:
         result_text_parts.append(
@@ -2896,7 +3652,7 @@ def submit_room_action(request, join_code):
                 f"Quick Invention rolled {random_bonus_roll}, so no bonus was added."
             )
 
-    # Treasure room: leaving safely does not require a roll.
+    # Treasure / special room: leaving safely does not require a roll.
     if (
         room.room_type in [
             DungeonRunRoom.RoomType.TREASURE,
@@ -2915,6 +3671,33 @@ def submit_room_action(request, join_code):
         else:
             result_text_parts.append(
                 "The party left the treasure room safely."
+            )
+
+    # Special mimic room: opening the chest immediately triggers the mimic.
+    elif (
+        room.room_type == DungeonRunRoom.RoomType.SPECIAL
+        and submitted_action_type == RoomAttempt.ActionType.OPEN_CHEST
+        and room_is_mimic(room)
+    ):
+        action_type = RoomAttempt.ActionType.OPEN_CHEST
+
+        transformed = transform_special_room_into_mimic(room)
+        room.refresh_from_db()
+
+        if transformed:
+            success = False
+            damage_taken = room.damage_on_failure or room.difficulty
+
+            apply_damage(character, damage_taken)
+
+            result_text_parts.append(
+                f"{character.character_name} opened the suspicious chest. "
+                f"It was a Mimic! {character.character_name} took "
+                f"{damage_taken} damage. The room is now a Combat Room."
+            )
+        else:
+            result_text_parts.append(
+                "The chest reacted strangely, but nothing happened."
             )
 
     else:
@@ -2950,7 +3733,10 @@ def submit_room_action(request, join_code):
             action_type = RoomAttempt.ActionType.BASIC_ATTACK
 
         elif room.room_type == DungeonRunRoom.RoomType.SPECIAL and not skill:
-            action_type = RoomAttempt.ActionType.SPECIAL_ACTION
+            if submitted_action_type == RoomAttempt.ActionType.OPEN_CHEST:
+                action_type = RoomAttempt.ActionType.OPEN_CHEST
+            else:
+                action_type = RoomAttempt.ActionType.SPECIAL_ACTION
 
         elif room.room_type == DungeonRunRoom.RoomType.TREASURE and not skill:
             action_type = RoomAttempt.ActionType.OPEN_CHEST
@@ -3028,15 +3814,6 @@ def submit_room_action(request, join_code):
 
             apply_damage(character, damage_taken)
 
-            if (
-                room.room_type == DungeonRunRoom.RoomType.SPECIAL
-                and action_type == RoomAttempt.ActionType.OPEN_CHEST
-            ):
-                transform_special_room_into_mimic(room)
-
-                result_text_parts.append(
-                    "The chest was a Mimic! It transforms into a Combat Room."
-                )
 
             next_skill_penalty = get_weakness_value(
                 room_weaknesses,
@@ -3089,6 +3866,7 @@ def submit_room_action(request, join_code):
         result_text=result_text,
         challenge_round=room.challenge_round,
     )
+    consume_room_support_effects(support_effects)
 
     if room.room_type == DungeonRunRoom.RoomType.TRAP and not room.is_cleared:
         trap_progress = get_trap_progress(room)
@@ -3455,6 +4233,10 @@ def start_boss_fight(request, join_code):
                 "updated_at",
             ]
         )
+
+        # The boss attacks once when the fight starts.
+        # After this, the helper passes the turn to the first living player.
+        resolve_boss_ability_once(encounter)
         
         resolve_boss_turn(encounter)
 
@@ -3563,20 +4345,18 @@ def activate_boss_ability(request, join_code):
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
     with transaction.atomic():
-        encounter = BossEncounter.objects.select_for_update().get(id=encounter.id)
-
-        pending_result = resolve_boss_pending_effects(encounter)
-
-        ability = get_current_boss_ability(encounter)
-
-        boss_damage_bonus_effect_ids = list(
-            get_active_boss_effects(
-                encounter,
-                target_type=BossCombatEffect.TargetType.PARTY,
-                effect_code=BossCombatEffect.EffectCode.PARTY_EXTRA_BOSS_DAMAGE_TAKEN,
-            ).values_list("id", flat=True)
+        encounter = (
+            BossEncounter.objects
+            .select_for_update()
+            .select_related("run", "run__party", "boss")
+            .get(id=encounter.id)
         )
 
+        if encounter.current_actor != BossEncounter.CurrentActor.BOSS:
+            messages.warning(request, "It is not the boss's turn.")
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+        resolve_boss_ability_once(encounter)
         previous_slot = encounter.next_boss_ability_slot
 
         if ability:
@@ -3710,45 +4490,23 @@ def boss_basic_attack(request, join_code):
         die_roll = random.randint(1, 6)
         final_roll_total = die_roll
         difficulty = encounter.current_difficulty
-        success = final_roll_total >= difficulty
 
+        success = final_roll_total >= difficulty
         damage_to_boss = 0
-        damage_to_player = 0
 
         if success:
-            damage_to_boss = get_character_basic_boss_damage(
-                encounter,
-                character,
-            )
-
-            encounter.current_life = max(
-                0,
-                encounter.current_life - damage_to_boss,
-            )
-            encounter.save(update_fields=["current_life", "updated_at"])
+            damage_to_boss = character.character_class.attack
+            damage_to_boss = damage_boss(encounter, damage_to_boss)
 
             result_text = (
                 f"{character.character_name} rolled {die_roll} and hit "
-                f"{encounter.current_boss_name} for {damage_to_boss} damage."
+                f"{encounter.current_boss_name}, dealing {damage_to_boss} damage."
             )
         else:
-            extra_damage = get_failed_boss_throw_damage(encounter, character)
-
-            if extra_damage > 0:
-                damage_to_player = apply_boss_damage_to_character(
-                    encounter,
-                    character,
-                    extra_damage,
-                )
-
-                result_text = (
-                    f"{character.character_name} rolled {die_roll} and missed. "
-                    f"They take {damage_to_player} backlash damage."
-                )
-            else:
-                result_text = (
-                    f"{character.character_name} rolled {die_roll} and missed."
-                )
+            result_text = (
+                f"{character.character_name} rolled {die_roll}, but needed "
+                f"{difficulty} or higher. The attack missed."
+            )
 
         BossActionLog.objects.create(
             encounter=encounter,
@@ -3763,7 +4521,8 @@ def boss_basic_attack(request, join_code):
             difficulty_at_roll=difficulty,
             success=success,
             damage_to_boss=damage_to_boss,
-            damage_to_players=damage_to_player,
+            damage_to_players=0,
+            healing_done=0,
             result_text=result_text,
         )
 
@@ -3778,7 +4537,7 @@ def boss_basic_attack(request, join_code):
         if check_boss_party_defeat_state(encounter):
             return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
-        set_next_boss_player_turn_or_boss(encounter)
+        advance_boss_after_player_action(encounter)
 
     return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
@@ -3838,7 +4597,7 @@ def boss_pass_turn(request, join_code):
 
         consume_character_turn_effects(encounter, character)
 
-        set_next_boss_player_turn_or_boss(encounter)
+        advance_boss_after_player_action(encounter)
 
     return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
@@ -3960,7 +4719,7 @@ def boss_use_skill(request, join_code):
         if check_boss_party_defeat_state(encounter):
             return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
-        set_next_boss_player_turn_or_boss(encounter)
+        advance_boss_after_player_action(encounter)
 
     messages.success(
         request,

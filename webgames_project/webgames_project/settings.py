@@ -25,7 +25,7 @@ SECRET_KEY = 'django-insecure-!kjm7=#wc)ppr2p3*ph0kqj5z)^jx2y1+3)i@gvzcx^po2k=e3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.68.64", "localhost", "127.0.0.1",]
+ALLOWED_HOSTS = ["192.168.68.64", "localhost", "127.0.0.1", "192.168.100.74"]
 
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_REDIRECT_URL = "/games/dashboard/"
@@ -122,4 +122,8 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/6.0/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "static/"
+
+STATICFILES_DIRS = [
+    BASE_DIR / "static",
+]
