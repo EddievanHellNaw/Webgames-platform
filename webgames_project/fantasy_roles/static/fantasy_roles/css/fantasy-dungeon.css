@@ -8049,3 +8049,136 @@
   }
 }
 
+/* ============================================================
+   Boss skill popover layering fix
+   ============================================================ */
+
+.fr-boss-board-panel,
+.fr-boss-encounter-stage,
+.fr-boss-encounter-grid,
+.fr-boss-encounter-main,
+.fr-boss-board-actions,
+.fr-boss-cinematic-actions,
+.fr-boss-action-rail {
+  overflow: visible !important;
+}
+
+.fr-boss-encounter-grid {
+  position: relative;
+}
+
+.fr-boss-encounter-main,
+.fr-boss-encounter-side {
+  position: relative;
+}
+
+.fr-boss-encounter-main {
+  z-index: 5;
+}
+
+.fr-boss-encounter-side {
+  z-index: 2;
+}
+
+.fr-boss-encounter-main:has(.fr-boss-skill-popover[open]) {
+  z-index: 10020;
+}
+
+.fr-boss-skill-popover {
+  position: relative;
+  z-index: 10030;
+}
+
+.fr-boss-skill-popover[open] {
+  z-index: 10040;
+}
+
+.fr-boss-skill-popover > summary {
+  list-style: none;
+}
+
+.fr-boss-skill-popover > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fr-boss-skill-popover-panel {
+  position: absolute !important;
+  top: calc(100% + 0.85rem) !important;
+  left: 50% !important;
+  right: auto !important;
+  bottom: auto !important;
+  transform: translateX(-50%) !important;
+
+  width: min(88vw, 380px);
+  max-height: min(58vh, 430px);
+  overflow-y: auto;
+
+  z-index: 10050 !important;
+  padding: 1rem;
+  border-radius: 22px;
+
+  border: 1px solid rgba(143, 211, 255, 0.34);
+  background:
+    radial-gradient(circle at top, rgba(143, 211, 255, 0.16), transparent 42%),
+    linear-gradient(135deg, rgba(9, 14, 32, 0.98), rgba(4, 7, 18, 0.98));
+
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.62),
+    0 0 28px rgba(77, 190, 255, 0.18);
+
+  backdrop-filter: blur(14px);
+}
+
+.fr-boss-skill-actions {
+  display: grid;
+  gap: 0.65rem;
+}
+
+.fr-boss-skill-actions form {
+  margin: 0;
+}
+
+.fr-boss-skill-actions .fr-btn {
+  width: 100%;
+  justify-content: center;
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .fr-boss-skill-popover[open]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 10045;
+    background: rgba(0, 0, 0, 0.58);
+    backdrop-filter: blur(3px);
+  }
+
+  .fr-boss-skill-popover-panel {
+    position: fixed !important;
+    top: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+
+    width: min(92vw, 430px);
+    max-height: min(62vh, 460px);
+
+    transform: translateX(-50%) translateY(0) !important;
+    z-index: 10060 !important;
+
+    border-radius: 26px;
+  }
+
+  .fr-boss-skill-popover[open] > summary {
+    position: relative;
+    z-index: 10070;
+  }
+
+  .fr-boss-skill-popover[open] .fr-boss-action-orb {
+    box-shadow:
+      0 0 0 1px rgba(143, 211, 255, 0.55),
+      0 0 28px rgba(143, 211, 255, 0.42),
+      0 16px 34px rgba(0, 0, 0, 0.5);
+  }
+}

@@ -558,6 +558,22 @@
   })();
 </script>
 <script>
+  document.addEventListener("click", function (event) {
+    const openBossSkillPopover = document.querySelector(".fr-boss-skill-popover[open]");
+
+    if (!openBossSkillPopover) {
+      return;
+    }
+
+    const clickedInsidePanel = event.target.closest(".fr-boss-skill-popover-panel");
+    const clickedSummary = event.target.closest(".fr-boss-skill-popover > summary");
+
+    if (!clickedInsidePanel && !clickedSummary) {
+      openBossSkillPopover.removeAttribute("open");
+    }
+  });
+</script>
+<script>
   (function () {
     const SEEN_BOSS_LOG_PREFIX = "fantasy_roles_seen_boss_log_";
     let bossMomentIsShowing = false;
