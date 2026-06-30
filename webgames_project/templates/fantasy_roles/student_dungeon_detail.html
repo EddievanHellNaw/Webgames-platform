@@ -22,6 +22,22 @@
     </div>
 
     <div class="fr-roll-summary">
+      <div class="fr-roll-total-row" id="roll-total-row" hidden>
+        <div
+          class="fr-roll-modifier-list"
+          id="roll-modifier-list"
+          hidden
+        ></div>
+
+        <span
+          class="fr-roll-total-chip"
+          id="roll-total-chip"
+          hidden
+        >
+          Total 0
+        </span>
+      </div>
+
       <p id="roll-result-main">The dice are rolling...</p>
       <p class="fr-muted-text" id="roll-result-detail"></p>
     </div>
@@ -301,92 +317,278 @@
     function closeOverlay() {
       overlay.hidden = true;
       card.classList.remove("is-success", "is-failure", "has-item");
+      diceWrap.classList.remove(
+        "is-rolling",
+        "is-success-pop",
+        "is-failure-pop",
+        "is-final-total"
+      );
+    }
+
+function showAttemptAnimation(payload) {
+  const attemptId = payload.dataset.attemptId;
+
+  if (!attemptId) {
+    return;
+  }
+
+  const storageKey = `fantasy_roles_attempt_seen_${attemptId}`;
+
+  if (sessionStorage.getItem(storageKey)) {
+    return;
+  }
+
+  sessionStorage.setItem(storageKey, "true");
+
+  const success = payload.dataset.success === "true";
+  const dieRoll = payload.dataset.dieRoll;
+  const rollBonus = Number(payload.dataset.rollBonus || 0);
+  const namedBreakdown = getRollBreakdown();
+  const rollBreakdown = namedBreakdown.length
+    ? namedBreakdown
+    : buildFallbackBreakdown(rollBonus);
+  
+  const finalTotal = payload.dataset.finalTotal;
+  const difficulty = payload.dataset.difficulty;
+  const damage = parseInt(payload.dataset.damage || "0", 10);
+  const item = payload.dataset.item || "";
+  const characterName = payload.dataset.characterName || "A hero";
+  const characterId = payload.dataset.characterId;
+
+  const totalRow = document.getElementById("roll-total-row");
+  const modifierList = document.getElementById("roll-modifier-list");
+  const totalChip = document.getElementById("roll-total-chip");
+
+  card.classList.remove(
+    "is-success",
+    "is-failure",
+    "has-item",
+    "is-resolving-total"
+  );
+
+  diceWrap.classList.remove(
+    "is-rolling",
+    "is-success-pop",
+    "is-failure-pop",
+    "is-final-total"
+  );
+
+  if (totalRow) totalRow.hidden = true;
+  
+  if (modifierList) {
+      modifierList.hidden = true;
+      modifierList.innerHTML = "";
+  }
+  if (totalChip) {
+    totalChip.hidden = true;
+    totalChip.textContent = "";
+  }
+
+  kicker.textContent = characterName;
+  title.textContent = "Rolling...";
+  main.textContent = "The die decides your fate.";
+  detail.textContent = "";
+
+  dice.textContent = dieRoll ? "?" : "◆";
+  overlay.hidden = false;
+
+  if (!dieRoll) {
+    card.classList.add(success ? "is-success" : "is-failure");
+
+    if (item) {
+      card.classList.add("has-item");
+      title.textContent = "Treasure Found!";
+      main.textContent = `Item obtained: ${item}`;
+      detail.textContent = "No roll was needed.";
+    } else {
+      title.textContent = success ? "Success!" : "Not Quite!";
+      main.textContent = success ? "The action succeeded." : "The action failed.";
+      detail.textContent = "No roll was needed.";
+    }
+
+    markRoomResult(success);
+
+    if (damage > 0) {
+      markCharacterDamage(characterId);
+    }
+
+    return;
+  }
+
+  diceWrap.classList.add("is-rolling");
+
+  let ticks = 0;
+
+  const interval = window.setInterval(function () {
+    ticks += 1;
+    dice.textContent = String(Math.floor(Math.random() * 6) + 1);
+
+    if (ticks >= 10) {
+      window.clearInterval(interval);
+
+      dice.textContent = dieRoll;
       diceWrap.classList.remove("is-rolling");
-    }
 
-    function showAttemptAnimation(payload) {
-      const attemptId = payload.dataset.attemptId;
+      title.textContent = "Natural Roll";
+      main.textContent = `You rolled ${dieRoll}.`;
 
-      if (!attemptId) {
-        return;
-      }
-
-      const storageKey = `fantasy_roles_attempt_seen_${attemptId}`;
-
-      if (sessionStorage.getItem(storageKey)) {
-        return;
-      }
-
-      sessionStorage.setItem(storageKey, "true");
-
-      const success = payload.dataset.success === "true";
-      const dieRoll = payload.dataset.dieRoll;
-      const finalTotal = payload.dataset.finalTotal;
-      const difficulty = payload.dataset.difficulty;
-      const damage = parseInt(payload.dataset.damage || "0", 10);
-      const item = payload.dataset.item || "";
-      const characterName = payload.dataset.characterName || "A hero";
-      const resultText = payload.dataset.resultText || "";
-      const characterId = payload.dataset.characterId;
-
-      card.classList.remove("is-success", "is-failure", "has-item");
-      card.classList.add(success ? "is-success" : "is-failure");
-
-      if (item) {
-        card.classList.add("has-item");
-      }
-
-      kicker.textContent = characterName;
-
-      if (success) {
-        title.textContent = item ? "Treasure Found!" : "Success!";
+      if (difficulty) {
+        detail.textContent = `Difficulty ${difficulty}`;
       } else {
-        title.textContent = damage > 0 ? "Failure!" : "Not Quite!";
+        detail.textContent = "";
       }
 
-      main.textContent = resultText || (success ? "The action succeeded." : "The action failed.");
+      if (rollBonus.length) {
+        window.setTimeout(function () {
+          if (totalRow) totalRow.hidden = false;
 
-      if (dieRoll) {
-        detail.textContent = `Roll ${dieRoll} · Total ${finalTotal || "—"} · Difficulty ${difficulty || "—"}`;
-      } else {
-        detail.textContent = item ? `Item obtained: ${item}` : "No roll was needed.";
-      }
+          showModifierChips(modifierList, rollBreakdown);
 
-      dice.textContent = dieRoll || "◆";
-      overlay.hidden = false;
+          card.classList.add("is-resolving-total");
+          main.textContent = "Modifiers change the result.";
+        }, 650);
 
-      if (dieRoll) {
-        diceWrap.classList.add("is-rolling");
+        window.setTimeout(function () {
+          const resolvedTotal = finalTotal || String(Number(dieRoll) + rollBonus);
 
-        let ticks = 0;
-        const interval = window.setInterval(function () {
-          ticks += 1;
-          dice.textContent = String(Math.floor(Math.random() * 6) + 1);
+          dice.textContent = resolvedTotal;
+          diceWrap.classList.add("is-final-total");
 
-          if (ticks >= 10) {
-            window.clearInterval(interval);
-            dice.textContent = dieRoll;
-            diceWrap.classList.remove("is-rolling");
-
-            if (success) {
-              diceWrap.classList.add("is-success-pop");
-            } else {
-              diceWrap.classList.add("is-failure-pop");
-            }
-
-            window.setTimeout(function () {
-              diceWrap.classList.remove("is-success-pop", "is-failure-pop");
-            }, 800);
+          if (totalChip) {
+            totalChip.hidden = false;
+            totalChip.textContent = `Total ${resolvedTotal}`;
           }
-        }, 70);
-      }
 
-      markRoomResult(success);
+          main.textContent = `Final result: ${resolvedTotal}.`;
+        }, 1350);
 
-      if (damage > 0) {
-        markCharacterDamage(characterId);
+        window.setTimeout(function () {
+          finishRollResult();
+        }, 2150);
+      } else {
+        window.setTimeout(function () {
+          finishRollResult();
+        }, 850);
       }
     }
+  }, 70);
+
+function getRollBreakdown() {
+  const script = document.getElementById("latest-attempt-roll-breakdown");
+
+  if (!script) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(script.textContent || "[]");
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed
+      .map(function (item) {
+        return {
+          label: item.label || "Modifier",
+          value: Number(item.value || 0),
+          type: item.type || "modifier",
+        };
+      })
+      .filter(function (item) {
+        return item.value !== 0;
+      });
+  } catch (error) {
+    return [];
+  }
+}
+
+function buildFallbackBreakdown(rollBonus) {
+  if (!rollBonus) {
+    return [];
+  }
+
+  return [{
+    label: rollBonus > 0 ? "Bonus" : "Penalty",
+    value: rollBonus,
+    type: rollBonus > 0 ? "bonus" : "penalty",
+  }];
+}
+
+function showModifierChips(modifierList, breakdown) {
+  if (!modifierList) {
+    return;
+  }
+
+  modifierList.innerHTML = "";
+  modifierList.hidden = false;
+
+  breakdown.forEach(function (modifier, index) {
+    const chip = document.createElement("span");
+
+    chip.className = "fr-roll-modifier-chip";
+
+    if (modifier.value > 0) {
+      chip.classList.add("is-positive");
+    } else {
+      chip.classList.add("is-negative");
+    }
+
+    if (modifier.type) {
+      chip.classList.add("is-" + modifier.type);
+    }
+
+    chip.style.setProperty("--modifier-delay", (index * 180) + "ms");
+
+    const value = document.createElement("strong");
+    value.textContent = modifier.value > 0
+      ? "+" + modifier.value
+      : String(modifier.value);
+
+    const label = document.createElement("span");
+    label.textContent = modifier.label;
+
+    chip.appendChild(value);
+    chip.appendChild(label);
+
+    modifierList.appendChild(chip);
+  });
+}
+
+  function finishRollResult() {
+    card.classList.remove("is-resolving-total");
+    card.classList.add(success ? "is-success" : "is-failure");
+
+    title.textContent = success ? "Success!" : "Failure!";
+
+    if (item && success) {
+      card.classList.add("has-item");
+      main.textContent = `You found ${item}.`;
+    } else {
+      main.textContent = success
+        ? "The action succeeded."
+        : "The action failed.";
+    }
+
+    if (difficulty) {
+      detail.textContent = `Final ${finalTotal || dieRoll} · Difficulty ${difficulty}`;
+    } else {
+      detail.textContent = `Final ${finalTotal || dieRoll}`;
+    }
+
+    diceWrap.classList.add(success ? "is-success-pop" : "is-failure-pop");
+
+    window.setTimeout(function () {
+      diceWrap.classList.remove("is-success-pop", "is-failure-pop");
+    }, 800);
+
+    markRoomResult(success);
+
+    if (damage > 0) {
+      markCharacterDamage(characterId);
+    }
+  }
+}
 
   
   (function () {

@@ -23,6 +23,7 @@ from .models import (
     BossEncounter,
     BossCombatEffect,
     BossActionLog,
+    ItemRunEffect,
     )   
 
 class ClassSkillInline(admin.TabularInline):
@@ -116,9 +117,28 @@ class ItemTemplateInline(admin.TabularInline):
         "name",
         "scope",
         "roll_number",
+        "effect_code",
+        "effect_value",
+        "can_use_in_rooms",
+        "can_use_in_boss",
         "is_consumable",
         "is_active",
     )
+class PartyInventoryItemInline(admin.TabularInline):
+    model = PartyInventoryItem
+    extra = 1
+
+    fields = (
+        "item",
+        "quantity",
+        "obtained_in_room",
+    )
+
+    autocomplete_fields = (
+        "item",
+        "obtained_in_room",
+    )
+
 
 class BossAbilityInline(admin.TabularInline):
     model = BossAbility
@@ -136,6 +156,19 @@ class BossAbilityInline(admin.TabularInline):
         "description",
     )
 
+
+@admin.register(ItemRunEffect)
+class ItemRunEffectAdmin(admin.ModelAdmin):
+    list_display = (
+        "run",
+        "item",
+        "effect_code",
+        "value",
+        "is_active",
+        "created_at",
+    )
+    list_filter = ("effect_code", "is_active")
+    search_fields = ("run__party__name", "item__name")
 
 @admin.register(BossTemplate)
 class BossTemplateAdmin(admin.ModelAdmin):
@@ -258,7 +291,10 @@ class AdventuringPartyAdmin(admin.ModelAdmin):
     )
     list_filter = ("session", "is_locked")
     search_fields = ("name", "session__title")
-    inlines = [PartyMemberInline]
+    inlines = [
+        PartyMemberInline,
+        PartyInventoryItemInline,
+    ]
 
 @admin.register(CharacterClass)
 class CharacterClassAdmin(admin.ModelAdmin):
@@ -340,11 +376,44 @@ class ItemTemplateAdmin(admin.ModelAdmin):
         "dungeon",
         "scope",
         "roll_number",
+        "effect_code",
+        "effect_value",
+        "can_use_in_rooms",
+        "can_use_in_boss",
         "is_consumable",
         "is_active",
     )
-    list_filter = ("scope", "dungeon", "is_consumable", "is_active")
-    search_fields = ("name", "effect_text")
+
+    list_filter = (
+        "scope",
+        "effect_code",
+        "can_use_in_rooms",
+        "can_use_in_boss",
+        "dungeon",
+        "is_consumable",
+        "is_active",
+    )
+
+    search_fields = (
+        "name",
+        "effect_text",
+    )
+
+    fields = (
+        "name",
+        "dungeon",
+        "scope",
+        "image",
+        "effect_text",
+        "effect_code",
+        "effect_value",
+        "roll_number",
+        "can_use_in_rooms",
+        "can_use_in_boss",
+        "is_consumable",
+        "is_active",
+    )
+
 
 
 @admin.register(PartyInventoryItem)
@@ -356,9 +425,29 @@ class PartyInventoryItemAdmin(admin.ModelAdmin):
         "obtained_in_room",
         "obtained_at",
     )
-    list_filter = ("party", "item")
-    search_fields = ("party__name", "item__name")
 
+    list_filter = (
+        "party",
+        "item",
+    )
+
+    search_fields = (
+        "party__name",
+        "item__name",
+    )
+
+    autocomplete_fields = (
+        "party",
+        "item",
+        "obtained_in_room",
+    )
+
+    fields = (
+        "party",
+        "item",
+        "quantity",
+        "obtained_in_room",
+    )
 
 @admin.register(Dungeon)
 class DungeonAdmin(admin.ModelAdmin):

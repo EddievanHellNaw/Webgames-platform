@@ -48,15 +48,20 @@
 {% elif name == "use" or name == "use_item" %}
   <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/use.png' %}" alt="{{ alt|default:'Use item' }}">
 
-{% elif name == "trap_room" or name == "trap" %}
+{% elif name == "trap_room" or name == "trap_room" %}
   <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/trap_icon.png' %}" alt="{{ alt|default:'Trap room' }}">
 
-{% elif name == "combat_room" or name == "combat" %}
+{% elif name == "combat_room" or name == "combat_room" %}
   <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/combat_icon.png' %}" alt="{{ alt|default:'Combat room' }}">
 
 {% elif name == "treasure_room" or name == "treasure" %}
   <img class="fr-png-icon {{ extra_class|default:'' }}" src="{% static 'fantasy_roles/img/icons/hud/treasure_icon.png' %}" alt="{{ alt|default:'Treasure room' }}">
-
+{% elif name == "use" %}
+  <img
+    class="fr-png-icon {{ extra_class|default:'' }}"
+    src="{% static 'fantasy_roles/img/icons/hud/use.png' %}"
+    alt="{{ alt|default:'Use' }}"
+  >
 {% else %}
   <span class="fr-png-icon-fallback {{ extra_class|default:'' }}" aria-hidden="true">◆</span>
 {% endif %}

@@ -60,17 +60,21 @@
                 Room {{ room.room_number }}
               </span>
 
-              <span class="fr-map-room-icon">
+              <span class="fr-map-room-icon fr-map-room-icon-{{ room.room_type|lower }}">
                 {% if room.room_type == "TRAP" %}
-                  ✦
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="trap_room" extra_class="fr-map-room-type-icon" alt="Trap room" %}
+
                 {% elif room.room_type == "COMBAT" %}
-                  ⚔
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="combat_room" extra_class="fr-map-room-type-icon" alt="Combat room" %}
+
                 {% elif room.room_type == "TREASURE" %}
-                  ◆
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="treasure" extra_class="fr-map-room-type-icon" alt="Treasure room" %}
+
                 {% elif room.room_type == "SPECIAL" %}
-                  ?
+                  {% include "fantasy_roles/partials/_png_icon.html" with name="treasure" extra_class="fr-map-room-type-icon" alt="Special room" %}
+
                 {% else %}
-                  ●
+                  <span class="fr-map-room-type-fallback">●</span>
                 {% endif %}
               </span>
 

@@ -57,6 +57,31 @@
                   <p>
                     {{ inventory_item.item.effect_text }}
                   </p>
+                  {% if run.status == "ACTIVE" and is_current_turn and inventory_item.item.can_use_in_rooms %}
+                    <form
+                      method="post"
+                      action="{% url 'fantasy_roles:use_room_item' session.join_code %}"
+                      class="fr-inventory-use-form"
+                    >
+                      {% csrf_token %}
+
+                      <input
+                        type="hidden"
+                        name="inventory_item_id"
+                        value="{{ inventory_item.id }}"
+                      >
+
+                    <button
+                      class="fr-use-item-icon-btn"
+                      type="submit"
+                      title="Use {{ inventory_item.item.name }}"
+                      aria-label="Use {{ inventory_item.item.name }}"
+                    >
+                      {% include "fantasy_roles/partials/_png_icon.html" with name="use" extra_class="fr-use-item-icon" alt="Use item" %}
+                      <span class="fr-sr-only">Use {{ inventory_item.item.name }}</span>
+                    </button>
+                    </form>
+                  {% endif %}
                 </div>
               </article>
             {% endfor %}

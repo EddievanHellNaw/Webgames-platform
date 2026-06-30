@@ -182,7 +182,66 @@
                   </div>
                 </details>
               {% endif %}
+                {% if party_inventory %}
+  <details class="fr-corner-popover fr-boss-item-popover">
+    <summary
+      class="fr-boss-action-orb is-item"
+      title="Use Item"
+      aria-label="Use Item"
+    >
+      {% include "fantasy_roles/partials/_png_icon.html" with name="inventory" extra_class="fr-boss-action-icon" alt="Use item" %}
+      <span>Item</span>
+    </summary>
 
+    <div class="fr-corner-popover-panel fr-boss-item-popover-panel">
+      <div class="fr-popover-heading">
+        <span class="fr-kicker">Party Inventory</span>
+        <strong>Use an item</strong>
+      </div>
+
+      <div class="fr-room-skill-actions fr-boss-item-actions">
+        {% for inventory_item in party_inventory %}
+          <article class="fr-boss-item-choice">
+            <div>
+              <strong>
+                {{ inventory_item.item.name }}
+                {% if inventory_item.quantity > 1 %}
+                  ×{{ inventory_item.quantity }}
+                {% endif %}
+              </strong>
+
+              <p>{{ inventory_item.item.effect_text }}</p>
+            </div>
+
+            <form
+              method="post"
+              action="{% url 'fantasy_roles:boss_use_item' session.join_code %}"
+            >
+              {% csrf_token %}
+
+              <input
+                type="hidden"
+                name="inventory_item_id"
+                value="{{ inventory_item.id }}"
+              >
+
+            <button
+              class="fr-use-item-icon-btn"
+              type="submit"
+              title="Use {{ inventory_item.item.name }}"
+              aria-label="Use {{ inventory_item.item.name }}"
+              {% if not inventory_item.item.can_use_in_boss %}disabled{% endif %}
+            >
+              {% include "fantasy_roles/partials/_png_icon.html" with name="use" extra_class="fr-use-item-icon" alt="Use item" %}
+              <span class="fr-sr-only">Use {{ inventory_item.item.name }}</span>
+            </button>
+            </form>
+          </article>
+        {% endfor %}
+      </div>
+    </div>
+  </details>
+{% endif %}
               <form
                 method="post"
                 action="{% url 'fantasy_roles:boss_pass_turn' session.join_code %}"

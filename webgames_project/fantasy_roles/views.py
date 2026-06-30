@@ -34,6 +34,7 @@ from .models import (
     RoomAttempt,
     RoomSupportEffect,
     DungeonRoom,
+    ItemRunEffect,
 )
 
 # ============================================================
@@ -319,6 +320,13 @@ def clear_next_room_skill_penalty(character):
     character.room_skill_ap_penalty = 0
     character.save(update_fields=["room_skill_ap_penalty", "updated_at"])
 
+def get_weakness_label_and_value(weaknesses, effect_code):
+    for weakness in weaknesses:
+        if weakness.effect_code == effect_code:
+            return weakness.name or "Class Weakness", weakness.effect_value
+
+    return "Class Weakness", 0
+
 def room_is_mimic(room):
     if room.source_room_id:
         return room.source_room.is_mimic_room
@@ -421,6 +429,232 @@ def award_random_item_to_party(party, dungeon, room):
 
     return item
 
+def apply_party_item_effect(run, party, acting_character, item, room=None, encounter=None):
+    code = item.effect_code
+    value = item.effect_value
+
+    result_parts = [
+        f"{acting_character.character_name} used {item.name}."
+    ]
+
+    healing_done = 0
+    ap_restored = 0
+    damage_to_boss = 0
+    die_roll = None
+    cleared_room = False
+    affected_character_ids = []
+
+    living_members = (
+        PartyMember.objects
+        .filter(party=party, character__current_life__gt=0)
+        .select_related("character", "character__character_class")
+        .order_by("order", "joined_at")
+    )
+
+    if code == ItemTemplate.EffectCode.HEAL_PARTY:
+        for member in living_members:
+            healed = recover_character_life_amount(member.character, value)
+            healing_done += healed
+
+            if healed > 0:
+                affected_character_ids.append(member.character_id)
+
+        result_parts.append(
+            f"The party recovered {healing_done} total Life."
+        )
+
+    elif code == ItemTemplate.EffectCode.RESTORE_AP_PARTY:
+        for member in living_members:
+            restored = recover_character_ap_amount(member.character, value)
+            ap_restored += restored
+
+            if restored > 0:
+                affected_character_ids.append(member.character_id)
+
+        result_parts.append(
+            f"The party recovered {ap_restored} total AP."
+        )
+
+    elif code == ItemTemplate.EffectCode.PERMANENT_ROLL_BONUS:
+        effect, created = activate_unique_run_item_effect(run, item)
+
+        if created:
+            result_parts.append(
+                f"The party gains +{effect.value} to rolls for the rest of the run."
+            )
+        else:
+            result_parts.append(
+                f"{item.name} is already active for this run."
+            )
+
+    elif code == ItemTemplate.EffectCode.RUN_DAMAGE_REDUCTION:
+        effect, created = activate_unique_run_item_effect(run, item)
+
+        if created:
+            result_parts.append(
+                f"The party receives -{effect.value} damage for the rest of the run."
+            )
+        else:
+            result_parts.append(
+                f"{item.name} is already active for this run."
+            )
+
+    elif code == ItemTemplate.EffectCode.REVIVE_MEMBER:
+        target = get_first_defeated_party_character(party)
+
+        if target:
+            revive_life = max(1, value)
+            target.current_life = min(
+                target.character_class.max_life,
+                revive_life,
+            )
+            target.save(update_fields=["current_life", "updated_at"])
+
+            healing_done = target.current_life
+            affected_character_ids.append(target.id)
+
+            result_parts.append(
+                f"{target.character_name} returned with {target.current_life} Life."
+            )
+        else:
+            result_parts.append(
+                "No defeated party member needed revival."
+            )
+
+    elif code == ItemTemplate.EffectCode.CLEAR_TRAP_ROOM:
+        if room and room.room_type == DungeonRunRoom.RoomType.TRAP and not room.is_cleared:
+            room.is_cleared = True
+            room.save(update_fields=["is_cleared"])
+
+            cleared_room = True
+
+            result_parts.append(
+                f"The party used {item.name} to bypass the trap room."
+            )
+        else:
+            result_parts.append(
+                "This item can only be used in an uncleared Trap Room."
+            )
+
+    else:
+        result_parts.append("Nothing happened.")
+
+    return {
+        "result_text": " ".join(result_parts),
+        "healing_done": healing_done,
+        "ap_restored": ap_restored,
+        "damage_to_boss": damage_to_boss,
+        "die_roll": die_roll,
+        "cleared_room": cleared_room,
+        "affected_character_ids": affected_character_ids,
+    }
+
+def consume_inventory_item(inventory_item):
+    if not inventory_item.item.is_consumable:
+        return
+
+    inventory_item.quantity = max(0, inventory_item.quantity - 1)
+
+    if inventory_item.quantity <= 0:
+        inventory_item.delete()
+    else:
+        inventory_item.save(update_fields=["quantity"])
+
+def get_run_roll_bonus(run):
+    if not run:
+        return 0
+
+    return sum(
+        effect.value
+        for effect in run.item_effects.filter(
+            is_active=True,
+            effect_code=ItemTemplate.EffectCode.PERMANENT_ROLL_BONUS,
+        )
+    )
+
+def get_run_damage_reduction(run):
+    if not run:
+        return 0
+
+    return sum(
+        effect.value
+        for effect in run.item_effects.filter(
+            is_active=True,
+            effect_code=ItemTemplate.EffectCode.RUN_DAMAGE_REDUCTION,
+        )
+    )
+
+def apply_run_damage_reduction(run, damage):
+    if damage <= 0:
+        return 0
+
+    reduction = get_run_damage_reduction(run)
+
+    return max(0, damage - reduction)
+
+def recover_character_life_amount(character, amount):
+    if not character or amount <= 0:
+        return 0
+
+    before_life = character.current_life
+
+    character.current_life = min(
+        character.character_class.max_life,
+        character.current_life + amount,
+    )
+    character.save(update_fields=["current_life", "updated_at"])
+
+    return character.current_life - before_life
+
+def recover_character_ap_amount(character, amount):
+    if not character or amount <= 0:
+        return 0
+
+    before_ap = character.current_action_points
+
+    character.current_action_points = min(
+        character.character_class.action_points,
+        character.current_action_points + amount,
+    )
+    character.save(update_fields=["current_action_points", "updated_at"])
+
+    return character.current_action_points - before_ap
+
+def get_first_defeated_party_character(party):
+    member = (
+        PartyMember.objects
+        .filter(
+            party=party,
+            character__current_life__lte=0,
+        )
+        .select_related("character", "character__character_class")
+        .order_by("order", "joined_at")
+        .first()
+    )
+
+    if not member:
+        return None
+
+    return member.character
+
+def activate_unique_run_item_effect(run, item):
+    effect, created = ItemRunEffect.objects.get_or_create(
+        run=run,
+        item=item,
+        effect_code=item.effect_code,
+        defaults={
+            "value": item.effect_value,
+            "is_active": True,
+        },
+    )
+
+    if not created and not effect.is_active:
+        effect.value = item.effect_value
+        effect.is_active = True
+        effect.save(update_fields=["value", "is_active"])
+
+    return effect, created
+
 def create_room_support_effect(
     room,
     character,
@@ -508,7 +742,11 @@ def submit_room_skill_action(request, session, run, room, character, membership)
     ]
 
     die_roll = None
+    roll_modifier = 0
+    roll_breakdown = []
     final_roll_total = None
+    difficulty_at_roll = None
+    success = True
 
     if skill.effect_code == ClassSkill.EffectCode.ROOM_REDUCE_DIFFICULTY:
         create_room_support_effect(room, character, skill)
@@ -536,9 +774,19 @@ def submit_room_skill_action(request, session, run, room, character, membership)
 
     elif skill.effect_code == ClassSkill.EffectCode.ROOM_RANDOM_ROLL_BONUS:
         die_roll = random.randint(1, 6)
-        final_roll_total = die_roll
+        roll_modifier = get_run_roll_bonus(run)
+        if roll_modifier:
+            roll_breakdown.append({
+                "label": "Lucky Charm",
+                "value": roll_modifier,
+                "type": "item",
+            })
 
-        if die_roll >= 4:
+        final_roll_total = die_roll + roll_modifier
+        difficulty_at_roll = 4
+        success = final_roll_total >= difficulty_at_roll
+
+        if success:
             create_room_support_effect(
                 room,
                 character,
@@ -546,13 +794,26 @@ def submit_room_skill_action(request, session, run, room, character, membership)
                 effect_code=ClassSkill.EffectCode.ROOM_ROLL_BONUS,
                 effect_value=skill.effect_value,
             )
-            result_parts.append(
-                f"Quick Invention rolled {die_roll}. The next room roll gets +{skill.effect_value}."
-            )
+
+            if roll_modifier:
+                result_parts.append(
+                    f"{skill.name} rolled {die_roll} + {roll_modifier} = {final_roll_total}. "
+                    f"The next room roll gets +{skill.effect_value}."
+                )
+            else:
+                result_parts.append(
+                    f"{skill.name} rolled {die_roll}. The next room roll gets +{skill.effect_value}."
+                )
         else:
-            result_parts.append(
-                f"Quick Invention rolled {die_roll}. No bonus was created."
-            )
+            if roll_modifier:
+                result_parts.append(
+                    f"{skill.name} rolled {die_roll} + {roll_modifier} = {final_roll_total}. "
+                    "No bonus was created."
+                )
+            else:
+                result_parts.append(
+                    f"{skill.name} rolled {die_roll}. No bonus was created."
+                )
 
     elif skill.effect_code == ClassSkill.EffectCode.ROOM_RECOVER_LIFE_ON_SUCCESS:
         create_room_support_effect(room, character, skill)
@@ -581,10 +842,11 @@ def submit_room_skill_action(request, session, run, room, character, membership)
         skill_used=skill,
         action_text="",
         die_roll=die_roll,
-        roll_bonus=0,
+        roll_bonus=roll_modifier,
+        roll_breakdown=roll_breakdown if die_roll is not None else [],
         final_roll_total=final_roll_total,
-        difficulty_at_roll=room.difficulty,
-        success=True,
+        difficulty_at_roll=difficulty_at_roll,
+        success=success,
         damage_taken=0,
         result_text=result_text,
         challenge_round=room.challenge_round,
@@ -623,6 +885,7 @@ def get_trap_progress(room):
             room=room,
             challenge_round=room.challenge_round,
             character_id__in=living_character_ids,
+            action_type=RoomAttempt.ActionType.TRAP_ACTION,
         )
         .select_related("character")
     )
@@ -657,6 +920,7 @@ def character_attempted_current_trap_round(room, character):
         room=room,
         character=character,
         challenge_round=room.challenge_round,
+        action_type=RoomAttempt.ActionType.TRAP_ACTION,
     ).exists()
 
 def get_turn_eligible_members(run):
@@ -1001,6 +1265,7 @@ def apply_boss_damage_to_character(encounter, character, base_damage):
         return 0
 
     damage = base_damage + get_boss_damage_bonus(encounter)
+    damage = apply_run_damage_reduction(encounter.run, damage)
 
     apply_damage(character, damage)
 
@@ -3446,6 +3711,8 @@ def submit_room_action(request, join_code):
     life_cost = 0
 
     roll_modifier = 0
+    item_roll_bonus = 0
+    roll_breakdown = []
     effective_difficulty = room.difficulty
     failure_damage_reduction = 0
     recover_life_on_success = 0
@@ -3469,31 +3736,39 @@ def submit_room_action(request, join_code):
             support_effect_texts.append(
                     f"{source_name}: room difficulty -{support_effect.effect_value}."
                 )
+        
         elif effect_code == ClassSkill.EffectCode.ROOM_ROLL_BONUS:
             roll_modifier += support_effect.effect_value
+
+            roll_breakdown.append({
+                "label": source_name,
+                "value": support_effect.effect_value,
+                "type": "skill",
+            })
+
             result_prefix = f"{source_name}: roll bonus +{support_effect.effect_value}."
-            support_effect_texts.append(
-                    f"{source_name}: room difficulty -{support_effect.effect_value}."
-                )
+            support_effect_texts.append(result_prefix)
+        
         elif effect_code == ClassSkill.EffectCode.ROOM_REDUCE_FAILURE_DAMAGE:
             failure_damage_reduction += support_effect.effect_value
             result_prefix = f"{source_name}: failure damage -{support_effect.effect_value}."
             support_effect_texts.append(
-                    f"{source_name}: room difficulty -{support_effect.effect_value}."
-                )
+                f"{source_name}: failure damage -{support_effect.effect_value}."
+            )
+        
         elif effect_code == ClassSkill.EffectCode.ROOM_FIELD_AID:
             failure_damage_reduction += support_effect.effect_value
             result_prefix = f"{source_name}: failure damage -{support_effect.effect_value}."
             support_effect_texts.append(
-                    f"{source_name}: room difficulty -{support_effect.effect_value}."
-                )
+                f"{source_name}: failure damage -{support_effect.effect_value}."
+            )
             
         elif effect_code == ClassSkill.EffectCode.ROOM_REROLL_AFTER_FAIL:
             reroll_after_fail = True
             result_prefix = f"{source_name}: reroll available."
             support_effect_texts.append(
-                    f"{source_name}: room difficulty -{support_effect.effect_value}."
-                )
+                f"{source_name}: reroll available."
+            )
             
         elif effect_code == ClassSkill.EffectCode.ROOM_RECOVER_LIFE_ON_SUCCESS:
             effective_difficulty = max(
@@ -3579,17 +3854,48 @@ def submit_room_action(request, join_code):
         ap_cost = 0
         action_type = RoomAttempt.ActionType.LEAVE_TREASURE
 
-    # Room weakness roll penalties.
+# Room weakness roll penalties.
     if room.room_type == DungeonRunRoom.RoomType.TRAP:
-        roll_modifier -= get_weakness_value(
+        weakness_label, trap_penalty = get_weakness_label_and_value(
             room_weaknesses,
             ClassWeakness.EffectCode.ROOM_TRAP_ROLL_PENALTY,
         )
 
+        if trap_penalty:
+            roll_modifier -= trap_penalty
+            roll_breakdown.append({
+                "label": weakness_label,
+                "value": -trap_penalty,
+                "type": "weakness",
+            })
+
     if room.room_type == DungeonRunRoom.RoomType.COMBAT:
-        roll_modifier -= get_weakness_value(
+        weakness_label, combat_penalty = get_weakness_label_and_value(
             room_weaknesses,
             ClassWeakness.EffectCode.ROOM_COMBAT_ROLL_PENALTY,
+        )
+
+        if combat_penalty:
+            roll_modifier -= combat_penalty
+            roll_breakdown.append({
+                "label": weakness_label,
+                "value": -combat_penalty,
+                "type": "weakness",
+            })
+
+    item_roll_bonus = get_run_roll_bonus(run)
+
+    if item_roll_bonus:
+        roll_modifier += item_roll_bonus
+
+        roll_breakdown.append({
+            "label": "Lucky Charm",
+            "value": item_roll_bonus,
+            "type": "item",
+        })
+
+        support_effect_texts.append(
+            f"Lucky Charm: roll bonus +{item_roll_bonus}."
         )
 
     if not spend_character_ap(character, ap_cost):
@@ -3685,16 +3991,36 @@ def submit_room_action(request, join_code):
         room.refresh_from_db()
 
         if transformed:
-            success = False
-            damage_taken = room.damage_on_failure or room.difficulty
+            first_die_roll = random.randint(1, 6)
+            die_roll = first_die_roll
+            final_roll_total = die_roll + roll_modifier
+            success = final_roll_total >= effective_difficulty
 
-            apply_damage(character, damage_taken)
+            if success:
+                damage_taken = 0
 
-            result_text_parts.append(
-                f"{character.character_name} opened the suspicious chest. "
-                f"It was a Mimic! {character.character_name} took "
-                f"{damage_taken} damage. The room is now a Combat Room."
-            )
+                result_text_parts.append(
+                    f"{character.character_name} opened the suspicious chest. "
+                    f"It was a Mimic! You rolled {die_roll}"
+                    f"{' + ' + str(roll_modifier) if roll_modifier > 0 else ''}"
+                    f"{' - ' + str(abs(roll_modifier)) if roll_modifier < 0 else ''}"
+                    f" = {final_roll_total} and avoided the first strike. "
+                    f"The room is now a Combat Room."
+                )
+            else:
+                damage_taken = room.damage_on_failure or room.difficulty
+                damage_taken = apply_run_damage_reduction(run, damage_taken)
+                apply_damage(character, damage_taken)
+
+                result_text_parts.append(
+                    f"{character.character_name} opened the suspicious chest. "
+                    f"It was a Mimic! You rolled {die_roll}"
+                    f"{' + ' + str(roll_modifier) if roll_modifier > 0 else ''}"
+                    f"{' - ' + str(abs(roll_modifier)) if roll_modifier < 0 else ''}"
+                    f" = {final_roll_total}. "
+                    f"{character.character_name} took {damage_taken} damage. "
+                    f"The room is now a Combat Room."
+                )
         else:
             result_text_parts.append(
                 "The chest reacted strangely, but nothing happened."
@@ -3710,16 +4036,17 @@ def submit_room_action(request, join_code):
             messages.warning(request, "Write an action before rolling for this room.")
             return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
         
+        # Roll Section
         first_die_roll = random.randint(1, 6)
         die_roll = first_die_roll
         final_roll_total = die_roll + roll_modifier
-        success = final_roll_total > effective_difficulty
+        success = final_roll_total >= effective_difficulty
 
         if not success and reroll_after_fail:
             second_die_roll = random.randint(1, 6)
             die_roll = second_die_roll
             final_roll_total = die_roll + roll_modifier
-            success = final_roll_total > effective_difficulty
+            success = final_roll_total >= effective_difficulty
 
             result_text_parts.append(
                 f"Shadow Step activated: first roll {first_die_roll}, reroll {second_die_roll}."
@@ -3742,10 +4069,13 @@ def submit_room_action(request, join_code):
             action_type = RoomAttempt.ActionType.OPEN_CHEST
 
         if success:
-            if room.room_type in [
-                DungeonRunRoom.RoomType.TREASURE,
-                DungeonRunRoom.RoomType.SPECIAL,
-            ]:
+            if (
+                room.room_type in [
+                    DungeonRunRoom.RoomType.TREASURE,
+                    DungeonRunRoom.RoomType.SPECIAL,
+                ]
+                or room_is_mimic(room)
+            ):
                 item_awarded = award_random_item_to_party(
                     membership.party,
                     run.dungeon,
@@ -3857,16 +4187,19 @@ def submit_room_action(request, join_code):
         skill_used=skill,
         action_text=action_text,
         die_roll=die_roll,
-        roll_bonus=roll_modifier,
+        roll_bonus=roll_modifier if die_roll is not None else 0,
+        roll_breakdown=roll_breakdown if die_roll is not None else [],
         final_roll_total=final_roll_total,
-        difficulty_at_roll=effective_difficulty,
+        difficulty_at_roll=effective_difficulty if die_roll is not None else None,
         success=success,
         damage_taken=damage_taken,
         item_awarded=item_awarded,
         result_text=result_text,
         challenge_round=room.challenge_round,
     )
-    consume_room_support_effects(support_effects)
+
+    if die_roll is not None:
+        consume_room_support_effects(support_effects)
 
     if room.room_type == DungeonRunRoom.RoomType.TRAP and not room.is_cleared:
         trap_progress = get_trap_progress(room)
@@ -3928,6 +4261,99 @@ def submit_room_action(request, join_code):
             attempt.save(update_fields=["result_text"])
 
     messages.info(request, result_text)
+
+    return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+def use_room_item(request, join_code):
+    session = get_object_or_404(
+        GameSession,
+        join_code=join_code,
+        game_template__code=GameTemplate.GameCode.FANTASY_ROLES,
+    )
+
+    participant, character, membership = get_student_character_and_membership(
+        request,
+        session,
+    )
+
+    if participant is None:
+        return redirect("sessions:join_session", join_code=session.join_code)
+
+    if character is None:
+        return redirect("fantasy_roles:character_create", join_code=session.join_code)
+
+    if membership is None:
+        return redirect("fantasy_roles:student_party_detail", join_code=session.join_code)
+
+    run = get_object_or_404(
+        PartyDungeonRun,
+        party=membership.party,
+        status=PartyDungeonRun.Status.ACTIVE,
+    )
+
+    room = run.current_room
+
+    if request.method != "POST":
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if not room or room.is_cleared:
+        messages.warning(request, "There is no active room where an item can be used.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    ensure_run_has_turn(run)
+    run.refresh_from_db()
+
+    if run.current_turn_character_id != character.id:
+        messages.warning(request, "You can only use an item on your turn.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    inventory_item_id = request.POST.get("inventory_item_id")
+
+    with transaction.atomic():
+        inventory_item = get_object_or_404(
+            PartyInventoryItem.objects.select_for_update().select_related("item"),
+            id=inventory_item_id,
+            party=membership.party,
+            quantity__gt=0,
+        )
+
+        item = inventory_item.item
+
+        if not item.is_active or not item.can_use_in_rooms:
+            messages.warning(request, "This item cannot be used in rooms.")
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+        item_result = apply_party_item_effect(
+            run=run,
+            party=membership.party,
+            acting_character=character,
+            item=item,
+            room=room,
+            encounter=None,
+        )
+
+        consume_inventory_item(inventory_item)
+
+        if item_result.get("cleared_room"):
+            update_run_status_after_room_result(run)
+
+        RoomAttempt.objects.create(
+            room=room,
+            character=character,
+            action_type=RoomAttempt.ActionType.USE_ITEM,
+            item_used=item,
+            action_text="",
+            die_roll=item_result.get("die_roll"),
+            roll_bonus=0,
+            final_roll_total=item_result.get("die_roll"),
+            difficulty_at_roll=None,
+            success=True,
+            damage_taken=0,
+            result_text=item_result["result_text"],
+            challenge_round=room.challenge_round,
+        )
+
+    messages.success(request, item_result["result_text"])
 
     return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
@@ -4488,10 +4914,11 @@ def boss_basic_attack(request, join_code):
         encounter = BossEncounter.objects.select_for_update().get(id=encounter.id)
 
         die_roll = random.randint(1, 6)
-        final_roll_total = die_roll
+        item_roll_bonus = get_run_roll_bonus(run)
+        final_roll_total = die_roll + item_roll_bonus
         difficulty = encounter.current_difficulty
 
-        success = final_roll_total >= difficulty
+        success = final_roll_total >= encounter.current_difficulty
         damage_to_boss = 0
 
         if success:
@@ -4725,5 +5152,118 @@ def boss_use_skill(request, join_code):
         request,
         skill_result.get("result_text", f"{character.character_name} used {skill.name}."),
     )
+
+    return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+def boss_use_item(request, join_code):
+    session = get_object_or_404(
+        GameSession,
+        join_code=join_code,
+        game_template__code=GameTemplate.GameCode.FANTASY_ROLES,
+    )
+
+    participant, character, membership = get_student_character_and_membership(
+        request,
+        session,
+    )
+
+    if participant is None:
+        return redirect("sessions:join_session", join_code=session.join_code)
+
+    if character is None:
+        return redirect("fantasy_roles:character_create", join_code=session.join_code)
+
+    if membership is None:
+        return redirect("fantasy_roles:student_party_detail", join_code=session.join_code)
+
+    run = get_object_or_404(
+        PartyDungeonRun,
+        party=membership.party,
+        status=PartyDungeonRun.Status.BOSS_ACTIVE,
+    )
+
+    encounter = get_object_or_404(
+        BossEncounter,
+        run=run,
+        status=BossEncounter.Status.ACTIVE,
+    )
+
+    if request.method != "POST":
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if (
+        encounter.current_actor != BossEncounter.CurrentActor.PLAYER
+        or encounter.current_turn_character_id != character.id
+    ):
+        messages.warning(request, "It is not your boss turn.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    inventory_item_id = request.POST.get("inventory_item_id")
+
+    with transaction.atomic():
+        encounter = (
+            BossEncounter.objects
+            .select_for_update()
+            .select_related("run", "run__party", "boss")
+            .get(id=encounter.id)
+        )
+
+        inventory_item = get_object_or_404(
+            PartyInventoryItem.objects.select_for_update().select_related("item"),
+            id=inventory_item_id,
+            party=membership.party,
+            quantity__gt=0,
+        )
+
+        item = inventory_item.item
+
+        if not item.is_active or not item.can_use_in_boss:
+            messages.warning(request, "This item cannot be used during boss combat.")
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+        item_result = apply_party_item_effect(
+            run=run,
+            party=membership.party,
+            acting_character=character,
+            item=item,
+            room=None,
+            encounter=None,
+        )
+
+        consume_inventory_item(inventory_item)
+
+        BossActionLog.objects.create(
+            encounter=encounter,
+            actor_type=BossActionLog.ActorType.PLAYER,
+            action_type=BossActionLog.ActionType.ITEM_USE,
+            character=character,
+            player_item=item,
+            phase=encounter.phase,
+            round_number=encounter.round_number,
+            player_phase_number=encounter.player_phase_number,
+            die_roll=item_result.get("die_roll"),
+            final_roll_total=item_result.get("die_roll"),
+            difficulty_at_roll=None,
+            success=True,
+            damage_to_boss=item_result.get("damage_to_boss", 0),
+            damage_to_players=0,
+            healing_done=item_result.get("healing_done", 0),
+            result_text=item_result["result_text"],
+        )
+
+        if check_boss_transformation_or_victory(
+            encounter,
+            triggering_character=character,
+        ):
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+        consume_character_turn_effects(encounter, character)
+
+        if check_boss_party_defeat_state(encounter):
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+        advance_boss_after_player_action(encounter)
+
+    messages.success(request, item_result["result_text"])
 
     return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)

@@ -221,6 +221,7 @@
         data-skill-ap-cost="{% if latest_attempt.skill_used %}{{ latest_attempt.skill_used.ap_cost }}{% else %}0{% endif %}"
         data-success="{{ latest_attempt.success|yesno:'true,false' }}"
         data-die-roll="{{ latest_attempt.die_roll|default:'' }}"
+        data-roll-bonus="{{ latest_attempt.roll_bonus|default:'0' }}"
         data-final-total="{{ latest_attempt.final_roll_total|default:'' }}"
         data-difficulty="{{ latest_attempt.difficulty_at_roll|default:'' }}"
         data-damage="{{ latest_attempt.damage_taken|default:'0' }}"
@@ -234,6 +235,7 @@
         data-room-image="{% if attempt_room_image %}{{ attempt_room_image.url }}{% endif %}"
         data-run-status="{{ run.status }}"
       ></div>
+      {{ latest_attempt.roll_breakdown|json_script:"latest-attempt-roll-breakdown" }}
     {% endwith %}
   {% endwith %}
 {% endif %}

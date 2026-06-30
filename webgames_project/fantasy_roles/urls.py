@@ -120,4 +120,15 @@ urlpatterns = [
     views.boss_use_skill,
     name="boss_use_skill",
     ),
+
+    path(
+    "<str:join_code>/room/use-item/",
+    views.use_room_item,
+    name="use_room_item",
+    ),
+    path(
+        "<str:join_code>/boss/use-item/",
+        views.boss_use_item,
+        name="boss_use_item",
+    ),
 ]

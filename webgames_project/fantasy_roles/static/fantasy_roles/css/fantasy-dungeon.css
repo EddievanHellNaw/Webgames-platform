@@ -8182,3 +8182,696 @@
       0 16px 34px rgba(0, 0, 0, 0.5);
   }
 }
+
+/* ============================================================
+   Mobile modal / story popup fit fixes
+   ============================================================ */
+
+@media (max-width: 760px) {
+  .fr-confirm-overlay,
+  .fr-room-story-overlay,
+  .fr-dungeon-event-overlay,
+  .fr-boss-reveal-overlay,
+  .fr-boss-transformation-overlay {
+    padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+    align-items: center;
+    overflow-y: auto;
+  }
+
+  .fr-confirm-modal,
+  .fr-dungeon-confirm-modal,
+  .fr-room-story-card,
+  .fr-party-event-card,
+  .fr-boss-reveal-card,
+  .fr-boss-transformation-card {
+    width: min(94vw, 440px);
+    max-height: calc(100dvh - 1.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .fr-dungeon-confirm-modal {
+    padding: 1rem;
+  }
+
+  .fr-dungeon-confirm-layout {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem;
+  }
+
+  .fr-dungeon-confirm-image {
+    width: 100%;
+    max-height: 28dvh;
+    aspect-ratio: 16 / 9;
+  }
+
+  .fr-dungeon-confirm-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .fr-dungeon-confirm-body h2 {
+    font-size: clamp(1.25rem, 6vw, 1.8rem);
+    margin: 0.2rem 0;
+  }
+
+  .fr-dungeon-meta-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+  }
+
+  .fr-room-story-card {
+    display: grid;
+    grid-template-columns: 1fr !important;
+  }
+
+  .fr-room-story-image-wrap {
+    width: 100%;
+    max-height: 32dvh;
+    aspect-ratio: 16 / 9;
+  }
+
+  .fr-room-story-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .fr-room-story-body {
+    padding: 1rem;
+  }
+
+  .fr-room-story-body h2,
+  .fr-party-event-card h2,
+  .fr-boss-reveal-card h2,
+  .fr-boss-transformation-card h2 {
+    font-size: clamp(1.35rem, 6vw, 2rem);
+    line-height: 1.05;
+  }
+
+  .fr-room-story-body p,
+  .fr-party-event-card p,
+  .fr-boss-reveal-card p,
+  .fr-boss-transformation-card p {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .fr-step-actions {
+    position: sticky;
+    bottom: 0;
+    padding-top: 0.75rem;
+    background:
+      linear-gradient(
+        to top,
+        rgba(5, 7, 18, 0.98),
+        rgba(5, 7, 18, 0.78),
+        transparent
+      );
+  }
+}
+
+.fr-boss-item-popover {
+  position: relative;
+  z-index: 10030;
+}
+
+.fr-boss-item-popover[open] {
+  z-index: 10040;
+}
+
+.fr-boss-item-popover > summary {
+  list-style: none;
+}
+
+.fr-boss-item-popover > summary::-webkit-details-marker {
+  display: none;
+}
+
+.fr-boss-item-popover-panel {
+  position: absolute !important;
+  top: calc(100% + 0.85rem) !important;
+  left: 50% !important;
+  transform: translateX(-50%) !important;
+  width: min(88vw, 420px);
+  max-height: min(58vh, 450px);
+  overflow-y: auto;
+  z-index: 10050 !important;
+  padding: 1rem;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 211, 106, 0.34);
+  background:
+    radial-gradient(circle at top, rgba(255, 211, 106, 0.16), transparent 42%),
+    linear-gradient(135deg, rgba(14, 10, 28, 0.98), rgba(4, 7, 18, 0.98));
+  box-shadow:
+    0 24px 70px rgba(0, 0, 0, 0.62),
+    0 0 28px rgba(255, 211, 106, 0.18);
+  backdrop-filter: blur(14px);
+}
+
+.fr-boss-item-actions {
+  display: grid;
+  gap: 0.75rem;
+}
+
+.fr-boss-item-choice {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.75rem;
+  border-radius: 16px;
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.fr-boss-item-choice p {
+  margin: 0.25rem 0 0;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.85rem;
+}
+
+@media (max-width: 760px) {
+  .fr-boss-item-popover[open]::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: 10045;
+    background: rgba(0, 0, 0, 0.58);
+    backdrop-filter: blur(3px);
+  }
+
+  .fr-boss-item-popover-panel {
+    position: fixed !important;
+    top: auto !important;
+    left: 50% !important;
+    right: auto !important;
+    bottom: max(1rem, env(safe-area-inset-bottom)) !important;
+    width: min(92vw, 430px);
+    max-height: min(62vh, 460px);
+    transform: translateX(-50%) !important;
+    z-index: 10060 !important;
+    border-radius: 26px;
+  }
+
+  .fr-boss-item-popover[open] > summary {
+    position: relative;
+    z-index: 10070;
+  }
+
+  .fr-boss-item-choice {
+    grid-template-columns: 1fr;
+  }
+
+  .fr-boss-item-choice .fr-btn {
+    width: 100%;
+  }
+}
+
+.fr-use-item-icon-btn {
+  width: 44px;
+  height: 44px;
+  display: inline-grid;
+  place-items: center;
+  flex: 0 0 auto;
+  border: 1px solid rgba(255, 211, 106, 0.45);
+  border-radius: 999px;
+  padding: 0;
+  background:
+    radial-gradient(circle at center, rgba(255, 211, 106, 0.18), transparent 66%),
+    rgba(5, 10, 20, 0.92);
+  cursor: pointer;
+  box-shadow:
+    0 0 16px rgba(255, 211, 106, 0.15),
+    inset 0 0 12px rgba(0, 0, 0, 0.45);
+}
+
+.fr-use-item-icon-btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(255, 211, 106, 0.78);
+  box-shadow:
+    0 0 24px rgba(255, 211, 106, 0.24),
+    inset 0 0 14px rgba(0, 0, 0, 0.5);
+}
+
+.fr-use-item-icon-btn:disabled {
+  opacity: 0.42;
+  cursor: not-allowed;
+}
+
+.fr-use-item-icon {
+  width: 28px;
+  height: 28px;
+}
+
+.fr-sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
+
+/* ============================================================
+   Final mobile modal compact override
+   Put this at the END of the last loaded CSS file.
+   ============================================================ */
+
+@media (max-width: 760px) {
+  .fr-confirm-overlay {
+    padding:
+      max(0.45rem, env(safe-area-inset-top))
+      0.55rem
+      max(0.45rem, env(safe-area-inset-bottom)) !important;
+    place-items: center !important;
+    overflow-y: auto !important;
+  }
+
+  .fr-dungeon-confirm-modal {
+    width: min(94vw, 390px) !important;
+    max-height: calc(100dvh - 1rem) !important;
+    padding: 0.75rem !important;
+    overflow-y: auto !important;
+    border-radius: 20px !important;
+  }
+
+  .fr-dungeon-confirm-modal .fr-panel-heading {
+    margin-bottom: 0.45rem !important;
+  }
+
+  .fr-dungeon-confirm-layout {
+    grid-template-columns: 1fr !important;
+    gap: 0.55rem !important;
+  }
+
+  .fr-dungeon-confirm-image {
+    width: 100% !important;
+    height: auto !important;
+    max-height: 18dvh !important;
+    min-height: 0 !important;
+    aspect-ratio: 16 / 8 !important;
+    border-radius: 16px !important;
+  }
+
+  .fr-dungeon-confirm-body h2 {
+    font-size: clamp(1.1rem, 5.5vw, 1.55rem) !important;
+    line-height: 1 !important;
+    margin: 0.15rem 0 0.4rem !important;
+  }
+
+  .fr-dungeon-confirm-body p {
+    margin: 0.45rem 0 !important;
+    font-size: 0.86rem !important;
+    line-height: 1.3 !important;
+  }
+
+  .fr-dungeon-meta-grid {
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.35rem !important;
+  }
+
+  .fr-dungeon-meta-grid span {
+    padding: 0.32rem 0.45rem !important;
+    font-size: 0.72rem !important;
+  }
+
+  .fr-dungeon-confirm-modal .fr-step-actions {
+    position: sticky !important;
+    bottom: 0 !important;
+    display: grid !important;
+    grid-template-columns: 1fr 1fr !important;
+    gap: 0.5rem !important;
+    margin-top: 0.5rem !important;
+    padding-top: 0.55rem !important;
+  }
+
+  .fr-dungeon-confirm-modal .fr-btn {
+    width: 100% !important;
+    margin-top: 0 !important;
+    padding: 0.55rem 0.7rem !important;
+    font-size: 0.85rem !important;
+  }
+}
+
+@media (max-width: 760px) {
+  .fr-room-story-overlay {
+    padding:
+      max(0.45rem, env(safe-area-inset-top))
+      0.55rem
+      max(0.45rem, env(safe-area-inset-bottom)) !important;
+    overflow-y: auto !important;
+  }
+
+  .fr-room-story-card {
+    width: min(94vw, 410px) !important;
+    max-height: calc(100dvh - 1rem) !important;
+    grid-template-columns: 1fr !important;
+    gap: 0.55rem !important;
+    padding: 0.75rem !important;
+    overflow-y: auto !important;
+    border-radius: 20px !important;
+  }
+
+  .fr-room-story-image-wrap {
+    width: 100% !important;
+    min-height: 0 !important;
+    height: auto !important;
+    max-height: 24dvh !important;
+    aspect-ratio: 16 / 8 !important;
+    border-radius: 16px !important;
+  }
+
+  .fr-room-story-image-wrap img {
+    min-height: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    object-fit: cover !important;
+  }
+
+  .fr-room-story-body {
+    padding: 0.35rem 0.2rem 0 !important;
+    align-content: start !important;
+  }
+
+  .fr-room-story-body h2 {
+    font-size: clamp(1.2rem, 6vw, 1.65rem) !important;
+    line-height: 1 !important;
+    margin: 0.15rem 0 0.35rem !important;
+  }
+
+  .fr-room-story-body p {
+    font-size: 0.9rem !important;
+    line-height: 1.3 !important;
+    margin-bottom: 0.55rem !important;
+  }
+
+  .fr-room-story-meta {
+    margin-bottom: 0.55rem !important;
+  }
+
+  .fr-room-story-meta span {
+    font-size: 0.72rem !important;
+    padding: 0.24rem 0.45rem !important;
+  }
+
+  .fr-room-story-body .fr-btn {
+    width: 100% !important;
+    margin-top: 0 !important;
+    padding: 0.58rem 0.8rem !important;
+  }
+}
+
+.fr-map-room-icon {
+  display: grid;
+  place-items: center;
+}
+
+.fr-map-room-type-icon {
+  width: 34px;
+  height: 34px;
+  object-fit: contain;
+  filter:
+    drop-shadow(0 0 8px rgb(var(--dungeon-rgb) / 0.38))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+}
+
+.fr-map-room-button .fr-map-room-type-icon,
+.fr-map-room-static .fr-map-room-type-icon {
+  transition:
+    transform 160ms ease,
+    filter 160ms ease;
+}
+
+.fr-map-room-button:hover .fr-map-room-type-icon {
+  transform: scale(1.08);
+  filter:
+    drop-shadow(0 0 12px rgb(var(--dungeon-rgb) / 0.55))
+    drop-shadow(0 5px 10px rgba(0, 0, 0, 0.5));
+}
+
+.fr-map-room-icon-special .fr-map-room-type-icon,
+.fr-map-room-icon-treasure .fr-map-room-type-icon {
+  filter:
+    drop-shadow(0 0 10px rgba(255, 211, 106, 0.45))
+    drop-shadow(0 4px 8px rgba(0, 0, 0, 0.45));
+}
+
+/* ============================================================
+   Visual roll result sequence
+   ============================================================ */
+
+.fr-roll-total-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.55rem;
+  margin: 0.65rem 0 0.35rem;
+  min-height: 2.4rem;
+}
+
+.fr-roll-modifier-badge,
+.fr-roll-total-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 3.1rem;
+  border-radius: 999px;
+  padding: 0.35rem 0.7rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.34),
+    inset 0 0 14px rgba(255, 255, 255, 0.05);
+}
+
+.fr-roll-modifier-badge {
+  font-size: 1.35rem;
+  transform: translateY(8px) scale(0.84);
+  opacity: 0;
+  animation: fr-roll-modifier-pop 520ms ease-out forwards;
+}
+
+.fr-roll-modifier-badge.is-positive {
+  color: #9ff2b8;
+  border-color: rgba(142, 240, 176, 0.5);
+  background:
+    radial-gradient(circle at center, rgba(142, 240, 176, 0.18), transparent 68%),
+    rgba(8, 18, 14, 0.88);
+  box-shadow:
+    0 0 22px rgba(142, 240, 176, 0.22),
+    inset 0 0 14px rgba(142, 240, 176, 0.08);
+}
+
+.fr-roll-modifier-badge.is-negative {
+  color: #ff9a9a;
+  border-color: rgba(255, 107, 107, 0.55);
+  background:
+    radial-gradient(circle at center, rgba(255, 107, 107, 0.18), transparent 68%),
+    rgba(24, 8, 12, 0.9);
+  box-shadow:
+    0 0 22px rgba(255, 107, 107, 0.22),
+    inset 0 0 14px rgba(255, 107, 107, 0.08);
+}
+
+.fr-roll-total-chip {
+  color: var(--fr-gold-bright, #ffe29a);
+  border-color: rgba(255, 226, 154, 0.5);
+  background:
+    radial-gradient(circle at center, rgba(255, 226, 154, 0.18), transparent 68%),
+    rgba(8, 11, 18, 0.9);
+  opacity: 0;
+  transform: translateY(8px) scale(0.88);
+  animation: fr-roll-total-pop 520ms ease-out forwards;
+}
+
+.fr-roll-card.is-resolving-total .fr-roll-dice {
+  animation: fr-roll-dice-total-pulse 800ms ease-in-out infinite;
+}
+
+@keyframes fr-roll-modifier-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.72);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.12);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fr-roll-total-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.78);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes fr-roll-dice-total-pulse {
+  0%,
+  100% {
+    transform: scale(1);
+    filter: brightness(1);
+  }
+
+  50% {
+    transform: scale(1.08);
+    filter: brightness(1.25);
+  }
+}
+
+@media (max-width: 760px) {
+  .fr-roll-total-row {
+    margin-top: 0.45rem;
+  }
+
+  .fr-roll-modifier-badge,
+  .fr-roll-total-chip {
+    min-width: 2.7rem;
+    padding: 0.28rem 0.58rem;
+  }
+
+  .fr-roll-modifier-badge {
+    font-size: 1.15rem;
+  }
+}
+
+.fr-roll-dice-wrap.is-final-total .fr-roll-dice {
+  color: var(--fr-gold-bright, #ffe29a);
+  border-color: rgba(255, 226, 154, 0.72);
+  box-shadow:
+    0 0 24px rgba(255, 226, 154, 0.34),
+    inset 0 0 22px rgba(255, 226, 154, 0.08),
+    inset 0 0 28px rgba(0, 0, 0, 0.55);
+  transform: scale(1.06);
+}
+
+.fr-roll-modifier-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.fr-roll-modifier-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  border-radius: 999px;
+  padding: 0.34rem 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  opacity: 0;
+  transform: translateY(10px) scale(0.82);
+  animation: fr-roll-modifier-chip-pop 520ms ease-out forwards;
+  animation-delay: var(--modifier-delay, 0ms);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.32),
+    inset 0 0 12px rgba(255, 255, 255, 0.04);
+}
+
+.fr-roll-modifier-chip strong {
+  font-size: 1rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.fr-roll-modifier-chip span {
+  font-size: 0.76rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.86;
+}
+
+.fr-roll-modifier-chip.is-positive {
+  color: #9ff2b8;
+  border-color: rgba(142, 240, 176, 0.5);
+  background:
+    radial-gradient(circle at center, rgba(142, 240, 176, 0.18), transparent 68%),
+    rgba(8, 18, 14, 0.9);
+}
+
+.fr-roll-modifier-chip.is-negative {
+  color: #ff9a9a;
+  border-color: rgba(255, 107, 107, 0.55);
+  background:
+    radial-gradient(circle at center, rgba(255, 107, 107, 0.18), transparent 68%),
+    rgba(24, 8, 12, 0.92);
+}
+
+.fr-roll-modifier-chip.is-item {
+  border-color: rgba(255, 226, 154, 0.58);
+  color: #ffe29a;
+  background:
+    radial-gradient(circle at center, rgba(255, 226, 154, 0.18), transparent 68%),
+    rgba(18, 14, 8, 0.9);
+}
+
+.fr-roll-modifier-chip.is-skill {
+  border-color: rgba(143, 211, 255, 0.55);
+  color: #aee5ff;
+  background:
+    radial-gradient(circle at center, rgba(143, 211, 255, 0.17), transparent 68%),
+    rgba(8, 14, 24, 0.92);
+}
+
+.fr-roll-modifier-chip.is-weakness {
+  border-color: rgba(255, 107, 107, 0.58);
+  color: #ffaaaa;
+}
+
+@keyframes fr-roll-modifier-chip-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.78);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .fr-roll-modifier-list {
+    gap: 0.35rem;
+  }
+
+  .fr-roll-modifier-chip {
+    padding: 0.28rem 0.52rem;
+  }
+
+  .fr-roll-modifier-chip strong {
+    font-size: 0.92rem;
+  }
+
+  .fr-roll-modifier-chip span {
+    font-size: 0.66rem;
+  }
+}

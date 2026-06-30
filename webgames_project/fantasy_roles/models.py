@@ -692,7 +692,16 @@ class ItemTemplate(models.Model):
     class ItemScope(models.TextChoices):
         GLOBAL = "GLOBAL", "Global"
         DUNGEON_SPECIFIC = "DUNGEON_SPECIFIC", "Dungeon-specific"
+    class EffectCode(models.TextChoices):
+        NONE = "NONE", "No special effect"
 
+        HEAL_PARTY = "HEAL_PARTY", "Restore Life to party"
+        RESTORE_AP_PARTY = "RESTORE_AP_PARTY", "Restore AP to party"
+
+        PERMANENT_ROLL_BONUS = "PERMANENT_ROLL_BONUS", "Permanent roll bonus"
+        CLEAR_TRAP_ROOM = "CLEAR_TRAP_ROOM", "Automatically clear trap room"
+        REVIVE_MEMBER = "REVIVE_MEMBER", "Revive a defeated party member"
+        RUN_DAMAGE_REDUCTION = "RUN_DAMAGE_REDUCTION", "Reduce damage for the run"
     name = models.CharField(max_length=150)
 
     dungeon = models.ForeignKey(
@@ -718,15 +727,33 @@ class ItemTemplate(models.Model):
 
     effect_text = models.TextField()
 
+    effect_code = models.CharField(
+        max_length=40,
+        choices=EffectCode.choices,
+        default=EffectCode.NONE,
+    )
+
+    effect_value = models.SmallIntegerField(
+        default=0,
+        help_text="Main value, such as +2 roll bonus, 10 healing, or 2 damage reduction.",
+    )
+
+    can_use_in_rooms = models.BooleanField(default=True)
+
+    can_use_in_boss = models.BooleanField(default=True)
+
     roll_number = models.PositiveSmallIntegerField(
         null=True,
         blank=True,
         help_text="Optional number needed to obtain this item from a chest.",
     )
 
+    
+
     is_consumable = models.BooleanField(default=True)
     is_active = models.BooleanField(default=True)
-
+    
+    
     class Meta:
         ordering = ["name"]
 
@@ -771,8 +798,6 @@ class PartyInventoryItem(models.Model):
 
     def __str__(self):
         return f"{self.party.name} - {self.item.name} x{self.quantity}"
-    
-
     
 
 class PartyDungeonRun(models.Model):
@@ -856,6 +881,36 @@ class PartyDungeonRun(models.Model):
     def __str__(self):
         return f"{self.party.name} in {self.dungeon.name}"
     
+class ItemRunEffect(models.Model):
+    run = models.ForeignKey(
+        PartyDungeonRun,
+        on_delete=models.CASCADE,
+        related_name="item_effects",
+    )
+
+    item = models.ForeignKey(
+        ItemTemplate,
+        on_delete=models.CASCADE,
+        related_name="run_effects",
+    )
+
+    effect_code = models.CharField(
+        max_length=40,
+        choices=ItemTemplate.EffectCode.choices,
+    )
+
+    value = models.SmallIntegerField(default=0)
+
+    is_active = models.BooleanField(default=True)
+
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["created_at"]
+
+    def __str__(self):
+        return f"{self.run} · {self.item.name} · {self.effect_code}" 
+
 class BossTemplate(models.Model):
     dungeon = models.OneToOneField(
         Dungeon,
@@ -1218,6 +1273,7 @@ class BossActionLog(models.Model):
         BOSS_ABILITY = "BOSS_ABILITY", "Boss Ability"
         BASIC_ATTACK = "BASIC_ATTACK", "Basic Attack"
         BOSS_SKILL = "BOSS_SKILL", "Boss Skill"
+        ITEM_USE = "ITEM_USE", "Use Item"
         PASS = "PASS", "Pass"
         TRANSFORMATION = "TRANSFORMATION", "Transformation"
         VICTORY = "VICTORY", "Victory"
@@ -1257,6 +1313,14 @@ class BossActionLog(models.Model):
 
     player_skill = models.ForeignKey(
         ClassSkill,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="boss_action_logs",
+    )
+
+    player_item = models.ForeignKey(
+        ItemTemplate,
         on_delete=models.SET_NULL,
         null=True,
         blank=True,
@@ -1464,6 +1528,7 @@ class RoomAttempt(models.Model):
         OPEN_CHEST = "OPEN_CHEST", "Open Chest"
         LEAVE_TREASURE = "LEAVE_TREASURE", "Leave Treasure"
         SPECIAL_ACTION = "SPECIAL_ACTION", "Special Action"
+        USE_ITEM = "USE_ITEM", "Use Item"
 
     room = models.ForeignKey(
         DungeonRunRoom,
@@ -1515,8 +1580,22 @@ class RoomAttempt(models.Model):
         blank=True,
         related_name="room_attempts_awarded",
     )
+
+    item_used = models.ForeignKey(
+        ItemTemplate,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name="room_attempts_used",
+    )
     
     roll_bonus = models.SmallIntegerField(default=0) 
+    
+    roll_breakdown = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Named roll modifiers for UI animation. Example: [{'label': 'Lucky Charm', 'value': 2}]",
+    )
     final_roll_total = models.PositiveSmallIntegerField(null=True, blank=True)
     
     result_text = models.TextField(blank=True)

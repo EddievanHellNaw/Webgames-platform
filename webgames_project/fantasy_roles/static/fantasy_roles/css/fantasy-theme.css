@@ -9307,3 +9307,111 @@ body {
   }
 }
 
+/* ============================================================
+   Mobile modal / story popup fit fixes
+   ============================================================ */
+
+@media (max-width: 760px) {
+  .fr-confirm-overlay,
+  .fr-room-story-overlay,
+  .fr-dungeon-event-overlay,
+  .fr-boss-reveal-overlay,
+  .fr-boss-transformation-overlay {
+    padding: max(0.75rem, env(safe-area-inset-top)) 0.75rem max(0.75rem, env(safe-area-inset-bottom));
+    align-items: center;
+    overflow-y: auto;
+  }
+
+  .fr-confirm-modal,
+  .fr-dungeon-confirm-modal,
+  .fr-room-story-card,
+  .fr-party-event-card,
+  .fr-boss-reveal-card,
+  .fr-boss-transformation-card {
+    width: min(94vw, 440px);
+    max-height: calc(100dvh - 1.5rem);
+    overflow-y: auto;
+    overscroll-behavior: contain;
+  }
+
+  .fr-dungeon-confirm-modal {
+    padding: 1rem;
+  }
+
+  .fr-dungeon-confirm-layout {
+    grid-template-columns: 1fr !important;
+    gap: 0.85rem;
+  }
+
+  .fr-dungeon-confirm-image {
+    width: 100%;
+    max-height: 28dvh;
+    aspect-ratio: 16 / 9;
+  }
+
+  .fr-dungeon-confirm-image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .fr-dungeon-confirm-body h2 {
+    font-size: clamp(1.25rem, 6vw, 1.8rem);
+    margin: 0.2rem 0;
+  }
+
+  .fr-dungeon-meta-grid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.45rem;
+  }
+
+  .fr-room-story-card {
+    display: grid;
+    grid-template-columns: 1fr !important;
+  }
+
+  .fr-room-story-image-wrap {
+    width: 100%;
+    max-height: 32dvh;
+    aspect-ratio: 16 / 9;
+  }
+
+  .fr-room-story-image-wrap img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+
+  .fr-room-story-body {
+    padding: 1rem;
+  }
+
+  .fr-room-story-body h2,
+  .fr-party-event-card h2,
+  .fr-boss-reveal-card h2,
+  .fr-boss-transformation-card h2 {
+    font-size: clamp(1.35rem, 6vw, 2rem);
+    line-height: 1.05;
+  }
+
+  .fr-room-story-body p,
+  .fr-party-event-card p,
+  .fr-boss-reveal-card p,
+  .fr-boss-transformation-card p {
+    font-size: 0.95rem;
+    line-height: 1.35;
+  }
+
+  .fr-step-actions {
+    position: sticky;
+    bottom: 0;
+    padding-top: 0.75rem;
+    background:
+      linear-gradient(
+        to top,
+        rgba(5, 7, 18, 0.98),
+        rgba(5, 7, 18, 0.78),
+        transparent
+      );
+  }
+}
