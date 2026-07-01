@@ -1377,11 +1377,6 @@ const momentSequence = buildBossMomentSequence({
 playBossMomentSequence(momentSequence, function () {
   showBossDamageIndicators(payload);
 });
-
-playBossMomentSequence(momentSequence, function () {
-  showBossDamageIndicators(payload);
-});
-
       bossMomentIsShowing = true;
 
       moment.hidden = false;
@@ -3235,6 +3230,73 @@ function setAp(heroCard, value, maxValue) {
       return entry.dieRoll;
     });
 }
+
+
+function getBossPlayerDamageBreakdown() {
+  const helpers = window.frRollVisualHelpers;
+
+  if (!helpers) {
+    return [];
+  }
+
+  return helpers.getJsonArrayFromScript("latest-boss-player-damage-breakdown")
+    .map(function (item) {
+      return {
+        label: item.label || "Damage",
+        value: Number(item.value || 0),
+        type: item.type || "modifier",
+      };
+    })
+    .filter(function (item) {
+      return item.type === "base" || item.type === "final" || item.value !== 0;
+    });
+}
+
+function showBossPlayerDamageChips(row, list, breakdown) {
+  if (!row || !list || !breakdown.length) {
+    return;
+  }
+
+  list.innerHTML = "";
+  row.hidden = false;
+
+  breakdown.forEach(function (effect, index) {
+    const chip = document.createElement("span");
+    chip.className = "fr-roll-effect-chip";
+
+    if (effect.type === "base") {
+      chip.classList.add("is-boss-base-damage");
+    } else if (effect.type === "final") {
+      chip.classList.add("is-final-damage");
+    } else if (effect.value >= 0) {
+      chip.classList.add("is-boss-damage-bonus");
+    } else {
+      chip.classList.add("is-boss-damage-penalty");
+    }
+
+    chip.style.setProperty("--effect-delay", (index * 160) + "ms");
+
+    const value = document.createElement("strong");
+
+    if (effect.type === "base") {
+      value.textContent = "Base " + effect.value;
+    } else if (effect.type === "final") {
+      value.textContent = "Final " + effect.value;
+    } else {
+      value.textContent = effect.value > 0
+        ? "+" + effect.value + " Damage"
+        : String(effect.value) + " Damage";
+    }
+
+    const label = document.createElement("span");
+    label.textContent = effect.label;
+
+    chip.appendChild(value);
+    chip.appendChild(label);
+
+    list.appendChild(chip);
+  });
+}
   
   function showBossPlayerRoll(payload) {
   if (!payload || anotherOverlayIsOpen()) {
@@ -3307,9 +3369,7 @@ function setAp(heroCard, value, maxValue) {
     "latest-boss-player"
   );
 
-  const damageBreakdown = helpers.getDamageBreakdown(
-    "latest-boss-player"
-  );
+  const damageBreakdown = getBossPlayerDamageBreakdown();
 
   const totalRow = document.getElementById("roll-total-row");
   const modifierList = document.getElementById("roll-modifier-list");
@@ -3495,20 +3555,28 @@ function setAp(heroCard, value, maxValue) {
 
     parts.detail.textContent = detailParts.join(" · ");
 
-    if (damageBreakdown.length) {
-      window.setTimeout(function () {
-        helpers.showDamageChips(
-          damageRow,
-          damageList,
-          damageBreakdown,
-          damageToPlayers
-        );
+  if (damageBreakdown.length && damageToBoss > 0) {
+  window.setTimeout(function () {
+    showBossPlayerDamageChips(
+      damageRow,
+      damageList,
+      damageBreakdown
+    );
 
-        parts.main.textContent = damageToPlayers > 0
-          ? "Shields reduced the damage."
-          : "The damage was fully blocked.";
-      }, 450);
-    }
+    parts.main.textContent = "Damage modifiers changed the hit.";
+  }, 450);
+} else if (damageBreakdown.length && damageToPlayers > 0) {
+  window.setTimeout(function () {
+    helpers.showDamageChips(
+      damageRow,
+      damageList,
+      damageBreakdown,
+      damageToPlayers
+    );
+
+    parts.main.textContent = "Shields reduced the damage.";
+  }, 450);
+}
 
     parts.diceWrap.classList.add(
       success ? "is-success-pop" : "is-failure-pop"

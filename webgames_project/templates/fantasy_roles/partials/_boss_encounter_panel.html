@@ -25,31 +25,7 @@
             {% endif %}
           </div>
 
-<div class="fr-boss-ui-v2">
-  <div class="fr-boss-top-stack-v2">
-    <div
-      class="fr-boss-life-frame-v2"
-      aria-label="Boss life {{ boss_encounter.current_life }} out of {{ boss_encounter.max_life_for_current_phase }}"
-    >
-      <div class="fr-boss-hp-track-v2">
-        <div
-          class="fr-boss-hp-fill-v2"
-          style="--boss-hp-percent: {{ boss_hp_percent }}%;"
-        ></div>
-      </div>
-    </div>
 
-    <div
-      class="fr-difficulty-runes fr-boss-difficulty-v2"
-      aria-label="Difficulty {{ boss_encounter.current_difficulty }} out of 5"
-    >
-      {% for marker in "12345" %}
-        <span class="fr-difficulty-rune {% if forloop.counter <= boss_encounter.current_difficulty %}is-filled{% endif %}">
-          {% include "fantasy_roles/partials/_png_icon.html" with name="difficulty" extra_class="fr-png-icon-xs" %}
-        </span>
-      {% endfor %}
-    </div>
-  </div>
 
 <div class="fr-boss-ui-v2">
   <div class="fr-boss-top-stack-v2">
@@ -97,7 +73,7 @@
 </div>
         </article>
 
-        <
+        
         <!-- ACTION AREA -->
         <section class="fr-boss-board-actions fr-boss-cinematic-actions">
           {% if boss_encounter.status == "WON" %}
@@ -363,6 +339,19 @@
                         {{ member_character.current_action_points }}/{{ member_character.character_class.action_points }}
                       </span>
                     </div>
+                    {% if member_character.boss_statuses %}
+                    <div class="fr-boss-status-row">
+                      {% for status in member_character.boss_statuses %}
+                        <span
+                          class="fr-party-status-chip is-{{ status.type }}"
+                          title="{{ status.label }}"
+                        >
+                          <span class="fr-party-status-icon">{{ status.icon }}</span>
+                          <span>{{ status.label }}</span>
+                        </span>
+                      {% endfor %}
+                    </div>
+                  {% endif %}
                   </div>
 
                   {% if boss_encounter.current_turn_character_id == member_character.id %}
@@ -427,6 +416,19 @@
                 {% if log.damage_to_players %}
                   <span>Player Damage: {{ log.damage_to_players }}</span>
                 {% endif %}
+
+                {% if log.damage_breakdown %}
+                  <div class="fr-teacher-log-damage-breakdown">
+                    <strong>Damage Breakdown:</strong>
+                    <ul>
+                      {% for entry in log.damage_breakdown %}
+                        <li>
+                          {{ entry.label }}: {{ entry.value }}
+                        </li>
+                      {% endfor %}
+                    </ul>
+                  </div>
+                {% endif %}
               </div>
             {% endif %}
 
@@ -445,7 +447,7 @@
     {% endif %}
   </details>
 
-  {% if latest_boss_ability_log %}
+{% if latest_boss_ability_log %}
   <div
     id="latest-boss-log-payload"
     hidden
@@ -459,6 +461,8 @@
     data-die-roll="{{ latest_boss_ability_log.die_roll|default:'' }}"
     data-target-character-ids="{% for member in party_members %}{% if member.character %}{{ member.character.id }}{% if not forloop.last %},{% endif %}{% endif %}{% endfor %}"
   ></div>
+
+  {{ latest_boss_ability_log.damage_breakdown|json_script:"latest-boss-log-damage-breakdown" }}
 {% endif %}
 
 {% if latest_boss_player_animation_log %}
@@ -492,7 +496,6 @@
   {{ latest_boss_player_animation_log.roll_breakdown|json_script:"latest-boss-player-roll-breakdown" }}
   {{ latest_boss_player_animation_log.difficulty_breakdown|json_script:"latest-boss-player-difficulty-breakdown" }}
   {{ latest_boss_player_animation_log.damage_breakdown|json_script:"latest-boss-player-damage-breakdown" }}
-  {{ latest_boss_ability_log.damage_breakdown|json_script:"latest-boss-log-damage-breakdown" }}
   {{ latest_boss_player_animation_log.roll_sequence|json_script:"latest-boss-player-roll-sequence" }}
 
 {% endif %}

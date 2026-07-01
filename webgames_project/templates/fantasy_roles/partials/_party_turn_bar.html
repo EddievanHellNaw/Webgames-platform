@@ -172,6 +172,19 @@
               </strong>
             </span>
           </div>
+          {% if hero.boss_statuses %}
+  <div class="fr-hero-showcase-status-row">
+    {% for status in hero.boss_statuses %}
+      <span
+        class="fr-party-status-chip is-{{ status.type }}"
+        title="{{ status.label }}"
+      >
+        <span class="fr-party-status-icon">{{ status.icon }}</span>
+        <span>{{ status.label }}</span>
+      </span>
+    {% endfor %}
+  </div>
+{% endif %}
         </article>
       {% endwith %}
     {% endwith %}
@@ -227,6 +240,19 @@
                 <strong>{{ hero.current_action_points }}/{{ hero.character_class.action_points }}</strong>
               </span>
             </div>
+            {% if hero.boss_statuses %}
+            <div class="fr-party-turn-mobile-status-row">
+              {% for status in hero.boss_statuses %}
+                <span
+                  class="fr-party-status-chip is-{{ status.type }}"
+                  title="{{ status.label }}"
+                >
+                  <span class="fr-party-status-icon">{{ status.icon }}</span>
+                  <span>{{ status.label }}</span>
+                </span>
+              {% endfor %}
+            </div>
+            {% endif %}
           </div>
         </article>
       {% endwith %}

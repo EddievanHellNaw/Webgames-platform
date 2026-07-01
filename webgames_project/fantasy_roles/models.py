@@ -1215,6 +1215,14 @@ class BossCombatEffect(models.Model):
         PARTY_EXTRA_BOSS_DAMAGE_TAKEN = "PARTY_EXTRA_BOSS_DAMAGE_TAKEN", "Party receives extra boss damage"
         PARTY_DAMAGE_REDUCTION = "PARTY_DAMAGE_REDUCTION", "Party damage reduction"
 
+        PLAYER_BOSS_DAMAGE_BONUS = "PLAYER_BOSS_DAMAGE_BONUS", "Player boss damage bonus"
+        PARTY_BOSS_DAMAGE_BONUS = "PARTY_BOSS_DAMAGE_BONUS", "Party boss damage bonus"
+        PLAYER_TAUNT = "PLAYER_TAUNT", "Player taunts boss"
+        PLAYER_UNTARGETABLE = "PLAYER_UNTARGETABLE", "Player cannot be targeted"
+
+        BOSS_DAMAGE_OVER_TIME = "BOSS_DAMAGE_OVER_TIME", "Boss damage over time"
+        BOSS_SKIP_NEXT_TURN = "BOSS_SKIP_NEXT_TURN", "Boss skips next turn"
+
         BOSS_UNTARGETABLE = "BOSS_UNTARGETABLE", "Boss cannot be attacked"
         BOSS_PENDING_DAMAGE_HIGHEST_LIFE = "BOSS_PENDING_DAMAGE_HIGHEST_LIFE", "Boss will damage highest life player"
 

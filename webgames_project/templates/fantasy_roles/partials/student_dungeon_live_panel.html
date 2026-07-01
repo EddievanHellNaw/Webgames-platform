@@ -48,6 +48,7 @@
   </section>
 
 {% else %}
+{% if run.status != "BOSS_ACTIVE" %}
 <section
   class="fr-dungeon-hero-card fr-dungeon-theme-{{ run.dungeon.name|slugify }}"
   {% if run.dungeon.image %}
@@ -175,17 +176,22 @@
   </div>
 {% endif %}
 </section>
+{% endif %}
 {% if boss_encounter %}
   {% if boss_encounter.status == "WON" or boss_encounter.status == "LOST" %}
-    <div
-      id="boss-ending-payload"
-      hidden
-      data-encounter-id="{{ boss_encounter.id }}"
-      data-status="{{ boss_encounter.status }}"
-      data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
-      data-image-url="{% if boss_encounter.boss.rage_image %}{{ boss_encounter.boss.rage_image.url }}{% elif boss_encounter.boss.image %}{{ boss_encounter.boss.image.url }}{% endif %}"
-      data-text="{% if boss_encounter.status == 'WON' %}{{ boss_encounter.boss.victory_text|default:'The boss falls. The realm is saved.'|escape }}{% else %}{{ boss_encounter.boss.defeat_text|default:'The party falls. Darkness claims the realm.'|escape }}{% endif %}"
-    ></div>
+    {% with boss_slug=boss_encounter.current_boss_name|slugify %}
+      {% with victory_path="fantasy_roles/img/bosses/endings/"|add:boss_slug|add:"-victory.png" defeat_path="fantasy_roles/img/bosses/endings/"|add:boss_slug|add:"-defeat.png" %}
+        <div
+          id="boss-ending-payload"
+          hidden
+          data-encounter-id="{{ boss_encounter.id }}"
+          data-status="{{ boss_encounter.status }}"
+          data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
+          data-image-url="{% if boss_encounter.status == 'WON' %}{% static victory_path %}{% else %}{% static defeat_path %}{% endif %}"
+          data-text="{% if boss_encounter.status == 'WON' %}{{ boss_encounter.boss.victory_text|default:'The boss falls. The realm is saved.'|escape }}{% else %}{{ boss_encounter.boss.defeat_text|default:'The party falls. Darkness claims the realm.'|escape }}{% endif %}"
+        ></div>
+      {% endwith %}
+    {% endwith %}
   {% endif %}
 {% endif %}
   {% if run.status == "FAILED" %}
@@ -201,17 +207,7 @@
   {% elif run.status == "BOSS_ACTIVE" %}
     {% include "fantasy_roles/partials/_boss_encounter_panel.html" %}
 
-  {% if boss_encounter and boss_encounter.status == "WON" or boss_encounter and boss_encounter.status == "LOST" %}
-  <div
-    id="boss-ending-payload"
-    hidden
-    data-encounter-id="{{ boss_encounter.id }}"
-    data-status="{{ boss_encounter.status }}"
-    data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
-    data-image-url="{% if boss_encounter.boss.rage_image %}{{ boss_encounter.boss.rage_image.url }}{% elif boss_encounter.boss.image %}{{ boss_encounter.boss.image.url }}{% endif %}"
-    data-text="{% if boss_encounter.status == 'WON' %}{{ boss_encounter.boss.victory_text|escape }}{% else %}{{ boss_encounter.boss.defeat_text|escape }}{% endif %}"
-  ></div>
-{% endif %}
+
 
 
   {% else %}

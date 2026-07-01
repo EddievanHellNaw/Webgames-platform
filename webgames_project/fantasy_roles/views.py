@@ -1197,6 +1197,120 @@ def get_current_boss_ability(encounter):
 
     return ability
 
+def character_is_boss_untargetable(encounter, character):
+    return get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_UNTARGETABLE,
+    ).exists()
+
+
+def get_boss_taunt_target(encounter):
+    effect = (
+        get_active_boss_effects(
+            encounter,
+            target_type=BossCombatEffect.TargetType.PLAYER,
+            effect_code=BossCombatEffect.EffectCode.PLAYER_TAUNT,
+        )
+        .select_related("target_character")
+        .first()
+    )
+
+    if not effect or not effect.target_character:
+        return None
+
+    if effect.target_character.current_life <= 0:
+        consume_boss_effect(effect)
+        return None
+
+    if character_is_boss_untargetable(encounter, effect.target_character):
+        return None
+
+    return effect.target_character
+
+
+def get_boss_targetable_characters(encounter):
+    characters = get_living_boss_characters(encounter.run.party)
+
+    return [
+        character
+        for character in characters
+        if not character_is_boss_untargetable(encounter, character)
+    ]
+
+
+def get_single_target_boss_pool(encounter):
+    taunt_target = get_boss_taunt_target(encounter)
+
+    if taunt_target:
+        return [taunt_target]
+
+    return get_boss_targetable_characters(encounter)
+
+
+def get_random_boss_target(encounter):
+    characters = get_single_target_boss_pool(encounter)
+
+    if not characters:
+        return None
+
+    return random.choice(characters)
+
+
+def get_lowest_life_boss_target(encounter):
+    characters = get_single_target_boss_pool(encounter)
+
+    if not characters:
+        return None
+
+    lowest_life = min(character.current_life for character in characters)
+
+    tied = [
+        character
+        for character in characters
+        if character.current_life == lowest_life
+    ]
+
+    return random.choice(tied)
+
+
+def get_highest_life_boss_target(encounter):
+    characters = get_single_target_boss_pool(encounter)
+
+    if not characters:
+        return None
+
+    highest_life = max(character.current_life for character in characters)
+
+    tied = [
+        character
+        for character in characters
+        if character.current_life == highest_life
+    ]
+
+    return random.choice(tied)
+
+
+def get_highest_attack_boss_target(encounter):
+    characters = get_single_target_boss_pool(encounter)
+
+    if not characters:
+        return None
+
+    highest_attack = max(
+        character.character_class.attack
+        for character in characters
+    )
+
+    tied = [
+        character
+        for character in characters
+        if character.character_class.attack == highest_attack
+    ]
+
+    return random.choice(tied)
+
 def add_boss_effect(
     encounter,
     effect_code,
@@ -1240,6 +1354,242 @@ def get_active_boss_effects(encounter, **filters):
         is_active=True,
         **filters,
     )
+
+
+def add_status(statuses, label, status_type="buff", icon="✦"):
+    statuses.append({
+        "label": label,
+        "type": status_type,
+        "icon": icon,
+    })
+
+
+def build_boss_statuses_for_character(encounter, run, character):
+    statuses = []
+
+    if not encounter or not character:
+        return statuses
+
+    if character.current_life <= 0:
+        add_status(statuses, "Down", "debuff", "☠")
+        return statuses
+
+    run_roll_bonus = get_run_roll_bonus(run)
+    if run_roll_bonus:
+        add_status(statuses, f"Roll +{run_roll_bonus}", "buff", "🎲")
+
+    run_damage_reduction = get_run_damage_reduction(run)
+    if run_damage_reduction:
+        add_status(statuses, f"Ring -{run_damage_reduction}", "buff", "🛡")
+
+    party_shields = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_DAMAGE_REDUCTION,
+    )
+
+    for effect in party_shields:
+        add_status(
+            statuses,
+            f"{effect.note or 'Shield'} -{effect.value}",
+            "buff",
+            "🛡",
+        )
+
+    party_damage_buffs = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_BOSS_DAMAGE_BONUS,
+    )
+
+    for effect in party_damage_buffs:
+        add_status(
+            statuses,
+            f"{effect.note or 'Party DMG'} +{effect.value}",
+            "buff",
+            "✦",
+        )
+
+    player_damage_buffs = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_BOSS_DAMAGE_BONUS,
+    )
+
+    for effect in player_damage_buffs:
+        add_status(
+            statuses,
+            f"{effect.note or 'DMG'} +{effect.value}",
+            "buff",
+            "✦",
+        )
+
+    if character_is_boss_untargetable(encounter, character):
+        add_status(statuses, "Untargetable", "buff", "◇")
+
+    taunt_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_TAUNT,
+    )
+
+    if taunt_effects.exists():
+        add_status(statuses, "Taunt", "debuff", "!")
+
+    skip_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_SKIP_TURN,
+    )
+
+    if skip_effects.exists():
+        add_status(statuses, "Skip", "debuff", "⛔")
+
+    cannot_attack_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_CANNOT_ATTACK,
+    )
+
+    if cannot_attack_effects.exists():
+        add_status(statuses, "No Attack", "debuff", "×")
+
+    party_cannot_attack = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_CANNOT_ATTACK,
+    )
+
+    if party_cannot_attack.exists():
+        add_status(statuses, "Party No Attack", "debuff", "×")
+
+    return statuses
+
+
+def attach_boss_statuses_to_party_members(party_members, boss_encounter, run):
+    if not boss_encounter:
+        for member in party_members:
+            member.character.boss_statuses = []
+        return
+
+    for member in party_members:
+        member.character.boss_statuses = build_boss_statuses_for_character(
+            boss_encounter,
+            run,
+            member.character,
+        )
+
+def consume_boss_effects_by_ids(effect_ids):
+    if not effect_ids:
+        return
+
+    effects = BossCombatEffect.objects.filter(
+        id__in=effect_ids,
+        is_active=True,
+    )
+
+    for effect in effects:
+        consume_boss_effect(effect)
+
+
+def get_player_boss_damage_bonus_breakdown(encounter, character):
+    effects = list(
+        get_active_boss_effects(
+            encounter,
+            target_type=BossCombatEffect.TargetType.PLAYER,
+            target_character=character,
+            effect_code=BossCombatEffect.EffectCode.PLAYER_BOSS_DAMAGE_BONUS,
+        )
+    )
+
+    effects.extend(
+        list(
+            get_active_boss_effects(
+                encounter,
+                target_type=BossCombatEffect.TargetType.PARTY,
+                effect_code=BossCombatEffect.EffectCode.PARTY_BOSS_DAMAGE_BONUS,
+            )
+        )
+    )
+
+    total_bonus = 0
+    effect_ids = []
+    text_parts = []
+    damage_breakdown = []
+
+    for effect in effects:
+        if effect.value == 0:
+            continue
+
+        total_bonus += effect.value
+        effect_ids.append(effect.id)
+
+        label = effect.note or "Damage Buff"
+
+        text_parts.append(
+            f"{label}: boss damage +{effect.value}."
+        )
+
+        damage_breakdown.append({
+            "label": label,
+            "value": effect.value,
+            "type": "buff",
+        })
+
+    return {
+        "total_bonus": total_bonus,
+        "effect_ids": effect_ids,
+        "text_parts": text_parts,
+        "damage_breakdown": damage_breakdown,
+    }
+
+
+def apply_player_damage_to_boss(encounter, character, base_damage):
+    bonus_result = get_player_boss_damage_bonus_breakdown(
+        encounter,
+        character,
+    )
+
+    final_damage = max(
+        0,
+        base_damage + bonus_result["total_bonus"],
+    )
+
+    damage_to_boss = apply_damage_to_boss(encounter, final_damage)
+
+    consume_boss_effects_by_ids(
+        bonus_result["effect_ids"],
+    )
+
+    damage_breakdown = [
+        {
+            "label": "Base damage",
+            "value": base_damage,
+            "type": "base",
+        }
+    ]
+
+    damage_breakdown.extend(
+        bonus_result["damage_breakdown"]
+    )
+
+    damage_breakdown.append({
+        "label": "Final damage",
+        "value": final_damage,
+        "type": "final",
+    })
+
+    return {
+        "base_damage": base_damage,
+        "final_damage": final_damage,
+        "damage_to_boss": damage_to_boss,
+        "text_parts": bonus_result["text_parts"],
+        "damage_breakdown": damage_breakdown,
+    }
 
 def get_boss_damage_bonus(encounter):
     effects = get_active_boss_effects(
@@ -1324,6 +1674,64 @@ def resolve_boss_ability_once(encounter):
     pending_result = resolve_boss_pending_effects(encounter)
     ability = get_current_boss_ability(encounter)
 
+    consume_boss_shield_effects(
+        encounter,
+        pending_result.get("shield_effect_ids", []),
+    )
+
+    boss_skip_effect = get_boss_skip_next_turn_effect(encounter)
+
+    if boss_skip_effect:
+        previous_slot = encounter.next_boss_ability_slot
+
+        consume_boss_effect(boss_skip_effect)
+
+        combined_result_text = " ".join(
+            text
+            for text in [
+                pending_result.get("result_text", ""),
+                f"{encounter.current_boss_name} loses its boss action.",
+            ]
+            if text
+        )
+
+        boss_log = BossActionLog.objects.create(
+            encounter=encounter,
+            actor_type=BossActionLog.ActorType.BOSS,
+            action_type=BossActionLog.ActionType.BOSS_ABILITY,
+            phase=encounter.phase,
+            round_number=encounter.round_number,
+            player_phase_number=encounter.player_phase_number,
+            success=True,
+            damage_to_boss=pending_result.get("damage_to_boss", 0),
+            damage_to_players=pending_result.get("damage_to_players", 0),
+            result_text=combined_result_text,
+        )
+
+        if previous_slot == BossAbility.Slot.FIRST:
+            encounter.next_boss_ability_slot = BossAbility.Slot.SECOND
+        else:
+            encounter.next_boss_ability_slot = BossAbility.Slot.FIRST
+            encounter.round_number += 1
+
+        encounter.player_phase_number += 1
+        encounter.current_actor = BossEncounter.CurrentActor.PLAYER
+        encounter.current_turn_character = None
+        encounter.save(
+            update_fields=[
+                "next_boss_ability_slot",
+                "round_number",
+                "player_phase_number",
+                "current_actor",
+                "current_turn_character",
+                "updated_at",
+            ]
+        )
+
+        set_next_boss_player_turn_or_boss(encounter)
+
+        return boss_log
+
     boss_damage_bonus_effect_ids = list(
         get_active_boss_effects(
             encounter,
@@ -1360,6 +1768,7 @@ def resolve_boss_ability_once(encounter):
                 pending_result.get("damage_to_players", 0)
                 + ability_result.get("damage_to_players", 0)
             ),
+            damage_to_boss=pending_result.get("damage_to_boss", 0),
             damage_breakdown=ability_result.get("damage_breakdown", []),
             healing_done=ability_result.get("healing_done", 0),
             result_text=combined_result_text,
@@ -1461,11 +1870,29 @@ DIRECT_BOSS_SKILL_EFFECTS = {
     ClassSkill.EffectCode.BOSS_FIXED_DAMAGE,
     ClassSkill.EffectCode.BOSS_D6_DAMAGE,
     ClassSkill.EffectCode.BOSS_D6_PLUS_DAMAGE,
-    ClassSkill.EffectCode.BOSS_HEAL,
-    ClassSkill.EffectCode.BOSS_RESTORE_AP,
     ClassSkill.EffectCode.BOSS_DOUBLE_ATTACK,
     ClassSkill.EffectCode.BOSS_PARTY_SHIELD,
+    ClassSkill.EffectCode.BOSS_HEAL,
+    ClassSkill.EffectCode.BOSS_RESTORE_AP,
+    ClassSkill.EffectCode.BOSS_LIFESTEAL,
+
+    ClassSkill.EffectCode.BOSS_DAMAGE_OVER_TIME,
+    ClassSkill.EffectCode.BOSS_DAMAGE_BUFF,
+    ClassSkill.EffectCode.BOSS_PARTY_DAMAGE_BUFF,
+    ClassSkill.EffectCode.BOSS_SKIP_TURN,
+    ClassSkill.EffectCode.BOSS_TAUNT,
+    ClassSkill.EffectCode.BOSS_UNTARGETABLE,
 }
+
+def get_boss_skip_next_turn_effect(encounter):
+    return (
+        get_active_boss_effects(
+            encounter,
+            target_type=BossCombatEffect.TargetType.BOSS,
+            effect_code=BossCombatEffect.EffectCode.BOSS_SKIP_NEXT_TURN,
+        )
+        .first()
+    )
 
 def skill_can_be_used_in_boss_step_one(skill):
     return (
@@ -1910,37 +2337,74 @@ def get_failed_boss_throw_damage(encounter, character):
 
 def resolve_boss_pending_effects(encounter):
     result_parts = []
-    total_damage = 0
 
+    total_damage_to_players = 0
+    total_damage_to_boss = 0
+
+    damage_breakdown = []
+    shield_effect_ids = []
+
+    # Damage over time effects on the boss.
+    dot_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.BOSS,
+        effect_code=BossCombatEffect.EffectCode.BOSS_DAMAGE_OVER_TIME,
+    )
+
+    for dot_effect in dot_effects:
+        damage = apply_damage_to_boss(encounter, dot_effect.value)
+        total_damage_to_boss += damage
+
+        result_parts.append(
+            f"{dot_effect.note or 'Damage over time'} deals {damage} damage to "
+            f"{encounter.current_boss_name}."
+        )
+
+        consume_boss_effect(dot_effect)
+
+    # Delayed boss effects that damage a player.
     pending_effects = get_active_boss_effects(
         encounter,
         target_type=BossCombatEffect.TargetType.BOSS,
         effect_code=BossCombatEffect.EffectCode.BOSS_PENDING_DAMAGE_HIGHEST_LIFE,
     )
 
-    for effect in pending_effects:
+    for pending_effect in pending_effects:
         target = get_highest_life_character(encounter.run.party)
 
         if target:
-            damage = apply_boss_damage_to_character(
+            damage_result = calculate_boss_damage_result(
                 encounter,
-                target,
-                effect.value,
+                pending_effect.value,
             )
-            total_damage += damage
+
+            final_damage = damage_result["final_damage"]
+
+            apply_damage(target, final_damage)
+
+            total_damage_to_players += final_damage
+
+            if not damage_breakdown:
+                damage_breakdown = damage_result.get("damage_breakdown", [])
+
+            shield_effect_ids.extend(
+                damage_result.get("shield_effect_ids", [])
+            )
 
             result_parts.append(
                 f"{encounter.current_boss_name}'s delayed attack hits "
-                f"{target.character_name} for {damage} damage."
+                f"{target.character_name} for {final_damage} damage."
             )
 
-        consume_boss_effect(effect)
+        consume_boss_effect(pending_effect)
 
     return {
         "result_text": " ".join(result_parts),
-        "damage_to_players": total_damage,
+        "damage_to_players": total_damage_to_players,
+        "damage_to_boss": total_damage_to_boss,
+        "damage_breakdown": damage_breakdown,
+        "shield_effect_ids": shield_effect_ids,
     }
-
 def apply_boss_ability_effect(encounter, ability):
     party = encounter.run.party
     code = ability.effect_code
@@ -1957,7 +2421,7 @@ def apply_boss_ability_effect(encounter, ability):
     if code == BossAbility.EffectCode.DAMAGE_LOWEST_LIFE:
         display_base_damage = ability.effect_value
         ability_attempted_damage = True
-        target = get_lowest_life_character(party)
+        target = get_lowest_life_boss_target(encounter)
 
         if target:
             damage = apply_boss_damage_to_character(
@@ -1971,7 +2435,7 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.PARALYZE_HIGHEST_ATTACK:
-        target = get_highest_attack_character(party)
+        target = get_highest_attack_boss_target(encounter)
 
         if target:
             add_boss_effect(
@@ -1988,7 +2452,7 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.WEAKEN_HIGHEST_ATTACK:
-        target = get_highest_attack_character(party)
+        target = get_highest_attack_boss_target(encounter)
 
         if target:
             add_boss_effect(
@@ -2021,7 +2485,7 @@ def apply_boss_ability_effect(encounter, ability):
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_AND_SKIP:
         display_base_damage = ability.effect_value
         ability_attempted_damage = True
-        target = get_random_living_character(party)
+        target = get_random_boss_target(encounter)
 
         if target:
             damage = apply_boss_damage_to_character(
@@ -2046,13 +2510,13 @@ def apply_boss_ability_effect(encounter, ability):
                 f"{target.character_name} loses their next action."
             )
 
-    elif code == BossAbility.EffectCode.DAMAGE_PARTY_D6_PLUS:
-        display_base_damage = ability.effect_value
-        ability_attempted_damage = True
-        die_roll = random.randint(1, 6)
-        base_damage = die_roll + ability.secondary_value
+        elif code == BossAbility.EffectCode.DAMAGE_PARTY_D6_PLUS:
+            ability_attempted_damage = True
+            die_roll = random.randint(1, 6)
+            base_damage = die_roll + ability.secondary_value
+            display_base_damage = base_damage
 
-        for character in get_living_boss_characters(party):
+        for character in get_boss_targetable_characters(encounter):
             damage = apply_boss_damage_to_character(
                 encounter,
                 character,
@@ -2068,7 +2532,7 @@ def apply_boss_ability_effect(encounter, ability):
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_AND_PARALYZE:
         display_base_damage = ability.effect_value
         ability_attempted_damage = True
-        target = get_random_living_character(party)
+        target = get_random_boss_target(encounter)
 
         if target:
             damage = apply_boss_damage_to_character(
@@ -2105,7 +2569,7 @@ def apply_boss_ability_effect(encounter, ability):
             note=ability.description,
         )
 
-        target = get_random_living_character(party)
+        target = get_random_boss_target(encounter)
 
         if target:
             damage = apply_boss_damage_to_character(
@@ -2139,7 +2603,7 @@ def apply_boss_ability_effect(encounter, ability):
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_CANNOT_ATTACK:
         display_base_damage = ability.effect_value
         ability_attempted_damage = True
-        target = get_random_living_character(party)
+        target = get_random_boss_target(encounter)
 
         if target:
             damage = apply_boss_damage_to_character(
@@ -2165,8 +2629,6 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.PARTY_PARALYZE_AND_DAMAGE_TAKEN_UP:
-        display_base_damage = ability.effect_value
-        ability_attempted_damage = True
         add_boss_effect(
             encounter=encounter,
             source_ability=ability,
@@ -2194,7 +2656,7 @@ def apply_boss_ability_effect(encounter, ability):
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_AND_PARTY_CANNOT_ATTACK:
         display_base_damage = ability.effect_value
         ability_attempted_damage = True
-        target = get_random_living_character(party)
+        target = get_random_boss_target(encounter)
 
         if target:
             damage = apply_boss_damage_to_character(
@@ -2226,7 +2688,7 @@ def apply_boss_ability_effect(encounter, ability):
     elif code == BossAbility.EffectCode.DAMAGE_ALL_PLAYERS:
         display_base_damage = ability.effect_value
         ability_attempted_damage = True
-        for character in get_living_boss_characters(party):
+        for character in get_boss_targetable_characters(encounter):
             damage = apply_boss_damage_to_character(
                 encounter,
                 character,
@@ -2241,7 +2703,7 @@ def apply_boss_ability_effect(encounter, ability):
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_PLAYER:
         display_base_damage = ability.effect_value
         ability_attempted_damage = True
-        target = get_random_living_character(party)
+        target = get_random_boss_target(encounter)
 
         if target:
             damage = apply_boss_damage_to_character(
@@ -2261,7 +2723,7 @@ def apply_boss_ability_effect(encounter, ability):
         target = encounter.transformed_by_character
 
         if not target or target.current_life <= 0:
-            target = get_random_living_character(party)
+            target = get_random_boss_target(encounter)
 
         if target:
             damage = apply_boss_damage_to_character(
@@ -2382,6 +2844,7 @@ def resolve_boss_turn(encounter):
                 pending_result.get("damage_to_players", 0)
                 + ability_result.get("damage_to_players", 0)
             ),
+            damage_to_boss=pending_result.get("damage_to_boss", 0),
             damage_breakdown=ability_result.get("damage_breakdown", []),
             healing_done=ability_result.get("healing_done", 0),
             result_text=combined_result_text,
@@ -2464,8 +2927,22 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
     damage_breakdown = []
 
     if code == ClassSkill.EffectCode.BOSS_FIXED_DAMAGE:
-        damage = skill.effect_value or character.character_class.attack
-        damage_to_boss = apply_damage_to_boss(encounter, damage)
+        base_damage = skill.effect_value or character.character_class.attack
+
+        damage_result = apply_player_damage_to_boss(
+            encounter,
+            character,
+            base_damage,
+        )
+
+        damage_breakdown = damage_result["damage_breakdown"]
+        damage_to_boss = damage_result["damage_to_boss"]
+        result_parts.extend(damage_result["text_parts"])
+
+        if damage_result["final_damage"] != base_damage:
+            result_parts.append(
+                f"Damage changed from {base_damage} to {damage_result['final_damage']}."
+            )
 
         result_parts.append(
             f"It deals {damage_to_boss} damage to {encounter.current_boss_name}."
@@ -2475,7 +2952,15 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
         die_roll = random.randint(1, 6)
         final_roll_total = die_roll
 
-        damage_to_boss = apply_damage_to_boss(encounter, final_roll_total)
+        damage_result = apply_player_damage_to_boss(
+            encounter,
+            character,
+            final_roll_total,
+        )
+
+        damage_breakdown = damage_result["damage_breakdown"]
+        damage_to_boss = damage_result["damage_to_boss"]
+        result_parts.extend(damage_result["text_parts"])
 
         result_parts.append(
             f"The d6 rolled {die_roll}. It deals {damage_to_boss} damage."
@@ -2493,7 +2978,15 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
                 "type": "skill",
             })
 
-        damage_to_boss = apply_damage_to_boss(encounter, final_roll_total)
+        damage_result = apply_player_damage_to_boss(
+            encounter,
+            character,
+            final_roll_total,
+        )
+    
+        damage_to_boss = damage_result["damage_to_boss"]
+        damage_breakdown = damage_result["damage_breakdown"]
+        result_parts.extend(damage_result["text_parts"])
 
         result_parts.append(
             f"The d6 rolled {die_roll} + {bonus} = {final_roll_total}. "
@@ -2510,12 +3003,28 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
             damage = 0
 
             if hit:
-                damage = character.character_class.attack
-                damage = apply_damage_to_boss(encounter, damage)
+                base_damage = character.character_class.attack
+
+                damage_result = apply_player_damage_to_boss(
+                    encounter,
+                    character,
+                    base_damage,
+                )
+
+                damage_breakdown = [
+                    {
+                        "label": "Total damage",
+                        "value": damage_to_boss,
+                        "type": "final",
+                    }
+                ]
+                damage = damage_result["damage_to_boss"]
                 total_damage += damage
 
+                result_parts.extend(damage_result["text_parts"])
+
             roll_sequence.append({
-                "label": f"Cleave {attack_number}",
+                "label": f"{skill.name} {attack_number}",
                 "die_roll": roll,
                 "difficulty": difficulty,
                 "success": hit,
@@ -2533,7 +3042,7 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
         ]
 
         result_parts.append(
-            f"Cleave rolls: {', '.join(roll_texts)}. "
+            f"{skill.name} rolls: {', '.join(roll_texts)}. "
             f"It deals {damage_to_boss} total damage."
         )
 
@@ -2574,15 +3083,125 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
         )
 
     elif code == ClassSkill.EffectCode.BOSS_LIFESTEAL:
-        damage = skill.effect_value or character.character_class.attack
-        damage_to_boss = apply_damage_to_boss(encounter, damage)
+        base_damage = skill.effect_value or character.character_class.attack
 
+        damage_result = apply_player_damage_to_boss(
+            encounter,
+            character,
+            base_damage,
+        )
+
+        damage_breakdown = damage_result["damage_breakdown"]
+        damage_to_boss = damage_result["damage_to_boss"]
         healing_done = damage_to_boss
+
         recover_character_life(character, healing_done)
+
+        result_parts.extend(damage_result["text_parts"])
 
         result_parts.append(
             f"{character.character_name} dealt {damage_to_boss} damage "
             f"and recovered {healing_done} Life."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_DAMAGE_OVER_TIME:
+        damage_value = skill.effect_value or 1
+        duration = skill.duration_turns or 2
+
+        add_boss_effect(
+            encounter=encounter,
+            effect_code=BossCombatEffect.EffectCode.BOSS_DAMAGE_OVER_TIME,
+            target_type=BossCombatEffect.TargetType.BOSS,
+            value=damage_value,
+            remaining_turns=duration,
+            note=skill.name,
+        )
+
+        result_parts.append(
+            f"{encounter.current_boss_name} will take {damage_value} damage "
+            f"at the start of its next {duration} boss turn(s)."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_DAMAGE_BUFF:
+        bonus_value = skill.effect_value or skill.secondary_value or 1
+        duration = skill.duration_turns or 1
+
+        add_boss_effect(
+            encounter=encounter,
+            effect_code=BossCombatEffect.EffectCode.PLAYER_BOSS_DAMAGE_BONUS,
+            target_type=BossCombatEffect.TargetType.PLAYER,
+            target_character=character,
+            value=bonus_value,
+            remaining_turns=duration,
+            note=skill.name,
+        )
+
+        result_parts.append(
+            f"{character.character_name}'s next boss damage gains +{bonus_value}."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_PARTY_DAMAGE_BUFF:
+        bonus_value = skill.effect_value or skill.secondary_value or 1
+        duration = skill.duration_turns or 1
+
+        add_boss_effect(
+            encounter=encounter,
+            effect_code=BossCombatEffect.EffectCode.PARTY_BOSS_DAMAGE_BONUS,
+            target_type=BossCombatEffect.TargetType.PARTY,
+            value=bonus_value,
+            remaining_turns=duration,
+            note=skill.name,
+        )
+
+        result_parts.append(
+            f"The party's next boss damage gains +{bonus_value}."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_SKIP_TURN:
+        duration = skill.duration_turns or 1
+
+        add_boss_effect(
+            encounter=encounter,
+            effect_code=BossCombatEffect.EffectCode.BOSS_SKIP_NEXT_TURN,
+            target_type=BossCombatEffect.TargetType.BOSS,
+            remaining_turns=duration,
+            note=skill.name,
+        )
+
+        result_parts.append(
+            f"{encounter.current_boss_name} will lose its next boss action."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_TAUNT:
+        duration = skill.duration_turns or 1
+
+        add_boss_effect(
+            encounter=encounter,
+            effect_code=BossCombatEffect.EffectCode.PLAYER_TAUNT,
+            target_type=BossCombatEffect.TargetType.PLAYER,
+            target_character=character,
+            remaining_turns=duration,
+            note=skill.name,
+        )
+
+        result_parts.append(
+            f"{character.character_name} taunts the boss for {duration} boss action(s)."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_UNTARGETABLE:
+        duration = skill.duration_turns or 1
+
+        add_boss_effect(
+            encounter=encounter,
+            effect_code=BossCombatEffect.EffectCode.PLAYER_UNTARGETABLE,
+            target_type=BossCombatEffect.TargetType.PLAYER,
+            target_character=character,
+            remaining_turns=duration,
+            note=skill.name,
+        )
+
+        result_parts.append(
+            f"{character.character_name} cannot be targeted for {duration} boss action(s)."
         )
 
     else:
@@ -2993,7 +3612,7 @@ def build_student_dungeon_context(request, session):
             .first()
         )
 
-        party_members = (
+        party_members = list(
             PartyMember.objects
             .filter(party=membership.party)
             .select_related(
@@ -3003,6 +3622,7 @@ def build_student_dungeon_context(request, session):
             )
             .order_by("order", "joined_at")
         )  
+
         party_inventory = (
             PartyInventoryItem.objects
             .filter(party=membership.party)
@@ -3188,6 +3808,12 @@ def build_student_dungeon_context(request, session):
             if character:
                 available_boss_skills = get_available_direct_boss_skills(character)
 
+        attach_boss_statuses_to_party_members(
+            party_members,
+            boss_encounter,
+            run,
+        )
+        
     return {
         "session": session,
         "participant": participant,
@@ -4950,8 +5576,6 @@ def start_boss_fight(request, join_code):
         # The boss attacks once when the fight starts.
         # After this, the helper passes the turn to the first living player.
         resolve_boss_ability_once(encounter)
-        
-        resolve_boss_turn(encounter)
 
     messages.success(
         request,
@@ -5053,10 +5677,6 @@ def activate_boss_ability(request, join_code):
     if request.method != "POST":
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
-    if encounter.current_actor != BossEncounter.CurrentActor.BOSS:
-        messages.warning(request, "It is not the boss's turn.")
-        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
-
     with transaction.atomic():
         encounter = (
             BossEncounter.objects
@@ -5070,86 +5690,6 @@ def activate_boss_ability(request, join_code):
             return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
         resolve_boss_ability_once(encounter)
-        previous_slot = encounter.next_boss_ability_slot
-
-        if ability:
-            ability_result = apply_boss_ability_effect(encounter, ability)
-
-            combined_result_text = " ".join(
-                text
-                for text in [
-                    pending_result.get("result_text", ""),
-                    ability_result.get("result_text", ""),
-                ]
-                if text
-            )
-
-            BossActionLog.objects.create(
-                encounter=encounter,
-                actor_type=BossActionLog.ActorType.BOSS,
-                action_type=BossActionLog.ActionType.BOSS_ABILITY,
-                boss_ability=ability,
-                phase=encounter.phase,
-                round_number=encounter.round_number,
-                player_phase_number=encounter.player_phase_number,
-                die_roll=ability_result.get("die_roll"),
-                success=True,
-                damage_to_players=(
-                    pending_result.get("damage_to_players", 0)
-                    + ability_result.get("damage_to_players", 0)
-                ),
-                healing_done=ability_result.get("healing_done", 0),
-                result_text=combined_result_text,
-            )
-        else:
-            combined_result_text = pending_result.get("result_text", "")
-
-            if not combined_result_text:
-                combined_result_text = (
-                    f"{encounter.current_boss_name} has no ability in this slot."
-                )
-
-            BossActionLog.objects.create(
-                encounter=encounter,
-                actor_type=BossActionLog.ActorType.BOSS,
-                action_type=BossActionLog.ActionType.BOSS_ABILITY,
-                phase=encounter.phase,
-                round_number=encounter.round_number,
-                player_phase_number=encounter.player_phase_number,
-                success=True,
-                damage_to_players=pending_result.get("damage_to_players", 0),
-                result_text=combined_result_text,
-            )
-
-        consume_boss_damage_bonus_effects(
-            encounter,
-            boss_damage_bonus_effect_ids,
-        )
-
-        if check_boss_party_defeat_state(encounter):
-            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
-
-        if previous_slot == BossAbility.Slot.FIRST:
-            encounter.next_boss_ability_slot = BossAbility.Slot.SECOND
-        else:
-            encounter.next_boss_ability_slot = BossAbility.Slot.FIRST
-            encounter.round_number += 1
-
-        encounter.player_phase_number += 1
-        encounter.current_actor = BossEncounter.CurrentActor.PLAYER
-        encounter.current_turn_character = None
-        encounter.save(
-            update_fields=[
-                "next_boss_ability_slot",
-                "round_number",
-                "player_phase_number",
-                "current_actor",
-                "current_turn_character",
-                "updated_at",
-            ]
-        )
-
-        set_next_boss_player_turn_or_boss(encounter)
 
     return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
@@ -5221,13 +5761,26 @@ def boss_basic_attack(request, join_code):
         damage_to_boss = 0
 
         if success:
-            damage_to_boss = character.character_class.attack
-            damage_to_boss = damage_boss(encounter, damage_to_boss)
+            base_damage = get_character_basic_boss_damage(encounter, character)
+
+            damage_result = apply_player_damage_to_boss(
+                encounter,
+                character,
+                base_damage,
+            )
+
+            damage_to_boss = damage_result["damage_to_boss"]
+            damage_breakdown = damage_result["damage_breakdown"]
+
+            bonus_text = " ".join(damage_result["text_parts"])
 
             result_text = (
                 f"{character.character_name} rolled {die_roll} and hit "
                 f"{encounter.current_boss_name}, dealing {damage_to_boss} damage."
             )
+
+            if bonus_text:
+                result_text = f"{result_text} {bonus_text}"
         else:
             result_text = (
                 f"{character.character_name} rolled {die_roll}, but needed "
