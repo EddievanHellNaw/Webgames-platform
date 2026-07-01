@@ -168,7 +168,26 @@
                           {% csrf_token %}
 
                           <input type="hidden" name="skill_id" value="{{ skill.id }}">
+                          {% if skill.effect_code == "BOSS_HEAL" or skill.effect_code == "BOSS_RESTORE_AP" %}
+                            <label class="fr-boss-target-select-label">
+                              <span class="fr-kicker">Target</span>
 
+                              <select name="target_character_id" class="fr-boss-target-select">
+                                {% for member in party_members %}
+                                  {% if member.character.current_life > 0 %}
+                                    <option
+                                      value="{{ member.character.id }}"
+                                      {% if member.character.id == character.id %}selected{% endif %}
+                                    >
+                                      {{ member.character.character_name }}
+                                      · Life {{ member.character.current_life }}/{{ member.character.character_class.max_life }}
+                                      · AP {{ member.character.current_action_points }}/{{ member.character.character_class.action_points }}
+                                    </option>
+                                  {% endif %}
+                                {% endfor %}
+                              </select>
+                            </label>
+                          {% endif %}
                           <button
                             class="fr-btn fr-btn-secondary"
                             type="submit"
@@ -458,6 +477,7 @@
     data-skill-ap-cost="{% if latest_boss_player_animation_log.player_skill %}{{ latest_boss_player_animation_log.player_skill.ap_cost }}{% else %}0{% endif %}"
     data-success="{{ latest_boss_player_animation_log.success|yesno:'true,false' }}"
     data-die-roll="{{ latest_boss_player_animation_log.die_roll|default:'' }}"
+    data-roll-bonus="{{ latest_boss_player_animation_log.roll_bonus|default:'0' }}"
     data-final-total="{{ latest_boss_player_animation_log.final_roll_total|default:'' }}"
     data-difficulty="{{ latest_boss_player_animation_log.difficulty_at_roll|default:'' }}"
     data-damage-to-boss="{{ latest_boss_player_animation_log.damage_to_boss|default:'0' }}"
@@ -468,6 +488,13 @@
     data-boss-current-life="{{ boss_encounter.current_life }}"
     data-boss-max-life="{{ boss_encounter.max_life_for_current_phase }}"
   ></div>
+
+  {{ latest_boss_player_animation_log.roll_breakdown|json_script:"latest-boss-player-roll-breakdown" }}
+  {{ latest_boss_player_animation_log.difficulty_breakdown|json_script:"latest-boss-player-difficulty-breakdown" }}
+  {{ latest_boss_player_animation_log.damage_breakdown|json_script:"latest-boss-player-damage-breakdown" }}
+  {{ latest_boss_ability_log.damage_breakdown|json_script:"latest-boss-log-damage-breakdown" }}
+  {{ latest_boss_player_animation_log.roll_sequence|json_script:"latest-boss-player-roll-sequence" }}
+
 {% endif %}
 {% if latest_boss_transformation_log %}
   <div

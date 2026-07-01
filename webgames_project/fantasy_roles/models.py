@@ -1213,6 +1213,7 @@ class BossCombatEffect(models.Model):
         PARTY_SKIP_TURN = "PARTY_SKIP_TURN", "Party skips turn"
         PARTY_CANNOT_ATTACK = "PARTY_CANNOT_ATTACK", "Party cannot attack"
         PARTY_EXTRA_BOSS_DAMAGE_TAKEN = "PARTY_EXTRA_BOSS_DAMAGE_TAKEN", "Party receives extra boss damage"
+        PARTY_DAMAGE_REDUCTION = "PARTY_DAMAGE_REDUCTION", "Party damage reduction"
 
         BOSS_UNTARGETABLE = "BOSS_UNTARGETABLE", "Boss cannot be attacked"
         BOSS_PENDING_DAMAGE_HIGHEST_LIFE = "BOSS_PENDING_DAMAGE_HIGHEST_LIFE", "Boss will damage highest life player"
@@ -1333,6 +1334,25 @@ class BossActionLog(models.Model):
         default=BossEncounter.Phase.NORMAL,
     )
 
+    roll_sequence = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
+    roll_breakdown = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
+    difficulty_breakdown = models.JSONField(
+        default=list,
+        blank=True,
+    )
+
+    damage_breakdown = models.JSONField(
+        default=list,
+        blank=True,
+    )
     round_number = models.PositiveIntegerField(default=1)
     player_phase_number = models.PositiveIntegerField(default=0)
 
@@ -1596,6 +1616,19 @@ class RoomAttempt(models.Model):
         blank=True,
         help_text="Named roll modifiers for UI animation. Example: [{'label': 'Lucky Charm', 'value': 2}]",
     )
+
+    difficulty_breakdown = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Named difficulty changes for UI animation. Example: [{'label': 'Arcane Insight', 'value': -2, 'from': 5, 'to': 3}]",
+    )
+
+    damage_breakdown = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Named damage reductions or increases for UI animation. Example: [{'label': 'Protection Ring', 'value': -2}]",
+    )
+
     final_roll_total = models.PositiveSmallIntegerField(null=True, blank=True)
     
     result_text = models.TextField(blank=True)

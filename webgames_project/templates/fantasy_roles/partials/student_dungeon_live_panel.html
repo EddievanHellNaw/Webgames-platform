@@ -175,7 +175,19 @@
   </div>
 {% endif %}
 </section>
-
+{% if boss_encounter %}
+  {% if boss_encounter.status == "WON" or boss_encounter.status == "LOST" %}
+    <div
+      id="boss-ending-payload"
+      hidden
+      data-encounter-id="{{ boss_encounter.id }}"
+      data-status="{{ boss_encounter.status }}"
+      data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
+      data-image-url="{% if boss_encounter.boss.rage_image %}{{ boss_encounter.boss.rage_image.url }}{% elif boss_encounter.boss.image %}{{ boss_encounter.boss.image.url }}{% endif %}"
+      data-text="{% if boss_encounter.status == 'WON' %}{{ boss_encounter.boss.victory_text|default:'The boss falls. The realm is saved.'|escape }}{% else %}{{ boss_encounter.boss.defeat_text|default:'The party falls. Darkness claims the realm.'|escape }}{% endif %}"
+    ></div>
+  {% endif %}
+{% endif %}
   {% if run.status == "FAILED" %}
     {% include "fantasy_roles/partials/_game_over_panel.html" %}
 
@@ -189,7 +201,19 @@
   {% elif run.status == "BOSS_ACTIVE" %}
     {% include "fantasy_roles/partials/_boss_encounter_panel.html" %}
 
-  
+  {% if boss_encounter and boss_encounter.status == "WON" or boss_encounter and boss_encounter.status == "LOST" %}
+  <div
+    id="boss-ending-payload"
+    hidden
+    data-encounter-id="{{ boss_encounter.id }}"
+    data-status="{{ boss_encounter.status }}"
+    data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
+    data-image-url="{% if boss_encounter.boss.rage_image %}{{ boss_encounter.boss.rage_image.url }}{% elif boss_encounter.boss.image %}{{ boss_encounter.boss.image.url }}{% endif %}"
+    data-text="{% if boss_encounter.status == 'WON' %}{{ boss_encounter.boss.victory_text|escape }}{% else %}{{ boss_encounter.boss.defeat_text|escape }}{% endif %}"
+  ></div>
+{% endif %}
+
+
   {% else %}
 <section class="fr-dungeon-play-stack fr-dungeon-room-layout">
   <main class="fr-dungeon-room-main">
@@ -236,6 +260,9 @@
         data-run-status="{{ run.status }}"
       ></div>
       {{ latest_attempt.roll_breakdown|json_script:"latest-attempt-roll-breakdown" }}
+      {{ latest_attempt.roll_breakdown|json_script:"latest-attempt-roll-breakdown" }}
+      {{ latest_attempt.difficulty_breakdown|json_script:"latest-attempt-difficulty-breakdown" }}
+      {{ latest_attempt.damage_breakdown|json_script:"latest-attempt-damage-breakdown" }}
     {% endwith %}
   {% endwith %}
 {% endif %}

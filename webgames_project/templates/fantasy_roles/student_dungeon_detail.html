@@ -20,6 +20,9 @@
     <div class="fr-roll-dice-wrap" id="roll-dice-wrap">
       <div class="fr-roll-dice" id="roll-dice">?</div>
     </div>
+    <div class="fr-roll-sequence-wrap" id="roll-sequence-wrap" hidden>
+  <div class="fr-roll-sequence-list" id="roll-sequence-list"></div>
+</div>
 
     <div class="fr-roll-summary">
       <div class="fr-roll-total-row" id="roll-total-row" hidden>
@@ -36,6 +39,13 @@
         >
           Total 0
         </span>
+      </div>
+      <div class="fr-roll-effect-row" id="roll-difficulty-row" hidden>
+        <div class="fr-roll-effect-list" id="roll-difficulty-list"></div>
+      </div>
+
+      <div class="fr-roll-effect-row" id="roll-damage-row" hidden>
+        <div class="fr-roll-effect-list" id="roll-damage-list"></div>
       </div>
 
       <p id="roll-result-main">The dice are rolling...</p>
@@ -245,6 +255,37 @@
     <div class="fr-boss-transformation-meta" id="boss-transformation-meta"></div>
   </article>
 </div>
+<div id="boss-ending-overlay" class="fr-ending-overlay" hidden>
+  <div class="fr-ending-stage">
+    <div class="fr-ending-art">
+      <img id="boss-ending-image" alt="">
+      <div class="fr-ending-veil"></div>
+      <div class="fr-ending-finalwash"></div>
+    </div>
+
+    <div class="fr-ending-copy">
+      <span class="fr-kicker" id="boss-ending-kicker">Final Outcome</span>
+      <h2 id="boss-ending-title">Victory</h2>
+
+      <div class="fr-ending-text-box">
+        <p id="boss-ending-typewriter"></p>
+      </div>
+
+      <div id="boss-ending-final-word" class="fr-ending-final-word" hidden>
+        VICTORY
+      </div>
+
+      <button
+        type="button"
+        id="boss-ending-close"
+        class="fr-btn fr-btn-primary fr-ending-close"
+        hidden
+      >
+        Continue
+      </button>
+    </div>
+  </div>
+</div>
 <script>
   window.frBossAnimationTiming = {
     retryDelay: 1000,
@@ -257,6 +298,8 @@
     const card = document.getElementById("roll-result-card");
     const dice = document.getElementById("roll-dice");
     const diceWrap = document.getElementById("roll-dice-wrap");
+    const sequenceWrap = document.getElementById("roll-sequence-wrap");
+    const sequenceList = document.getElementById("roll-sequence-list");
     const title = document.getElementById("roll-result-title");
     const kicker = document.getElementById("roll-result-kicker");
     const main = document.getElementById("roll-result-main");
@@ -323,6 +366,9 @@
         "is-failure-pop",
         "is-final-total"
       );
+      if (sequenceWrap) sequenceWrap.hidden = true;
+      if (sequenceList) sequenceList.innerHTML = "";
+      if (diceWrap) diceWrap.hidden = false;
     }
 
 function showAttemptAnimation(payload) {
@@ -347,8 +393,10 @@ function showAttemptAnimation(payload) {
   const rollBreakdown = namedBreakdown.length
     ? namedBreakdown
     : buildFallbackBreakdown(rollBonus);
-  
+  const difficultyBreakdown = getDifficultyBreakdown("latest-attempt");
+  const damageBreakdown = getDamageBreakdown("latest-attempt");
   const finalTotal = payload.dataset.finalTotal;
+  const resolvedTotal = finalTotal || String(Number(dieRoll || 0) + rollBonus);
   const difficulty = payload.dataset.difficulty;
   const damage = parseInt(payload.dataset.damage || "0", 10);
   const item = payload.dataset.item || "";
@@ -358,6 +406,10 @@ function showAttemptAnimation(payload) {
   const totalRow = document.getElementById("roll-total-row");
   const modifierList = document.getElementById("roll-modifier-list");
   const totalChip = document.getElementById("roll-total-chip");
+  const difficultyRow = document.getElementById("roll-difficulty-row");
+  const difficultyList = document.getElementById("roll-difficulty-list");
+  const damageRow = document.getElementById("roll-damage-row");
+  const damageList = document.getElementById("roll-damage-list");
 
   card.classList.remove(
     "is-success",
@@ -383,6 +435,19 @@ function showAttemptAnimation(payload) {
     totalChip.hidden = true;
     totalChip.textContent = "";
   }
+
+  if (difficultyRow) difficultyRow.hidden = true;
+  if (difficultyList) difficultyList.innerHTML = "";
+
+  if (damageRow) damageRow.hidden = true;
+  if (damageList) damageList.innerHTML = "";
+
+  const sequenceWrap = document.getElementById("roll-sequence-wrap");
+  const sequenceList = document.getElementById("roll-sequence-list");
+
+  if (sequenceWrap) sequenceWrap.hidden = true;
+  if (sequenceList) sequenceList.innerHTML = "";
+  if (diceWrap) diceWrap.hidden = false;
 
   kicker.textContent = characterName;
   title.textContent = "Rolling...";
@@ -419,7 +484,8 @@ function showAttemptAnimation(payload) {
 
   let ticks = 0;
 
-  const interval = window.setInterval(function () {
+  const interval = window.setInterval(
+    function () {
     ticks += 1;
     dice.textContent = String(Math.floor(Math.random() * 6) + 1);
 
@@ -438,40 +504,54 @@ function showAttemptAnimation(payload) {
         detail.textContent = "";
       }
 
-      if (rollBonus.length) {
-        window.setTimeout(function () {
-          if (totalRow) totalRow.hidden = false;
+      const hasPreResultEffects = rollBreakdown.length || difficultyBreakdown.length;
 
-          showModifierChips(modifierList, rollBreakdown);
+    if (hasPreResultEffects) {
+  window.setTimeout(function () {
+    if (totalRow) totalRow.hidden = false;
 
-          card.classList.add("is-resolving-total");
-          main.textContent = "Modifiers change the result.";
-        }, 650);
-
-        window.setTimeout(function () {
-          const resolvedTotal = finalTotal || String(Number(dieRoll) + rollBonus);
-
-          dice.textContent = resolvedTotal;
-          diceWrap.classList.add("is-final-total");
-
-          if (totalChip) {
-            totalChip.hidden = false;
-            totalChip.textContent = `Total ${resolvedTotal}`;
-          }
-
-          main.textContent = `Final result: ${resolvedTotal}.`;
-        }, 1350);
-
-        window.setTimeout(function () {
-          finishRollResult();
-        }, 2150);
-      } else {
-        window.setTimeout(function () {
-          finishRollResult();
-        }, 850);
-      }
+    if (rollBreakdown.length) {
+      showModifierChips(modifierList, rollBreakdown);
+      main.textContent = "Modifiers change the result.";
     }
-  }, 70);
+  }, 650);
+
+  window.setTimeout(function () {
+    if (difficultyBreakdown.length) {
+      showDifficultyChips(
+        difficultyRow,
+        difficultyList,
+        difficultyBreakdown
+      );
+
+      main.textContent = "The room difficulty changes.";
+    }
+  }, rollBreakdown.length ? 1250 : 650);
+
+  window.setTimeout(function () {
+    const resolvedTotal = finalTotal || String(Number(dieRoll) + rollBonus);
+
+    dice.textContent = resolvedTotal;
+    diceWrap.classList.add("is-final-total");
+
+    if (totalChip) {
+      totalChip.hidden = false;
+      totalChip.textContent = `Total ${resolvedTotal}`;
+    }
+
+    main.textContent = `Final result: ${resolvedTotal}.`;
+  }, difficultyBreakdown.length ? 1850 : 1350);
+
+  window.setTimeout(function () {
+    finishRollResult();
+  }, difficultyBreakdown.length ? 2650 : 2150);
+  } else {
+    window.setTimeout(function () {
+      finishRollResult();
+    }, 850);
+  }
+      }
+    }, 70);
 
 function getRollBreakdown() {
   const script = document.getElementById("latest-attempt-roll-breakdown");
@@ -555,6 +635,143 @@ function showModifierChips(modifierList, breakdown) {
   });
 }
 
+function getJsonArrayFromScript(id) {
+  const script = document.getElementById(id);
+
+  if (!script) {
+    return [];
+  }
+
+  try {
+    const parsed = JSON.parse(script.textContent || "[]");
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed;
+  } catch (error) {
+    return [];
+  }
+}
+
+function getDifficultyBreakdown(prefix) {
+  return getJsonArrayFromScript(prefix + "-difficulty-breakdown")
+    .map(function (item) {
+      return {
+        label: item.label || "Difficulty",
+        value: Number(item.value || 0),
+        from: item.from,
+        to: item.to,
+        type: item.type || "difficulty",
+      };
+    })
+    .filter(function (item) {
+      return item.value !== 0 || item.from !== undefined || item.to !== undefined;
+    });
+}
+
+function getDamageBreakdown(prefix) {
+  return getJsonArrayFromScript(prefix + "-damage-breakdown")
+    .map(function (item) {
+      return {
+        label: item.label || "Shield",
+        value: Number(item.value || 0),
+        type: item.type || "shield",
+      };
+    })
+    .filter(function (item) {
+      return item.value !== 0;
+    });
+}
+
+function showDifficultyChips(row, list, breakdown) {
+  if (!row || !list || !breakdown.length) {
+    return;
+  }
+
+  list.innerHTML = "";
+  row.hidden = false;
+
+  breakdown.forEach(function (effect, index) {
+    const chip = document.createElement("span");
+    chip.className = "fr-roll-effect-chip is-difficulty";
+
+    if (effect.type) {
+      chip.classList.add("is-" + effect.type);
+    }
+
+    chip.style.setProperty("--effect-delay", (index * 160) + "ms");
+
+    const value = document.createElement("strong");
+
+    if (effect.from !== undefined && effect.to !== undefined) {
+      value.textContent = "Difficulty " + effect.from + " → " + effect.to;
+    } else {
+      value.textContent = effect.value < 0
+        ? "Difficulty " + effect.value
+        : "Difficulty +" + effect.value;
+    }
+
+    const label = document.createElement("span");
+    label.textContent = effect.label;
+
+    chip.appendChild(value);
+    chip.appendChild(label);
+
+    list.appendChild(chip);
+  });
+}
+
+function showDamageChips(row, list, breakdown, finalDamage) {
+  if (!row || !list || !breakdown.length) {
+    return;
+  }
+
+  list.innerHTML = "";
+  row.hidden = false;
+
+  breakdown.forEach(function (effect, index) {
+    const chip = document.createElement("span");
+    chip.className = "fr-roll-effect-chip is-shield";
+
+    if (effect.type) {
+      chip.classList.add("is-" + effect.type);
+    }
+
+    chip.style.setProperty("--effect-delay", (index * 160) + "ms");
+
+    const value = document.createElement("strong");
+    value.textContent = effect.value < 0
+      ? String(effect.value) + " Damage"
+      : "+" + effect.value + " Damage";
+
+    const label = document.createElement("span");
+    label.textContent = effect.label;
+
+    chip.appendChild(value);
+    chip.appendChild(label);
+
+    list.appendChild(chip);
+  });
+
+  if (finalDamage !== null && finalDamage !== undefined) {
+    const finalChip = document.createElement("span");
+    finalChip.className = "fr-roll-effect-chip is-final-damage";
+
+    const value = document.createElement("strong");
+    value.textContent = "Final Damage " + finalDamage;
+
+    const label = document.createElement("span");
+    label.textContent = "After shields";
+
+    finalChip.appendChild(value);
+    finalChip.appendChild(label);
+
+    list.appendChild(finalChip);
+  }
+}
+
   function finishRollResult() {
     card.classList.remove("is-resolving-total");
     card.classList.add(success ? "is-success" : "is-failure");
@@ -571,10 +788,24 @@ function showModifierChips(modifierList, breakdown) {
     }
 
     if (difficulty) {
-      detail.textContent = `Final ${finalTotal || dieRoll} · Difficulty ${difficulty}`;
+      detail.textContent = `Final ${resolvedTotal} · Difficulty ${difficulty}`;
     } else {
-      detail.textContent = `Final ${finalTotal || dieRoll}`;
+      detail.textContent = `Final ${resolvedTotal}`;
     }
+    if (!success && damageBreakdown.length) {
+  window.setTimeout(function () {
+    showDamageChips(
+      damageRow,
+      damageList,
+      damageBreakdown,
+      damage
+    );
+
+    main.textContent = damage > 0
+      ? "Shields reduced the damage."
+      : "The damage was fully blocked.";
+  }, 450);
+}
 
     diceWrap.classList.add(success ? "is-success-pop" : "is-failure-pop");
 
@@ -587,6 +818,10 @@ function showModifierChips(modifierList, breakdown) {
     if (damage > 0) {
       markCharacterDamage(characterId);
     }
+
+    if (sequenceWrap) sequenceWrap.hidden = true;
+    if (sequenceList) sequenceList.innerHTML = "";
+    if (diceWrap) diceWrap.hidden = false;
   }
 }
 
@@ -917,50 +1152,184 @@ function showModifierChips(modifierList, breakdown) {
     }
 
     function showBossDamageIndicators(payload) {
-      const damage = Number(payload.dataset.damage || 0);
-      const healing = Number(payload.dataset.healing || 0);
+  const totalDamage = Number(payload.dataset.damage || 0);
+  const healing = Number(payload.dataset.healing || 0);
 
-      if (damage > 0) {
-        const targets = getDamageTargetElements(payload);
+  if (totalDamage > 0) {
+    const targets = getDamageTargetElements(payload);
 
-        targets.forEach(function (target, index) {
-          window.setTimeout(function () {
-            pulseDamageTarget(target);
-            showFloatingIndicator(target, "-" + damage, "damage");
-          }, index * 120);
+    const damagePerTarget = Number(payload.dataset.damagePerTarget || 0) || (
+      targets.length > 1
+        ? Math.ceil(totalDamage / targets.length)
+        : totalDamage
+    );
+
+    targets.forEach(function (target, index) {
+      window.setTimeout(function () {
+        pulseDamageTarget(target);
+        showFloatingIndicator(target, "-" + damagePerTarget, "damage");
+      }, index * 120);
+    });
+  }
+
+  if (healing > 0) {
+    const bossCard = document.querySelector("[data-boss-card]");
+
+    if (bossCard) {
+      bossCard.classList.remove("is-boss-heal-pulse");
+      void bossCard.offsetWidth;
+      bossCard.classList.add("is-boss-heal-pulse");
+
+      showFloatingIndicator(bossCard, "+" + healing, "healing");
+
+      window.setTimeout(function () {
+        bossCard.classList.remove("is-boss-heal-pulse");
+      }, 1000);
+    }
+  }
+}
+
+
+function appendMomentMetaPill(text, className) {
+  const meta = document.getElementById("boss-turn-moment-meta");
+
+  if (!meta || !text) return;
+
+  const pill = document.createElement("span");
+
+  if (className) {
+    pill.classList.add(className);
+  }
+
+  pill.textContent = text;
+  pill.style.opacity = "0";
+  pill.style.transform = "translateY(8px) scale(0.92)";
+
+  meta.appendChild(pill);
+
+  requestAnimationFrame(function () {
+    pill.style.transition = "opacity 280ms ease, transform 280ms ease";
+    pill.style.opacity = "1";
+    pill.style.transform = "translateY(0) scale(1)";
+  });
+}
+
+function getBossDamageBreakdownRaw() {
+  const helpers = window.frRollVisualHelpers;
+
+  if (!helpers) {
+    return [];
+  }
+
+  return helpers.getJsonArrayFromScript("latest-boss-log-damage-breakdown");
+}
+
+function getBreakdownValue(effect) {
+  if (effect.value !== undefined) {
+    return Number(effect.value || 0);
+  }
+
+  if (effect.base_damage !== undefined) {
+    return Number(effect.base_damage || 0);
+  }
+
+  if (effect.final_damage !== undefined) {
+    return Number(effect.final_damage || 0);
+  }
+
+  return 0;
+}
+
+function buildBossMomentSequence(options) {
+  const sequence = [];
+
+  if (options.dieRoll) {
+    sequence.push({
+      text: "Roll: " + options.dieRoll,
+      type: "roll",
+    });
+  }
+
+  options.damageBreakdown.forEach(function (effect) {
+    const value = getBreakdownValue(effect);
+
+    if (effect.type === "base") {
+      sequence.push({
+        text: "Base damage: " + value,
+        type: "base",
+      });
+
+      return;
+    }
+
+    if (effect.type === "final") {
+      sequence.push({
+        text: "Final damage: " + value,
+        type: "final",
+      });
+
+      if (value === 0 && options.damageBreakdown.length) {
+        sequence.push({
+          text: "Damage blocked",
+          type: "blocked",
         });
       }
 
-      if (healing > 0) {
-        const bossCard = document.querySelector("[data-boss-card]");
-
-        if (bossCard) {
-          bossCard.classList.remove("is-boss-heal-pulse");
-          void bossCard.offsetWidth;
-          bossCard.classList.add("is-boss-heal-pulse");
-
-          showFloatingIndicator(bossCard, "+" + healing, "healing");
-
-          window.setTimeout(function () {
-            bossCard.classList.remove("is-boss-heal-pulse");
-          }, 1000);
-        }
-      }
+      return;
     }
 
-    function setMomentMeta(items) {
-      const meta = document.getElementById("boss-turn-moment-meta");
+    const formattedValue = value < 0
+      ? String(value)
+      : "+" + value;
 
-      if (!meta) return;
+    sequence.push({
+      text: effect.label + " " + formattedValue + " damage",
+      type: effect.type || "modifier",
+    });
+  });
 
-      meta.innerHTML = "";
+  if (!options.damageBreakdown.length && options.damage > 0) {
+    sequence.push({
+      text: "Total party damage: " + options.damage,
+      type: "damage",
+    });
+  }
 
-      items.filter(Boolean).forEach(function (item) {
-        const pill = document.createElement("span");
-        pill.textContent = item;
-        meta.appendChild(pill);
-      });
-    }
+  if (options.healing > 0) {
+    sequence.push({
+      text: "Healing: " + options.healing,
+      type: "healing",
+    });
+  }
+
+  return sequence;
+}
+
+function playBossMomentSequence(sequence, afterSequence) {
+  const meta = document.getElementById("boss-turn-moment-meta");
+
+  if (!meta) {
+    if (afterSequence) afterSequence();
+    return;
+  }
+
+  meta.innerHTML = "";
+
+  if (!sequence.length) {
+    if (afterSequence) afterSequence();
+    return;
+  }
+
+  sequence.forEach(function (item, index) {
+    window.setTimeout(function () {
+      appendMomentMetaPill(item.text, "is-" + item.type);
+    }, index * 520);
+  });
+
+  window.setTimeout(function () {
+    if (afterSequence) afterSequence();
+  }, sequence.length * 520 + 250);
+}
 
     function showBossTurnMoment(payload) {
       const moment = getMoment();
@@ -996,11 +1365,22 @@ function showModifierChips(modifierList, breakdown) {
       ability.textContent = abilityName;
       effect.textContent = resultText || bossName + " uses " + abilityName + ".";
 
-      setMomentMeta([
-        dieRoll ? "Roll: " + dieRoll : "",
-        damage > 0 ? "Damage: " + damage : "",
-        healing > 0 ? "Healing: " + healing : "",
-      ]);
+      const damageBreakdown = getBossDamageBreakdownRaw();
+
+const momentSequence = buildBossMomentSequence({
+  dieRoll: dieRoll,
+  damage: damage,
+  healing: healing,
+  damageBreakdown: damageBreakdown,
+});
+
+playBossMomentSequence(momentSequence, function () {
+  showBossDamageIndicators(payload);
+});
+
+playBossMomentSequence(momentSequence, function () {
+  showBossDamageIndicators(payload);
+});
 
       bossMomentIsShowing = true;
 
@@ -1013,19 +1393,21 @@ function showModifierChips(modifierList, breakdown) {
 
       markBossLogSeen(logId);
 
-      window.setTimeout(function () {
-        showBossDamageIndicators(payload);
-      }, 900);
+      
+      const closeDelay = Math.max(
+  3600,
+  1900 + (momentSequence.length * 520)
+);
 
-      window.setTimeout(function () {
-        moment.classList.remove("is-showing");
+window.setTimeout(function () {
+  moment.classList.remove("is-showing");
 
-        window.setTimeout(function () {
-          moment.hidden = true;
-          moment.setAttribute("hidden", "");
-          bossMomentIsShowing = false;
-        }, 260);
-      }, 3400);
+  window.setTimeout(function () {
+    moment.hidden = true;
+    moment.setAttribute("hidden", "");
+    bossMomentIsShowing = false;
+  }, 260);
+}, closeDelay);
 
       return true;
     }
@@ -1929,7 +2311,211 @@ function setAp(heroCard, value, maxValue) {
     };
   })();
 </script>
+<script>
+  window.frRollVisualHelpers = {
+    getJsonArrayFromScript: function (id) {
+      const script = document.getElementById(id);
 
+      if (!script) {
+        return [];
+      }
+
+      try {
+        const parsed = JSON.parse(script.textContent || "[]");
+
+        if (!Array.isArray(parsed)) {
+          return [];
+        }
+
+        return parsed;
+      } catch (error) {
+        return [];
+      }
+    },
+
+    buildFallbackBreakdown: function (rollBonus) {
+      if (!rollBonus) {
+        return [];
+      }
+
+      return [{
+        label: rollBonus > 0 ? "Bonus" : "Penalty",
+        value: rollBonus,
+        type: rollBonus > 0 ? "bonus" : "penalty",
+      }];
+    },
+
+    normalizeModifierBreakdown: function (scriptId, fallbackBonus) {
+      const items = this.getJsonArrayFromScript(scriptId)
+        .map(function (item) {
+          return {
+            label: item.label || "Modifier",
+            value: Number(item.value || 0),
+            type: item.type || "modifier",
+          };
+        })
+        .filter(function (item) {
+          return item.value !== 0;
+        });
+
+      return items.length ? items : this.buildFallbackBreakdown(fallbackBonus);
+    },
+
+    getDifficultyBreakdown: function (prefix) {
+      return this.getJsonArrayFromScript(prefix + "-difficulty-breakdown")
+        .map(function (item) {
+          return {
+            label: item.label || "Difficulty",
+            value: Number(item.value || 0),
+            from: item.from,
+            to: item.to,
+            type: item.type || "difficulty",
+          };
+        })
+        .filter(function (item) {
+          return (
+            item.value !== 0 ||
+            item.from !== undefined ||
+            item.to !== undefined
+          );
+        });
+    },
+
+    getDamageBreakdown: function (prefix) {
+      return this.getJsonArrayFromScript(prefix + "-damage-breakdown")
+        .map(function (item) {
+          return {
+            label: item.label || "Shield",
+            value: Number(item.value || 0),
+            type: item.type || "shield",
+          };
+        })
+        .filter(function (item) {
+          return item.value !== 0;
+        });
+    },
+
+    showModifierChips: function (modifierList, breakdown) {
+      if (!modifierList) {
+        return;
+      }
+
+      modifierList.innerHTML = "";
+      modifierList.hidden = false;
+
+      breakdown.forEach(function (modifier, index) {
+        const chip = document.createElement("span");
+        chip.className = "fr-roll-modifier-chip";
+
+        chip.classList.add(
+          modifier.value > 0 ? "is-positive" : "is-negative"
+        );
+
+        if (modifier.type) {
+          chip.classList.add("is-" + modifier.type);
+        }
+
+        chip.style.setProperty("--modifier-delay", (index * 180) + "ms");
+
+        const value = document.createElement("strong");
+        value.textContent = modifier.value > 0
+          ? "+" + modifier.value
+          : String(modifier.value);
+
+        const label = document.createElement("span");
+        label.textContent = modifier.label;
+
+        chip.appendChild(value);
+        chip.appendChild(label);
+        modifierList.appendChild(chip);
+      });
+    },
+
+    showDifficultyChips: function (row, list, breakdown) {
+      if (!row || !list || !breakdown.length) {
+        return;
+      }
+
+      list.innerHTML = "";
+      row.hidden = false;
+
+      breakdown.forEach(function (effect, index) {
+        const chip = document.createElement("span");
+        chip.className = "fr-roll-effect-chip is-difficulty";
+
+        if (effect.type) {
+          chip.classList.add("is-" + effect.type);
+        }
+
+        chip.style.setProperty("--effect-delay", (index * 160) + "ms");
+
+        const value = document.createElement("strong");
+
+        if (effect.from !== undefined && effect.to !== undefined) {
+          value.textContent = "Difficulty " + effect.from + " → " + effect.to;
+        } else {
+          value.textContent = effect.value < 0
+            ? "Difficulty " + effect.value
+            : "Difficulty +" + effect.value;
+        }
+
+        const label = document.createElement("span");
+        label.textContent = effect.label;
+
+        chip.appendChild(value);
+        chip.appendChild(label);
+        list.appendChild(chip);
+      });
+    },
+
+    showDamageChips: function (row, list, breakdown, finalDamage) {
+      if (!row || !list || !breakdown.length) {
+        return;
+      }
+
+      list.innerHTML = "";
+      row.hidden = false;
+
+      breakdown.forEach(function (effect, index) {
+        const chip = document.createElement("span");
+        chip.className = "fr-roll-effect-chip is-shield";
+
+        if (effect.type) {
+          chip.classList.add("is-" + effect.type);
+        }
+
+        chip.style.setProperty("--effect-delay", (index * 160) + "ms");
+
+        const value = document.createElement("strong");
+        value.textContent = effect.value < 0
+          ? String(effect.value) + " Damage"
+          : "+" + effect.value + " Damage";
+
+        const label = document.createElement("span");
+        label.textContent = effect.label;
+
+        chip.appendChild(value);
+        chip.appendChild(label);
+        list.appendChild(chip);
+      });
+
+      if (finalDamage !== null && finalDamage !== undefined) {
+        const finalChip = document.createElement("span");
+        finalChip.className = "fr-roll-effect-chip is-final-damage";
+
+        const value = document.createElement("strong");
+        value.textContent = "Final Damage " + finalDamage;
+
+        const label = document.createElement("span");
+        label.textContent = "After shields";
+
+        finalChip.appendChild(value);
+        finalChip.appendChild(label);
+        list.appendChild(finalChip);
+      }
+    },
+  };
+</script>
 <script>
   (function () {
     const BOSS_REVEAL_SEEN_PREFIX = "fantasy_roles_boss_reveal_seen_";
@@ -2328,7 +2914,16 @@ function setAp(heroCard, value, maxValue) {
       const payload = getPayload();
       const overlay = getOverlay();
 
+      
+
       if (!payload || !overlay || transformationIsShowing || anotherOverlayIsOpen()) {
+        return false;
+      }
+
+      if (
+        window.frBossPlayerEventGate &&
+        !window.frBossPlayerEventGate.isComplete()
+      ) {
         return false;
       }
 
@@ -2619,115 +3214,421 @@ function setAp(heroCard, value, maxValue) {
       }, 1200);
     }
 
-    function showBossPlayerRoll(payload) {
-      if (!payload || anotherOverlayIsOpen()) {
-        return false;
-      }
+  function getBossPlayerRollSequence() {
+  const helpers = window.frRollVisualHelpers;
 
-      const logId = payload.dataset.logId;
-      const dieRoll = payload.dataset.dieRoll;
-      const actionType = payload.dataset.actionType;
+  if (!helpers) {
+    return [];
+  }
 
-      if (!logId) {
-        return false;
-      }
+  return helpers.getJsonArrayFromScript("latest-boss-player-roll-sequence")
+    .map(function (entry) {
+      return {
+        label: entry.label || "Roll",
+        dieRoll: String(entry.die_roll || ""),
+        difficulty: entry.difficulty,
+        success: entry.success === true,
+        damage: Number(entry.damage || 0),
+      };
+    })
+    .filter(function (entry) {
+      return entry.dieRoll;
+    });
+}
+  
+  function showBossPlayerRoll(payload) {
+  if (!payload || anotherOverlayIsOpen()) {
+    return false;
+  }
 
-      if (actionType === "PASS") {
-        return false;
-      }
+  const logId = payload.dataset.logId;
+  const actionType = payload.dataset.actionType;
+  const dieRoll = payload.dataset.dieRoll;
+  const rollSequence = getBossPlayerRollSequence();
 
-      if (!dieRoll && actionType === "BASIC_ATTACK") {
-        console.warn(
-          "Boss basic attack log has no die roll. Check boss_basic_attack backend.",
-          payload.dataset
-        );
-        return false;
-      }
-      const storageKey = BOSS_PLAYER_ROLL_SEEN_PREFIX + logId;
+  if (!logId) {
+    return false;
+  }
 
-      if (sessionStorage.getItem(storageKey) === "true") {
-        return false;
-      }
+  if (actionType === "PASS") {
+    return false;
+  }
 
-      const parts = getRollOverlayParts();
-
-      if (
-        !parts.overlay ||
-        !parts.card ||
-        !parts.dice ||
-        !parts.diceWrap ||
-        !parts.title ||
-        !parts.kicker ||
-        !parts.main ||
-        !parts.detail
-      ) {
-        return false;
-      }
-
-      const success = payload.dataset.success === "true";
-      
-      const skillName = payload.dataset.skillName;
-      const damageToBoss = Number(payload.dataset.damageToBoss || 0);
-      const damageToPlayers = Number(payload.dataset.damageToPlayers || 0);
-
-      parts.card.classList.remove("is-success", "is-failure", "has-item");
-      parts.card.classList.add(success ? "is-success" : "is-failure");
-
-      parts.kicker.textContent = payload.dataset.characterName || "Hero";
-
-      if (actionType === "BOSS_SKILL" && skillName) {
-  parts.title.textContent = skillName;
-} else if (success) {
-  parts.title.textContent = "Boss Hit!";
-} else {
-  parts.title.textContent = "Miss!";
+  if (!dieRoll && !rollSequence.length) {
+  return false;
 }
 
-      parts.main.textContent = payload.dataset.resultText || "The boss action resolves.";
+  const storageKey = BOSS_PLAYER_ROLL_SEEN_PREFIX + logId;
 
-      if (dieRoll) {
-  parts.detail.textContent =
-    "Roll " + dieRoll +
-    " · Total " + (payload.dataset.finalTotal || dieRoll) +
-    " · Difficulty " + (payload.dataset.difficulty || "—");
-} else if (damageToBoss > 0) {
-        parts.detail.textContent = "Damage to boss: " + damageToBoss;
-      } else if (damageToPlayers > 0) {
-        parts.detail.textContent = "Damage taken: " + damageToPlayers;
-      } else {
-        parts.detail.textContent = "Skill resolved.";
+  if (sessionStorage.getItem(storageKey) === "true") {
+    return false;
+  }
+
+  const helpers = window.frRollVisualHelpers;
+
+  if (!helpers) {
+    console.warn("frRollVisualHelpers is missing. Boss roll visual sequence cannot run.");
+    return false;
+  }
+
+  const parts = getRollOverlayParts();
+
+  if (
+    !parts.overlay ||
+    !parts.card ||
+    !parts.dice ||
+    !parts.diceWrap ||
+    !parts.title ||
+    !parts.kicker ||
+    !parts.main ||
+    !parts.detail
+  ) {
+    return false;
+  }
+
+  const success = payload.dataset.success === "true";
+  const rollBonus = Number(payload.dataset.rollBonus || 0);
+  const finalTotal = payload.dataset.finalTotal;
+  const resolvedTotal = finalTotal || String(Number(dieRoll || 0) + rollBonus);
+  const difficulty = payload.dataset.difficulty;
+
+  const skillName = payload.dataset.skillName || "";
+  const characterName = payload.dataset.characterName || "Hero";
+  const damageToBoss = Number(payload.dataset.damageToBoss || 0);
+  const damageToPlayers = Number(payload.dataset.damageToPlayers || 0);
+  const healing = Number(payload.dataset.healing || 0);
+
+  const rollBreakdown = helpers.normalizeModifierBreakdown(
+    "latest-boss-player-roll-breakdown",
+    rollBonus
+  );
+
+  const difficultyBreakdown = helpers.getDifficultyBreakdown(
+    "latest-boss-player"
+  );
+
+  const damageBreakdown = helpers.getDamageBreakdown(
+    "latest-boss-player"
+  );
+
+  const totalRow = document.getElementById("roll-total-row");
+  const modifierList = document.getElementById("roll-modifier-list");
+  const totalChip = document.getElementById("roll-total-chip");
+
+  const difficultyRow = document.getElementById("roll-difficulty-row");
+  const difficultyList = document.getElementById("roll-difficulty-list");
+
+  const damageRow = document.getElementById("roll-damage-row");
+  const damageList = document.getElementById("roll-damage-list");
+
+  parts.card.classList.remove(
+    "is-success",
+    "is-failure",
+    "has-item",
+    "is-resolving-total"
+  );
+
+  parts.diceWrap.classList.remove(
+    "is-rolling",
+    "is-success-pop",
+    "is-failure-pop",
+    "is-final-total"
+  );
+
+  if (totalRow) totalRow.hidden = true;
+
+  if (modifierList) {
+    modifierList.hidden = true;
+    modifierList.innerHTML = "";
+  }
+
+  if (totalChip) {
+    totalChip.hidden = true;
+    totalChip.textContent = "";
+  }
+
+  if (difficultyRow) difficultyRow.hidden = true;
+  if (difficultyList) difficultyList.innerHTML = "";
+
+  if (damageRow) damageRow.hidden = true;
+  if (damageList) damageList.innerHTML = "";
+
+  parts.kicker.textContent = characterName;
+  parts.title.textContent = "Rolling...";
+  parts.main.textContent = actionType === "BOSS_SKILL" && skillName
+    ? characterName + " uses " + skillName + "."
+    : characterName + " attacks the boss.";
+
+  parts.detail.textContent = difficulty
+    ? "Difficulty " + difficulty
+    : "Damage roll";
+
+  parts.dice.textContent = "?";
+
+  parts.overlay.hidden = false;
+  parts.overlay.removeAttribute("hidden");
+
+  document.body.classList.add("fr-modal-open");
+  document.documentElement.classList.add("fr-modal-open");
+
+  sessionStorage.setItem(storageKey, "true");
+
+  if (rollSequence.length > 1) {
+    playBossRollSequence();
+    return true;
+  }
+
+  parts.diceWrap.classList.add("is-rolling");
+
+  let ticks = 0;
+
+  const interval = window.setInterval(function () {
+    ticks += 1;
+    parts.dice.textContent = String(Math.floor(Math.random() * 6) + 1);
+
+    if (ticks < 10) {
+      return;
+    }
+
+    window.clearInterval(interval);
+
+    parts.dice.textContent = dieRoll;
+    parts.diceWrap.classList.remove("is-rolling");
+
+    parts.title.textContent = "Natural Roll";
+    parts.main.textContent = "You rolled " + dieRoll + ".";
+
+    if (difficulty) {
+      parts.detail.textContent = "Difficulty " + difficulty;
+    } else {
+      parts.detail.textContent = "Damage roll";
+    }
+
+    const hasPreResultEffects =
+      rollBreakdown.length || difficultyBreakdown.length;
+
+    if (hasPreResultEffects) {
+      window.setTimeout(function () {
+        if (totalRow) totalRow.hidden = false;
+
+        if (rollBreakdown.length) {
+          helpers.showModifierChips(modifierList, rollBreakdown);
+          parts.main.textContent = "Modifiers change the result.";
+        }
+      }, 650);
+
+      window.setTimeout(function () {
+        if (difficultyBreakdown.length) {
+          helpers.showDifficultyChips(
+            difficultyRow,
+            difficultyList,
+            difficultyBreakdown
+          );
+
+          parts.main.textContent = "The boss difficulty changes.";
+        }
+      }, rollBreakdown.length ? 1250 : 650);
+
+      window.setTimeout(function () {
+        parts.dice.textContent = resolvedTotal;
+        parts.diceWrap.classList.add("is-final-total");
+
+        if (totalChip) {
+          totalChip.hidden = false;
+          totalChip.textContent = "Total " + resolvedTotal;
+        }
+
+        parts.main.textContent = "Final result: " + resolvedTotal + ".";
+      }, difficultyBreakdown.length ? 1850 : 1350);
+
+      window.setTimeout(function () {
+        finishBossPlayerRoll();
+      }, difficultyBreakdown.length ? 2650 : 2150);
+    } else {
+      window.setTimeout(function () {
+        finishBossPlayerRoll();
+      }, 850);
+    }
+  }, 70);
+
+  function finishBossPlayerRoll() {
+    parts.card.classList.remove("is-resolving-total");
+    parts.card.classList.add(success ? "is-success" : "is-failure");
+
+    if (actionType === "BOSS_SKILL" && skillName) {
+      parts.title.textContent = skillName;
+    } else {
+      parts.title.textContent = success ? "Boss Hit!" : "Miss!";
+    }
+
+    if (damageToBoss > 0) {
+      parts.main.textContent = "The boss takes " + damageToBoss + " damage.";
+    } else if (damageToPlayers > 0) {
+      parts.main.textContent = characterName + " takes " + damageToPlayers + " damage.";
+    } else if (healing > 0) {
+      parts.main.textContent = characterName + " recovers " + healing + " Life.";
+    } else {
+      parts.main.textContent = success
+        ? "The boss action succeeded."
+        : "The boss action failed.";
+    }
+
+    const detailParts = [];
+
+    detailParts.push("Final " + resolvedTotal);
+
+    if (difficulty) {
+      detailParts.push("Difficulty " + difficulty);
+    }
+
+    if (damageToBoss > 0) {
+      detailParts.push("Boss Damage " + damageToBoss);
+    }
+
+    if (damageToPlayers > 0) {
+      detailParts.push("Player Damage " + damageToPlayers);
+    }
+
+    if (healing > 0) {
+      detailParts.push("Healing " + healing);
+    }
+
+    parts.detail.textContent = detailParts.join(" · ");
+
+    if (damageBreakdown.length) {
+      window.setTimeout(function () {
+        helpers.showDamageChips(
+          damageRow,
+          damageList,
+          damageBreakdown,
+          damageToPlayers
+        );
+
+        parts.main.textContent = damageToPlayers > 0
+          ? "Shields reduced the damage."
+          : "The damage was fully blocked.";
+      }, 450);
+    }
+
+    parts.diceWrap.classList.add(
+      success ? "is-success-pop" : "is-failure-pop"
+    );
+
+    if (damageToBoss > 0) {
+      pulseBossPanel();
+    }
+
+    window.setTimeout(function () {
+      parts.diceWrap.classList.remove(
+        "is-success-pop",
+        "is-failure-pop"
+      );
+    }, 800);
+  }
+
+  function playBossRollSequence() {
+  const sequenceWrap = document.getElementById("roll-sequence-wrap");
+  const sequenceList = document.getElementById("roll-sequence-list");
+
+  if (!sequenceWrap || !sequenceList) {
+    finishBossPlayerRoll();
+    return;
+  }
+
+  parts.diceWrap.hidden = true;
+  sequenceWrap.hidden = false;
+  sequenceList.innerHTML = "";
+
+  parts.title.textContent = skillName || "Cleave";
+  parts.main.textContent = "Multiple strikes are rolling.";
+  parts.detail.textContent = "";
+
+  const cards = rollSequence.map(function (entry, index) {
+    const card = document.createElement("article");
+    card.className = "fr-roll-sequence-card";
+
+    const label = document.createElement("span");
+    label.className = "fr-roll-sequence-label";
+    label.textContent = entry.label || "Roll " + (index + 1);
+
+    const die = document.createElement("div");
+    die.className = "fr-roll-sequence-die";
+    die.textContent = "?";
+
+    const meta = document.createElement("span");
+    meta.className = "fr-roll-sequence-meta";
+    meta.textContent = entry.difficulty
+      ? "Difficulty " + entry.difficulty
+      : "";
+
+    card.appendChild(label);
+    card.appendChild(die);
+    card.appendChild(meta);
+
+    sequenceList.appendChild(card);
+
+    return {
+      card: card,
+      die: die,
+      meta: meta,
+      entry: entry,
+    };
+  });
+
+  let index = 0;
+
+  function playNext() {
+    const item = cards[index];
+
+    if (!item) {
+      window.setTimeout(function () {
+        finishBossPlayerRoll();
+      }, 650);
+
+      return;
+    }
+
+    item.card.classList.add("is-rolling");
+
+    parts.main.textContent =
+      "Rolling " + item.entry.label + " (" + (index + 1) + "/" + cards.length + ").";
+
+    let ticks = 0;
+
+    const interval = window.setInterval(function () {
+      ticks += 1;
+      item.die.textContent = String(Math.floor(Math.random() * 6) + 1);
+
+      if (ticks < 10) {
+        return;
       }
 
-      parts.dice.textContent = dieRoll;
-      parts.overlay.hidden = false;
-      parts.overlay.removeAttribute("hidden");
+      window.clearInterval(interval);
 
-      parts.diceWrap.classList.add("is-rolling");
+      item.card.classList.remove("is-rolling");
+      item.die.textContent = item.entry.dieRoll;
 
-      let ticks = 0;
-      const interval = window.setInterval(function () {
-        ticks += 1;
-        parts.dice.textContent = String(Math.floor(Math.random() * 6) + 1);
+      if (item.entry.success) {
+        item.card.classList.add("is-success");
+        item.meta.textContent = "Hit · Damage " + item.entry.damage;
+        parts.main.textContent = item.entry.label + " hits.";
+      } else {
+        item.card.classList.add("is-failure");
+        item.meta.textContent = "Miss";
+        parts.main.textContent = item.entry.label + " misses.";
+      }
 
-        if (ticks >= 10) {
-          window.clearInterval(interval);
-          parts.dice.textContent = dieRoll;
-          parts.diceWrap.classList.remove("is-rolling");
-          parts.diceWrap.classList.add(success ? "is-success-pop" : "is-failure-pop");
+      index += 1;
 
-          window.setTimeout(function () {
-            parts.diceWrap.classList.remove("is-success-pop", "is-failure-pop");
-          }, 800);
-        }
-      }, 70);
+      window.setTimeout(playNext, 850);
+    }, 70);
+  }
 
-      document.body.classList.add("fr-modal-open");
-      document.documentElement.classList.add("fr-modal-open");
+  playNext();
+}
 
-      sessionStorage.setItem(storageKey, "true");
-
-      return true;
-    }
+  return true;
+}
 
     function showBossPlayerEvent(payload) {
       if (!payload || anotherOverlayIsOpen()) {
@@ -2863,6 +3764,8 @@ function setAp(heroCard, value, maxValue) {
 
       sessionStorage.setItem(storageKey, "true");
 
+      
+
       return true;
     }
 
@@ -2916,16 +3819,19 @@ function setAp(heroCard, value, maxValue) {
     });
 
     function latestPlayerPayloadNeedsRoll(payload) {
-  if (!payload) return false;
+      if (!payload) return false;
 
-  const actionType = payload.dataset.actionType;
+      const actionType = payload.dataset.actionType;
 
-  if (actionType === "PASS") {
-    return false;
-  }
+      if (actionType === "PASS") {
+        return false;
+      }
 
-  return Boolean(payload.dataset.dieRoll);
-}
+      const hasDieRoll = Boolean(payload.dataset.dieRoll);
+      const hasRollSequence = getBossPlayerRollSequence().length > 0;
+
+      return hasDieRoll || hasRollSequence;
+    }
 
 function latestPlayerPayloadNeedsEvent(payload) {
   if (!payload) return false;
@@ -3006,5 +3912,237 @@ window.frBossPlayerEventDebug = {
   },
 };
   })();
+</script>
+
+<!--- Ending cinematic -->
+
+<script>
+(function () {
+  const BOSS_ENDING_SEEN_PREFIX = "fr_boss_ending_seen_";
+  let endingIsShowing = false;
+
+  function getBossEndingPayload() {
+    return document.getElementById("boss-ending-payload");
+  }
+
+  function getBossEndingOverlay() {
+    return document.getElementById("boss-ending-overlay");
+  }
+
+  function closeBossEndingOverlay() {
+    const overlay = getBossEndingOverlay();
+
+    if (!overlay) {
+      return;
+    }
+
+    overlay.hidden = true;
+    overlay.setAttribute("hidden", "");
+
+    overlay.classList.remove(
+      "is-visible",
+      "is-victory",
+      "is-defeat",
+      "is-final"
+    );
+
+    document.body.classList.remove("fr-modal-open");
+    document.documentElement.classList.remove("fr-modal-open");
+
+    endingIsShowing = false;
+  }
+
+  function typewriteText(element, text, speed, onDone) {
+    if (!element) {
+      if (typeof onDone === "function") onDone();
+      return;
+    }
+
+    element.textContent = "";
+
+    const safeText = text || "";
+    let index = 0;
+
+    function step() {
+      if (index >= safeText.length) {
+        if (typeof onDone === "function") onDone();
+        return;
+      }
+
+      element.textContent += safeText.charAt(index);
+      index += 1;
+
+      window.setTimeout(step, speed);
+    }
+
+    step();
+  }
+
+  function showBossEndingOverlayFromPayload(payload) {
+    if (!payload || endingIsShowing) {
+      return false;
+    }
+
+    const encounterId = payload.dataset.encounterId;
+    const status = payload.dataset.status;
+    const bossName = payload.dataset.bossName || "The Boss";
+    const imageUrl = payload.dataset.imageUrl || "";
+    const text = payload.dataset.text || "";
+    const memoryKey = BOSS_ENDING_SEEN_PREFIX + encounterId + "_" + status;
+
+    if (!encounterId || !status) {
+      return false;
+    }
+
+    if (sessionStorage.getItem(memoryKey) === "true") {
+      return false;
+    }
+
+    const overlay = getBossEndingOverlay();
+    const image = document.getElementById("boss-ending-image");
+    const kicker = document.getElementById("boss-ending-kicker");
+    const title = document.getElementById("boss-ending-title");
+    const typewriter = document.getElementById("boss-ending-typewriter");
+    const finalWord = document.getElementById("boss-ending-final-word");
+    const closeButton = document.getElementById("boss-ending-close");
+
+    if (
+      !overlay ||
+      !image ||
+      !kicker ||
+      !title ||
+      !typewriter ||
+      !finalWord ||
+      !closeButton
+    ) {
+      return false;
+    }
+
+    endingIsShowing = true;
+
+    overlay.hidden = false;
+    overlay.removeAttribute("hidden");
+
+    overlay.classList.remove(
+      "is-final",
+      "is-victory",
+      "is-defeat",
+      "is-visible"
+    );
+
+    overlay.classList.add(status === "WON" ? "is-victory" : "is-defeat");
+
+    if (imageUrl) {
+      image.src = imageUrl;
+      image.alt = bossName;
+    } else {
+      image.removeAttribute("src");
+      image.alt = bossName;
+    }
+
+    if (status === "WON") {
+      kicker.textContent = "Realm Saved";
+      title.textContent = bossName + " has fallen";
+      finalWord.textContent = "VICTORY";
+    } else {
+      kicker.textContent = "Party Defeated";
+      title.textContent = bossName + " prevails";
+      finalWord.textContent = "DEFEAT";
+    }
+
+    typewriter.textContent = "";
+    finalWord.hidden = true;
+    closeButton.hidden = true;
+
+    document.body.classList.add("fr-modal-open");
+    document.documentElement.classList.add("fr-modal-open");
+
+    requestAnimationFrame(function () {
+      overlay.classList.add("is-visible");
+    });
+
+    sessionStorage.setItem(memoryKey, "true");
+
+    window.setTimeout(function () {
+      typewriteText(typewriter, text, 32, function () {
+        window.setTimeout(function () {
+          finalWord.hidden = false;
+          overlay.classList.add("is-final");
+
+          window.setTimeout(function () {
+            closeButton.hidden = false;
+          }, 900);
+        }, 600);
+      });
+    }, 700);
+
+    return true;
+  }
+
+  function tryShowBossEndingOverlay() {
+    const payload = getBossEndingPayload();
+
+    if (!payload) {
+      return false;
+    }
+
+    return showBossEndingOverlayFromPayload(payload);
+  }
+
+  function scheduleBossEndingCheck(delay) {
+    window.setTimeout(function () {
+      if (tryShowBossEndingOverlay()) {
+        return;
+      }
+
+      window.setTimeout(function () {
+        tryShowBossEndingOverlay();
+      }, 700);
+    }, delay);
+  }
+
+  document.addEventListener("click", function (event) {
+    const closeButton = event.target.closest
+      ? event.target.closest("#boss-ending-close")
+      : null;
+
+    if (closeButton) {
+      event.preventDefault();
+      closeBossEndingOverlay();
+    }
+  });
+
+  document.addEventListener("DOMContentLoaded", function () {
+    scheduleBossEndingCheck(900);
+  });
+
+  document.body.addEventListener("htmx:afterSettle", function () {
+    scheduleBossEndingCheck(500);
+  });
+
+  window.frBossEndingDebug = {
+    show: tryShowBossEndingOverlay,
+    close: closeBossEndingOverlay,
+    clearEndingMemory: function () {
+      Object.keys(sessionStorage)
+        .filter((key) => key.startsWith(BOSS_ENDING_SEEN_PREFIX))
+        .forEach((key) => sessionStorage.removeItem(key));
+
+      return "Boss ending memory cleared.";
+    },
+    state: function () {
+      const payload = getBossEndingPayload();
+      const overlay = getBossEndingOverlay();
+
+      return {
+        payloadExists: !!payload,
+        payloadDataset: payload ? { ...payload.dataset } : null,
+        overlayExists: !!overlay,
+        overlayHidden: overlay ? overlay.hidden : null,
+        endingIsShowing: endingIsShowing,
+      };
+    },
+  };
+})();
 </script>
 {% endblock %}

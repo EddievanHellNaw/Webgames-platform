@@ -1264,12 +1264,11 @@ def apply_boss_damage_to_character(encounter, character, base_damage):
     if not character or base_damage <= 0:
         return 0
 
-    damage = base_damage + get_boss_damage_bonus(encounter)
-    damage = apply_run_damage_reduction(encounter.run, damage)
+    damage_result = calculate_boss_damage_result(encounter, base_damage)
 
-    apply_damage(character, damage)
+    apply_damage(character, damage_result["final_damage"])
 
-    return damage
+    return damage_result["final_damage"]
 
 def boss_ability_already_resolved_for_current_state(encounter):
     """
@@ -1361,9 +1360,16 @@ def resolve_boss_ability_once(encounter):
                 pending_result.get("damage_to_players", 0)
                 + ability_result.get("damage_to_players", 0)
             ),
+            damage_breakdown=ability_result.get("damage_breakdown", []),
             healing_done=ability_result.get("healing_done", 0),
             result_text=combined_result_text,
         )
+
+        consume_boss_shield_effects(
+            encounter,
+            ability_result.get("shield_effect_ids", []),
+        )
+
     else:
         combined_result_text = pending_result.get("result_text", "")
 
@@ -1416,6 +1422,37 @@ def resolve_boss_ability_once(encounter):
 
     return boss_log
 
+def calculate_boss_damage_result(encounter, base_damage):
+    raw_damage = max(0, base_damage + get_boss_damage_bonus(encounter))
+
+    reduction_result = get_boss_damage_reduction_breakdown(encounter)
+    total_reduction = reduction_result["total_reduction"]
+
+    final_damage = max(0, raw_damage - total_reduction)
+
+    damage_breakdown = [
+        {
+            "label": "Base damage",
+            "value": raw_damage,
+            "type": "base",
+        }
+    ]
+
+    damage_breakdown.extend(reduction_result["damage_breakdown"])
+
+    damage_breakdown.append({
+        "label": "Final damage",
+        "value": final_damage,
+        "type": "final",
+    })
+
+    return {
+        "base_damage": raw_damage,
+        "final_damage": final_damage,
+        "damage_breakdown": damage_breakdown,
+        "shield_effect_ids": reduction_result["shield_effect_ids"],
+    }
+
 # ============================================================
 # Boss turn-cycle / combat / victory helpers
 # ============================================================
@@ -1427,6 +1464,7 @@ DIRECT_BOSS_SKILL_EFFECTS = {
     ClassSkill.EffectCode.BOSS_HEAL,
     ClassSkill.EffectCode.BOSS_RESTORE_AP,
     ClassSkill.EffectCode.BOSS_DOUBLE_ATTACK,
+    ClassSkill.EffectCode.BOSS_PARTY_SHIELD,
 }
 
 def skill_can_be_used_in_boss_step_one(skill):
@@ -1909,10 +1947,16 @@ def apply_boss_ability_effect(encounter, ability):
 
     result_parts = []
     die_roll = None
+    damage_breakdown = []
+    shield_effect_ids = []
+    display_base_damage = None
+    ability_attempted_damage = False
     total_damage = 0
     healing_done = 0
 
     if code == BossAbility.EffectCode.DAMAGE_LOWEST_LIFE:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         target = get_lowest_life_character(party)
 
         if target:
@@ -1975,6 +2019,8 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_AND_SKIP:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         target = get_random_living_character(party)
 
         if target:
@@ -2001,6 +2047,8 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.DAMAGE_PARTY_D6_PLUS:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         die_roll = random.randint(1, 6)
         base_damage = die_roll + ability.secondary_value
 
@@ -2018,6 +2066,8 @@ def apply_boss_ability_effect(encounter, ability):
         )
 
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_AND_PARALYZE:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         target = get_random_living_character(party)
 
         if target:
@@ -2044,6 +2094,8 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.PARTY_SKIP_AND_RANDOM_DAMAGE:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         add_boss_effect(
             encounter=encounter,
             source_ability=ability,
@@ -2085,6 +2137,8 @@ def apply_boss_ability_effect(encounter, ability):
         )
 
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_CANNOT_ATTACK:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         target = get_random_living_character(party)
 
         if target:
@@ -2111,6 +2165,8 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.PARTY_PARALYZE_AND_DAMAGE_TAKEN_UP:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         add_boss_effect(
             encounter=encounter,
             source_ability=ability,
@@ -2136,6 +2192,8 @@ def apply_boss_ability_effect(encounter, ability):
         )
 
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_AND_PARTY_CANNOT_ATTACK:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         target = get_random_living_character(party)
 
         if target:
@@ -2166,6 +2224,8 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.DAMAGE_ALL_PLAYERS:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         for character in get_living_boss_characters(party):
             damage = apply_boss_damage_to_character(
                 encounter,
@@ -2179,6 +2239,8 @@ def apply_boss_ability_effect(encounter, ability):
         )
 
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_PLAYER:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         target = get_random_living_character(party)
 
         if target:
@@ -2194,6 +2256,8 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.DAMAGE_TRANSFORMER:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         target = encounter.transformed_by_character
 
         if not target or target.current_life <= 0:
@@ -2212,6 +2276,8 @@ def apply_boss_ability_effect(encounter, ability):
             )
 
     elif code == BossAbility.EffectCode.BOSS_UNTARGETABLE_THEN_DAMAGE_HIGHEST_LIFE:
+        display_base_damage = ability.effect_value
+        ability_attempted_damage = True
         add_boss_effect(
             encounter=encounter,
             source_ability=ability,
@@ -2241,11 +2307,21 @@ def apply_boss_ability_effect(encounter, ability):
             f"{encounter.current_boss_name} uses {ability.name}, but nothing happens yet."
         )
 
+    if ability_attempted_damage and display_base_damage is not None:
+        display_damage_result = calculate_boss_damage_result(
+            encounter,
+            display_base_damage,
+        )
+
+        damage_breakdown = display_damage_result["damage_breakdown"]
+        shield_effect_ids = display_damage_result["shield_effect_ids"]
     return {
         "result_text": " ".join(result_parts),
         "die_roll": die_roll,
         "damage_to_players": total_damage,
         "healing_done": healing_done,
+        "damage_breakdown": damage_breakdown,
+        "shield_effect_ids": shield_effect_ids,
     }
 
 def resolve_boss_turn(encounter):
@@ -2306,10 +2382,14 @@ def resolve_boss_turn(encounter):
                 pending_result.get("damage_to_players", 0)
                 + ability_result.get("damage_to_players", 0)
             ),
+            damage_breakdown=ability_result.get("damage_breakdown", []),
             healing_done=ability_result.get("healing_done", 0),
             result_text=combined_result_text,
         )
-
+        consume_boss_shield_effects(
+            encounter,
+            ability_result.get("shield_effect_ids", []),
+        )
     else:
         combined_result_text = pending_result.get("result_text", "")
 
@@ -2329,7 +2409,7 @@ def resolve_boss_turn(encounter):
             damage_to_players=pending_result.get("damage_to_players", 0),
             result_text=combined_result_text,
         )
-
+        
     consume_boss_damage_bonus_effects(
         encounter,
         boss_damage_bonus_effect_ids,
@@ -2360,22 +2440,31 @@ def resolve_boss_turn(encounter):
 
     set_next_boss_player_turn_or_boss(encounter)
 
-def resolve_direct_boss_skill(encounter, character, skill):
+def resolve_direct_boss_skill(encounter, character, skill, target_character=None):
     code = skill.effect_code
 
     result_parts = [
         f"{character.character_name} used {skill.name}."
     ]
 
+    target_character = target_character or character
+
     die_roll = None
     final_roll_total = None
-    difficulty = encounter.current_difficulty
+    difficulty = None
     success = True
+
     damage_to_boss = 0
+    damage_to_players = 0
     healing_done = 0
 
+    roll_breakdown = []
+    roll_sequence = []
+    difficulty_breakdown = []
+    damage_breakdown = []
+
     if code == ClassSkill.EffectCode.BOSS_FIXED_DAMAGE:
-        damage = skill.effect_value
+        damage = skill.effect_value or character.character_class.attack
         damage_to_boss = apply_damage_to_boss(encounter, damage)
 
         result_parts.append(
@@ -2384,7 +2473,9 @@ def resolve_direct_boss_skill(encounter, character, skill):
 
     elif code == ClassSkill.EffectCode.BOSS_D6_DAMAGE:
         die_roll = random.randint(1, 6)
-        damage_to_boss = apply_damage_to_boss(encounter, die_roll)
+        final_roll_total = die_roll
+
+        damage_to_boss = apply_damage_to_boss(encounter, final_roll_total)
 
         result_parts.append(
             f"The d6 rolled {die_roll}. It deals {damage_to_boss} damage."
@@ -2393,53 +2484,105 @@ def resolve_direct_boss_skill(encounter, character, skill):
     elif code == ClassSkill.EffectCode.BOSS_D6_PLUS_DAMAGE:
         die_roll = random.randint(1, 6)
         bonus = skill.secondary_value or skill.effect_value
-        damage = die_roll + bonus
+        final_roll_total = die_roll + bonus
 
-        damage_to_boss = apply_damage_to_boss(encounter, damage)
+        if bonus:
+            roll_breakdown.append({
+                "label": skill.name,
+                "value": bonus,
+                "type": "skill",
+            })
+
+        damage_to_boss = apply_damage_to_boss(encounter, final_roll_total)
 
         result_parts.append(
-            f"The d6 rolled {die_roll} + {bonus}. "
+            f"The d6 rolled {die_roll} + {bonus} = {final_roll_total}. "
             f"It deals {damage_to_boss} damage."
-        )
-
-    elif code == ClassSkill.EffectCode.BOSS_HEAL:
-        before_life = character.current_life
-        recover_character_life(character, skill.effect_value)
-        character.refresh_from_db()
-
-        healing_done = character.current_life - before_life
-
-        result_parts.append(
-            f"{character.character_name} recovers {healing_done} Life."
-        )
-
-    elif code == ClassSkill.EffectCode.BOSS_RESTORE_AP:
-        restored_ap = recover_character_ap(character, skill.effect_value)
-
-        result_parts.append(
-            f"{character.character_name} recovers {restored_ap} AP."
         )
 
     elif code == ClassSkill.EffectCode.BOSS_DOUBLE_ATTACK:
         total_damage = 0
-        roll_texts = []
+        difficulty = encounter.current_difficulty
 
         for attack_number in [1, 2]:
             roll = random.randint(1, 6)
             hit = roll >= difficulty
-
-            roll_texts.append(str(roll))
+            damage = 0
 
             if hit:
                 damage = character.character_class.attack
-                total_damage += apply_damage_to_boss(encounter, damage)
+                damage = apply_damage_to_boss(encounter, damage)
+                total_damage += damage
 
-        die_roll = None
+            roll_sequence.append({
+                "label": f"Cleave {attack_number}",
+                "die_roll": roll,
+                "difficulty": difficulty,
+                "success": hit,
+                "damage": damage,
+            })
+
+        die_roll = roll_sequence[0]["die_roll"] if roll_sequence else None
+        final_roll_total = total_damage
+        success = total_damage > 0
         damage_to_boss = total_damage
+
+        roll_texts = [
+            str(entry["die_roll"])
+            for entry in roll_sequence
+        ]
 
         result_parts.append(
             f"Cleave rolls: {', '.join(roll_texts)}. "
             f"It deals {damage_to_boss} total damage."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_PARTY_SHIELD:
+        shield_value = skill.effect_value or skill.secondary_value or 1
+        duration = skill.duration_turns or 1
+
+        add_boss_effect(
+            encounter=encounter,
+            effect_code=BossCombatEffect.EffectCode.PARTY_DAMAGE_REDUCTION,
+            target_type=BossCombatEffect.TargetType.PARTY,
+            value=shield_value,
+            remaining_turns=duration,
+            note=skill.name,
+        )
+
+        result_parts.append(
+            f"The party gains a shield: boss damage -{shield_value} "
+            f"for {duration} boss damage event(s)."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_HEAL:
+        before_life = target_character.current_life
+        recover_character_life(target_character, skill.effect_value)
+        target_character.refresh_from_db()
+
+        healing_done = target_character.current_life - before_life
+
+        result_parts.append(
+            f"{target_character.character_name} recovers {healing_done} Life."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_RESTORE_AP:
+        restored_ap = recover_character_ap(target_character, skill.effect_value)
+
+        result_parts.append(
+            f"{target_character.character_name} recovers {restored_ap} AP."
+        )
+
+    elif code == ClassSkill.EffectCode.BOSS_LIFESTEAL:
+        damage = skill.effect_value or character.character_class.attack
+        damage_to_boss = apply_damage_to_boss(encounter, damage)
+
+        healing_done = damage_to_boss
+        recover_character_life(character, healing_done)
+
+        result_parts.append(
+            f"{character.character_name} dealt {damage_to_boss} damage "
+            f"and recovered {healing_done} Life."
         )
 
     else:
@@ -2455,7 +2598,12 @@ def resolve_direct_boss_skill(encounter, character, skill):
         "difficulty": difficulty,
         "success": success,
         "damage_to_boss": damage_to_boss,
+        "damage_to_players": damage_to_players,
         "healing_done": healing_done,
+        "roll_sequence": roll_sequence,
+        "roll_breakdown": roll_breakdown,
+        "difficulty_breakdown": difficulty_breakdown,
+        "damage_breakdown": damage_breakdown,
     }
 
 def skill_can_be_used_in_boss(skill):
@@ -2595,6 +2743,89 @@ def apply_boss_player_skill_effect(encounter, character, skill):
         "ap_restored": ap_restored,
         "result_text": result_text,
     }
+
+TARGETED_BOSS_SKILL_EFFECTS = {
+    ClassSkill.EffectCode.BOSS_HEAL,
+    ClassSkill.EffectCode.BOSS_RESTORE_AP,
+}
+
+def boss_skill_requires_target(skill):
+    return skill.effect_code in TARGETED_BOSS_SKILL_EFFECTS
+
+def get_boss_skill_target_from_request(request, encounter, acting_character, skill):
+    if not boss_skill_requires_target(skill):
+        return acting_character
+
+    target_character_id = request.POST.get("target_character_id")
+
+    if not target_character_id:
+        return None
+
+    member = (
+        PartyMember.objects
+        .filter(
+            party=encounter.run.party,
+            character_id=target_character_id,
+            character__current_life__gt=0,
+        )
+        .select_related("character", "character__character_class")
+        .first()
+    )
+
+    if not member:
+        return None
+
+    return member.character
+
+def get_boss_damage_reduction_breakdown(encounter):
+    breakdown = []
+    total_reduction = 0
+    shield_effect_ids = []
+
+    protection_reduction = get_run_damage_reduction(encounter.run)
+
+    if protection_reduction:
+        total_reduction += protection_reduction
+        breakdown.append({
+            "label": "Protection Ring",
+            "value": -protection_reduction,
+            "type": "item",
+        })
+
+    shield_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_DAMAGE_REDUCTION,
+    )
+
+    for effect in shield_effects:
+        if effect.value <= 0:
+            continue
+
+        total_reduction += effect.value
+        shield_effect_ids.append(effect.id)
+
+        breakdown.append({
+            "label": effect.note or "Party Shield",
+            "value": -effect.value,
+            "type": "shield",
+        })
+
+    return {
+        "total_reduction": total_reduction,
+        "damage_breakdown": breakdown,
+        "shield_effect_ids": shield_effect_ids,
+    }
+
+def consume_boss_shield_effects(encounter, effect_ids):
+    effects = BossCombatEffect.objects.filter(
+        encounter=encounter,
+        id__in=effect_ids,
+        is_active=True,
+    )
+
+    for effect in effects:
+        consume_boss_effect(effect)
 
 # ============================================================
 # Context builders
@@ -2739,9 +2970,6 @@ def build_student_dungeon_context(request, session):
     boss_attack_block_reason = ""
     available_boss_skills = []
     latest_boss_log = None
-    latest_boss_ability_log = None
-    latest_boss_player_animation_log = None
-    latest_boss_skip_log = Nonelatest_boss_log = None
     latest_boss_ability_log = None
     latest_boss_player_animation_log = None
     latest_boss_skip_log = None
@@ -3713,7 +3941,12 @@ def submit_room_action(request, join_code):
     roll_modifier = 0
     item_roll_bonus = 0
     roll_breakdown = []
+    difficulty_breakdown = []
+    damage_breakdown = []
+
+    base_difficulty = room.difficulty
     effective_difficulty = room.difficulty
+
     failure_damage_reduction = 0
     recover_life_on_success = 0
     reroll_after_fail = False
@@ -3725,18 +3958,28 @@ def submit_room_action(request, join_code):
 
     for support_effect in support_effects:
         effect_code = support_effect.effect_code
-        source_name = support_effect.skill.name
+        source_name = support_effect.skill.name if support_effect.skill else "Support Effect"
 
         if effect_code == ClassSkill.EffectCode.ROOM_REDUCE_DIFFICULTY:
+            before_difficulty = effective_difficulty
+
             effective_difficulty = max(
                 0,
                 effective_difficulty - support_effect.effect_value,
             )
-            result_prefix = f"{source_name}: room difficulty -{support_effect.effect_value}."
+
+            difficulty_breakdown.append({
+                "label": source_name,
+                "value": -support_effect.effect_value,
+                "from": before_difficulty,
+                "to": effective_difficulty,
+                "type": "skill",
+            })
+
             support_effect_texts.append(
-                    f"{source_name}: room difficulty -{support_effect.effect_value}."
-                )
-        
+                f"{source_name}: room difficulty -{support_effect.effect_value}."
+            )
+
         elif effect_code == ClassSkill.EffectCode.ROOM_ROLL_BONUS:
             roll_modifier += support_effect.effect_value
 
@@ -3746,50 +3989,65 @@ def submit_room_action(request, join_code):
                 "type": "skill",
             })
 
-            result_prefix = f"{source_name}: roll bonus +{support_effect.effect_value}."
-            support_effect_texts.append(result_prefix)
-        
+            support_effect_texts.append(
+                f"{source_name}: roll bonus +{support_effect.effect_value}."
+            )
+
         elif effect_code == ClassSkill.EffectCode.ROOM_REDUCE_FAILURE_DAMAGE:
             failure_damage_reduction += support_effect.effect_value
-            result_prefix = f"{source_name}: failure damage -{support_effect.effect_value}."
+
+            damage_breakdown.append({
+                "label": source_name,
+                "value": -support_effect.effect_value,
+                "type": "shield",
+            })
+
             support_effect_texts.append(
                 f"{source_name}: failure damage -{support_effect.effect_value}."
             )
-        
+
         elif effect_code == ClassSkill.EffectCode.ROOM_FIELD_AID:
             failure_damage_reduction += support_effect.effect_value
-            result_prefix = f"{source_name}: failure damage -{support_effect.effect_value}."
+
+            damage_breakdown.append({
+                "label": source_name,
+                "value": -support_effect.effect_value,
+                "type": "shield",
+            })
+
             support_effect_texts.append(
                 f"{source_name}: failure damage -{support_effect.effect_value}."
             )
-            
+
         elif effect_code == ClassSkill.EffectCode.ROOM_REROLL_AFTER_FAIL:
             reroll_after_fail = True
-            result_prefix = f"{source_name}: reroll available."
+
             support_effect_texts.append(
                 f"{source_name}: reroll available."
             )
-            
+
         elif effect_code == ClassSkill.EffectCode.ROOM_RECOVER_LIFE_ON_SUCCESS:
+            before_difficulty = effective_difficulty
+
             effective_difficulty = max(
                 0,
                 effective_difficulty - support_effect.effect_value,
             )
+
+            difficulty_breakdown.append({
+                "label": source_name,
+                "value": -support_effect.effect_value,
+                "from": before_difficulty,
+                "to": effective_difficulty,
+                "type": "skill",
+            })
+
             recover_life_on_success += support_effect.secondary_value
-            result_prefix = (
+
+            support_effect_texts.append(
                 f"{source_name}: room difficulty -{support_effect.effect_value}; "
                 f"recover {support_effect.secondary_value} Life on success."
             )
-            support_effect_texts.append(
-                    f"{source_name}: room difficulty -{support_effect.effect_value}."
-                )
-
-        else:
-            result_prefix = ""
-
-        if result_prefix:
-            # We store these messages later after result_text_parts exists.
-            pass
 
     action_type = submitted_action_type
 
@@ -3824,8 +4082,18 @@ def submit_room_action(request, join_code):
                 room.difficulty - skill.effect_value,
             )
 
-        elif effect_code == ClassSkill.EffectCode.ROOM_ROLL_BONUS:
-            roll_modifier += skill.effect_value or skill.roll_bonus
+        elif effect_code == ClassSkill.EffectCode.ROOM_RANDOM_ROLL_BONUS:
+            random_bonus_roll = random.randint(1, 6)
+
+            if random_bonus_roll >= 4:
+                roll_modifier += skill.effect_value
+                random_bonus_applied = True
+
+                roll_breakdown.append({
+                    "label": skill.name,
+                    "value": skill.effect_value,
+                    "type": "skill",
+                })
 
         elif effect_code == ClassSkill.EffectCode.ROOM_REDUCE_FAILURE_DAMAGE:
             failure_damage_reduction += skill.effect_value
@@ -3839,6 +4107,12 @@ def submit_room_action(request, join_code):
             if random_bonus_roll >= 4:
                 roll_modifier += skill.effect_value
                 random_bonus_applied = True
+
+                roll_breakdown.append({
+                    "label": skill.name,
+                    "value": skill.effect_value,
+                    "type": "skill",
+                })
 
         elif effect_code == ClassSkill.EffectCode.ROOM_RECOVER_LIFE_ON_SUCCESS:
             effective_difficulty = max(
@@ -4137,9 +4411,20 @@ def submit_room_action(request, join_code):
                     ClassWeakness.EffectCode.ROOM_EXTRA_DAMAGE_AFTER_SKILL_FAIL,
                 )
 
+            raw_damage = base_damage + extra_damage
+
+            protection_reduction = get_run_damage_reduction(run)
+
+            if protection_reduction:
+                damage_breakdown.append({
+                    "label": "Protection Ring",
+                    "value": -protection_reduction,
+                    "type": "item",
+                })
+
             damage_taken = max(
                 0,
-                base_damage + extra_damage - failure_damage_reduction,
+                raw_damage - failure_damage_reduction - protection_reduction,
             )
 
             apply_damage(character, damage_taken)
@@ -4189,6 +4474,8 @@ def submit_room_action(request, join_code):
         die_roll=die_roll,
         roll_bonus=roll_modifier if die_roll is not None else 0,
         roll_breakdown=roll_breakdown if die_roll is not None else [],
+        difficulty_breakdown=difficulty_breakdown if die_roll is not None else [],
+        damage_breakdown=damage_breakdown if damage_taken > 0 or damage_breakdown else [],
         final_roll_total=final_roll_total,
         difficulty_at_roll=effective_difficulty if die_roll is not None else None,
         success=success,
@@ -4912,9 +5199,21 @@ def boss_basic_attack(request, join_code):
 
     with transaction.atomic():
         encounter = BossEncounter.objects.select_for_update().get(id=encounter.id)
-
+        
         die_roll = random.randint(1, 6)
         item_roll_bonus = get_run_roll_bonus(run)
+
+        roll_breakdown = []
+        difficulty_breakdown = []
+        damage_breakdown = []
+
+        if item_roll_bonus:
+            roll_breakdown.append({
+                "label": "Lucky Charm",
+                "value": item_roll_bonus,
+                "type": "item",
+            })
+
         final_roll_total = die_roll + item_roll_bonus
         difficulty = encounter.current_difficulty
 
@@ -4944,6 +5243,9 @@ def boss_basic_attack(request, join_code):
             round_number=encounter.round_number,
             player_phase_number=encounter.player_phase_number,
             die_roll=die_roll,
+            roll_breakdown=roll_breakdown,
+            difficulty_breakdown=difficulty_breakdown,
+            damage_breakdown=damage_breakdown,
             final_roll_total=final_roll_total,
             difficulty_at_roll=difficulty,
             success=success,
@@ -4999,6 +5301,19 @@ def boss_pass_turn(request, join_code):
 
     if request.method != "POST":
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    print(
+        "BOSS PASS DEBUG:",
+        {
+            "character": character.id,
+            "character_name": character.character_name,
+            "current_actor": encounter.current_actor,
+            "current_turn_character_id": encounter.current_turn_character_id,
+            "status": encounter.status,
+            "round": encounter.round_number,
+            "player_phase": encounter.player_phase_number,
+        },
+    )
 
     if (
         encounter.current_actor != BossEncounter.CurrentActor.PLAYER
@@ -5110,11 +5425,23 @@ def boss_use_skill(request, join_code):
 
     with transaction.atomic():
         encounter = BossEncounter.objects.select_for_update().get(id=encounter.id)
+        
+        target_character = get_boss_skill_target_from_request(
+            request,
+            encounter,
+            character,
+            skill,
+        )
+
+        if boss_skill_requires_target(skill) and target_character is None:
+            messages.warning(request, "Choose a valid party member for this skill.")
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
         skill_result = resolve_direct_boss_skill(
             encounter,
             character,
             skill,
+            target_character=target_character,
         )
 
         BossActionLog.objects.create(
@@ -5127,9 +5454,14 @@ def boss_use_skill(request, join_code):
             round_number=encounter.round_number,
             player_phase_number=encounter.player_phase_number,
             die_roll=skill_result.get("die_roll"),
+            roll_breakdown=skill_result.get("roll_breakdown", []),
+            difficulty_breakdown=skill_result.get("difficulty_breakdown", []),
+            damage_breakdown=skill_result.get("damage_breakdown", []),
+            roll_sequence=skill_result.get("roll_sequence", []),
             final_roll_total=skill_result.get("final_roll_total"),
             difficulty_at_roll=skill_result.get("difficulty"),
             success=skill_result.get("success", True),
+            damage_to_players=skill_result.get("damage_to_players", 0),
             damage_to_boss=skill_result.get("damage_to_boss", 0),
             healing_done=skill_result.get("healing_done", 0),
             result_text=skill_result.get("result_text", ""),

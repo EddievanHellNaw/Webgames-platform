@@ -8875,3 +8875,466 @@
     font-size: 0.66rem;
   }
 }
+
+.fr-roll-effect-row {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0.4rem 0 0.25rem;
+}
+
+.fr-roll-effect-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem;
+  flex-wrap: wrap;
+}
+
+.fr-roll-effect-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.38rem;
+  border-radius: 999px;
+  padding: 0.34rem 0.65rem;
+  opacity: 0;
+  transform: translateY(10px) scale(0.82);
+  animation: fr-roll-effect-chip-pop 520ms ease-out forwards;
+  animation-delay: var(--effect-delay, 0ms);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow:
+    0 10px 24px rgba(0, 0, 0, 0.32),
+    inset 0 0 12px rgba(255, 255, 255, 0.04);
+}
+
+.fr-roll-effect-chip strong {
+  font-size: 0.92rem;
+  font-weight: 950;
+  line-height: 1;
+}
+
+.fr-roll-effect-chip span {
+  font-size: 0.72rem;
+  font-weight: 900;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+  opacity: 0.86;
+}
+
+.fr-roll-effect-chip.is-difficulty {
+  color: #aee5ff;
+  border-color: rgba(143, 211, 255, 0.55);
+  background:
+    radial-gradient(circle at center, rgba(143, 211, 255, 0.18), transparent 68%),
+    rgba(8, 14, 24, 0.92);
+}
+
+.fr-roll-effect-chip.is-shield,
+.fr-roll-effect-chip.is-final-damage {
+  color: #9ff2b8;
+  border-color: rgba(142, 240, 176, 0.5);
+  background:
+    radial-gradient(circle at center, rgba(142, 240, 176, 0.18), transparent 68%),
+    rgba(8, 18, 14, 0.9);
+}
+
+.fr-roll-effect-chip.is-item {
+  color: #ffe29a;
+  border-color: rgba(255, 226, 154, 0.58);
+  background:
+    radial-gradient(circle at center, rgba(255, 226, 154, 0.18), transparent 68%),
+    rgba(18, 14, 8, 0.9);
+}
+
+.fr-roll-effect-chip.is-final-damage {
+  color: #fff4d6;
+  border-color: rgba(255, 226, 154, 0.45);
+}
+
+@keyframes fr-roll-effect-chip-pop {
+  0% {
+    opacity: 0;
+    transform: translateY(10px) scale(0.78);
+  }
+
+  70% {
+    opacity: 1;
+    transform: translateY(-2px) scale(1.08);
+  }
+
+  100% {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@media (max-width: 760px) {
+  .fr-roll-effect-chip {
+    padding: 0.28rem 0.52rem;
+  }
+
+  .fr-roll-effect-chip strong {
+    font-size: 0.82rem;
+  }
+
+  .fr-roll-effect-chip span {
+    font-size: 0.63rem;
+  }
+}
+
+.fr-boss-target-select-label {
+  display: grid;
+  gap: 0.25rem;
+  margin-top: 0.55rem;
+}
+
+.fr-boss-target-select {
+  width: 100%;
+  border: 1px solid rgb(var(--dungeon-rgb) / 0.28);
+  border-radius: 12px;
+  padding: 0.45rem 0.55rem;
+  color: var(--fr-text, #fff4d6);
+  background: rgba(0, 0, 0, 0.38);
+}
+
+.fr-roll-sequence-wrap[hidden] {
+  display: none !important;
+}
+
+.fr-roll-sequence-wrap {
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  margin: 0.6rem 0 0.4rem;
+}
+
+.fr-roll-sequence-list {
+  display: flex;
+  justify-content: center;
+  align-items: stretch;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.fr-roll-sequence-card {
+  min-width: 112px;
+  display: grid;
+  justify-items: center;
+  gap: 0.35rem;
+}
+
+.fr-roll-sequence-label {
+  font-size: 0.72rem;
+  font-weight: 950;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: rgba(245, 235, 255, 0.72);
+}
+
+.fr-roll-sequence-die {
+  width: 104px;
+  height: 104px;
+  display: grid;
+  place-items: center;
+  border-radius: 26px;
+  border: 1px solid rgba(255, 226, 154, 0.28);
+  background:
+    radial-gradient(circle at center, rgba(255, 226, 154, 0.12), transparent 68%),
+    rgba(0, 0, 0, 0.64);
+  color: var(--fr-gold-bright, #ffe29a);
+  font-size: 3rem;
+  font-weight: 950;
+  line-height: 1;
+  box-shadow:
+    0 18px 36px rgba(0, 0, 0, 0.38),
+    inset 0 0 28px rgba(0, 0, 0, 0.52);
+}
+
+.fr-roll-sequence-card.is-rolling .fr-roll-sequence-die {
+  animation: fr-roll-dice-shake 90ms linear infinite;
+}
+
+.fr-roll-sequence-card.is-success .fr-roll-sequence-die {
+  border-color: rgba(127, 255, 178, 0.62);
+  color: #8fffc0;
+  box-shadow:
+    0 0 22px rgba(127, 255, 178, 0.18),
+    inset 0 0 28px rgba(127, 255, 178, 0.08);
+}
+
+.fr-roll-sequence-card.is-failure .fr-roll-sequence-die {
+  border-color: rgba(255, 107, 107, 0.62);
+  color: #ff7777;
+  box-shadow:
+    0 0 22px rgba(255, 107, 107, 0.18),
+    inset 0 0 28px rgba(255, 107, 107, 0.08);
+}
+
+.fr-roll-sequence-meta {
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: rgba(245, 235, 255, 0.72);
+  text-align: center;
+}
+
+@media (max-width: 760px) {
+  .fr-roll-sequence-list {
+    gap: 0.65rem;
+  }
+
+  .fr-roll-sequence-die {
+    width: 88px;
+    height: 88px;
+    border-radius: 22px;
+    font-size: 2.45rem;
+  }
+}
+
+.fr-boss-turn-moment-meta span.is-roll {
+  border-color: rgba(143, 211, 255, 0.45);
+  color: #aee5ff;
+}
+
+.fr-boss-turn-moment-meta span.is-base,
+.fr-boss-turn-moment-meta span.is-damage {
+  border-color: rgba(255, 184, 108, 0.45);
+  color: #ffd39a;
+}
+
+.fr-boss-turn-moment-meta span.is-item {
+  border-color: rgba(255, 226, 154, 0.55);
+  color: #ffe29a;
+}
+
+.fr-boss-turn-moment-meta span.is-shield,
+.fr-boss-turn-moment-meta span.is-blocked {
+  border-color: rgba(142, 240, 176, 0.5);
+  color: #9ff2b8;
+}
+
+.fr-boss-turn-moment-meta span.is-final {
+  border-color: rgba(255, 255, 255, 0.36);
+  color: #fff4d6;
+}
+
+/* =========================
+   BOSS ENDING CINEMATIC
+   ========================= */
+
+.fr-ending-overlay[hidden] {
+  display: none !important;
+}
+
+.fr-ending-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 2vw, 24px);
+  background: rgba(4, 6, 14, 0.74);
+  backdrop-filter: blur(10px);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.35s ease;
+}
+
+.fr-ending-overlay.is-visible {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.fr-ending-stage {
+  position: relative;
+  width: min(100%, 1040px);
+  height: min(88vh, 780px);
+  min-height: 520px;
+  border-radius: 28px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 220, 140, 0.28);
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,0.04) inset,
+    0 30px 90px rgba(0,0,0,0.55),
+    0 0 50px rgba(82, 123, 255, 0.18);
+  background: #040811;
+}
+
+.fr-ending-art,
+.fr-ending-art img,
+.fr-ending-veil,
+.fr-ending-finalwash {
+  position: absolute;
+  inset: 0;
+}
+
+.fr-ending-art img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  filter: brightness(0.7) saturate(1.1);
+  transform: scale(1.04);
+  transition:
+    transform 5.2s cubic-bezier(.2,.7,.2,1),
+    filter 1.2s ease;
+}
+
+/* Victory image scrolls upward */
+.fr-ending-overlay.is-victory.is-visible .fr-ending-art img {
+  transform: translateY(-10%) scale(1.02);
+}
+
+/* Defeat is more static and oppressive */
+.fr-ending-overlay.is-defeat.is-visible .fr-ending-art img {
+  transform: scale(1.06);
+  filter: brightness(0.52) saturate(0.9);
+}
+
+.fr-ending-veil {
+  background:
+    linear-gradient(to top,
+      rgba(3, 6, 15, 0.95) 0%,
+      rgba(3, 6, 15, 0.55) 32%,
+      rgba(3, 6, 15, 0.18) 60%,
+      rgba(3, 6, 15, 0.08) 100%);
+}
+
+.fr-ending-finalwash {
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 1.4s ease;
+}
+
+.fr-ending-overlay.is-victory .fr-ending-finalwash {
+  background:
+    radial-gradient(circle at center,
+      rgba(255,255,255,0.92) 0%,
+      rgba(255,255,255,0.75) 32%,
+      rgba(255,255,255,0.18) 62%,
+      rgba(255,255,255,0) 100%);
+}
+
+.fr-ending-overlay.is-defeat .fr-ending-finalwash {
+  background:
+    linear-gradient(to bottom,
+      rgba(0,0,0,0.08) 0%,
+      rgba(0,0,0,0.36) 45%,
+      rgba(0,0,0,0.76) 80%,
+      rgba(0,0,0,0.96) 100%);
+}
+
+.fr-ending-overlay.is-final .fr-ending-finalwash {
+  opacity: 1;
+}
+
+.fr-ending-copy {
+  position: absolute;
+  inset: auto 0 0 0;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: clamp(20px, 4vw, 38px);
+}
+
+.fr-ending-kicker,
+#boss-ending-kicker {
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  font-size: 0.82rem;
+  opacity: 0.9;
+}
+
+#boss-ending-title {
+  margin: 0;
+  font-size: clamp(2rem, 4vw, 4rem);
+  line-height: 1.02;
+  text-shadow: 0 8px 24px rgba(0,0,0,0.45);
+}
+
+.fr-ending-overlay.is-victory #boss-ending-title {
+  color: #f5f8ff;
+}
+
+.fr-ending-overlay.is-defeat #boss-ending-title {
+  color: #f7d9d9;
+}
+
+.fr-ending-text-box {
+  max-width: min(780px, 100%);
+  padding: 16px 18px;
+  border-radius: 18px;
+  background: rgba(6, 10, 20, 0.42);
+  border: 1px solid rgba(255,255,255,0.10);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.18);
+}
+
+#boss-ending-typewriter {
+  margin: 0;
+  min-height: 5.5em;
+  white-space: pre-wrap;
+  line-height: 1.6;
+  font-size: clamp(1rem, 1.6vw, 1.2rem);
+  color: rgba(255,255,255,0.96);
+}
+
+.fr-ending-final-word[hidden] {
+  display: none !important;
+}
+
+.fr-ending-final-word {
+  margin-top: 4px;
+  font-size: clamp(2rem, 6vw, 5rem);
+  font-weight: 900;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  opacity: 0;
+  transform: translateY(12px) scale(0.97);
+  transition: opacity 0.8s ease, transform 0.8s ease;
+  text-shadow: 0 8px 28px rgba(0,0,0,0.35);
+}
+
+.fr-ending-overlay.is-final .fr-ending-final-word {
+  opacity: 1;
+  transform: translateY(0) scale(1);
+}
+
+.fr-ending-overlay.is-victory .fr-ending-final-word {
+  color: #ffffff;
+}
+
+.fr-ending-overlay.is-defeat .fr-ending-final-word {
+  color: #ffdddd;
+}
+
+.fr-ending-close[hidden] {
+  display: none !important;
+}
+
+.fr-ending-close {
+  align-self: flex-start;
+  min-width: 180px;
+}
+
+@media (max-width: 768px) {
+  .fr-ending-stage {
+    height: min(90vh, 760px);
+    min-height: 460px;
+    border-radius: 22px;
+  }
+
+  .fr-ending-copy {
+    padding: 18px;
+    gap: 12px;
+  }
+
+  .fr-ending-text-box {
+    padding: 14px;
+  }
+
+  #boss-ending-typewriter {
+    min-height: 6.5em;
+    font-size: 1rem;
+  }
+}
