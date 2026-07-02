@@ -1374,6 +1374,9 @@ class BossActionLog(models.Model):
     damage_to_players = models.PositiveIntegerField(default=0)
     healing_done = models.PositiveIntegerField(default=0)
 
+
+    production_prompt = models.TextField(blank=True)
+    production_response = models.TextField(blank=True)
     result_text = models.TextField(blank=True)
 
     created_at = models.DateTimeField(auto_now_add=True)
@@ -1586,6 +1589,9 @@ class RoomAttempt(models.Model):
     challenge_round = models.PositiveSmallIntegerField(default=1)
     
     action_text = models.TextField(blank=True)
+
+    production_prompt = models.TextField(blank=True)
+    production_response = models.TextField(blank=True)
 
     die_roll = models.PositiveSmallIntegerField(
         null=True,

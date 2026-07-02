@@ -1,5 +1,6 @@
 # Create your views here.
 import random
+import re
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
@@ -160,6 +161,128 @@ def reset_party_ap(party):
         character = membership.character
         character.current_action_points = character.character_class.action_points
         character.save(update_fields=["current_action_points", "updated_at"])
+
+# ============================================================
+# Language production helpers
+# ============================================================
+
+PRODUCTION_PROMPTS = {
+    PlayerCharacter.EnglishLevel.LEVEL_1: {
+        "ROOM_TRAP": "Write one idea with can / can't. Example: I can jump over the trap, but I can't touch the acid.",
+        "ROOM_COMBAT": "Write one idea with can / can't. Example: I can attack with my sword.",
+        "ROOM_TREASURE": "Write one idea with can / can't. Example: I can open the chest carefully.",
+        "ROOM_SPECIAL": "Write one idea with can / can't. Example: I can check the room, but I can't trust the chest.",
+        "BOSS_TURN": "Write one battle command with can / can't. Example: I can attack the boss this turn.",
+    },
+    PlayerCharacter.EnglishLevel.LEVEL_2: {
+        "ROOM_TRAP": "Write one idea in simple past. Example: I saw the trap, so I moved carefully.",
+        "ROOM_COMBAT": "Write one idea in simple past. Example: I attacked the monster with my axe.",
+        "ROOM_TREASURE": "Write one idea in simple past. Example: I opened the chest carefully.",
+        "ROOM_SPECIAL": "Write one idea in simple past. Example: I checked the strange room before moving.",
+        "BOSS_TURN": "Write one battle command in simple past + now. Example: Last turn, the boss attacked us. Now I will heal.",
+    },
+    PlayerCharacter.EnglishLevel.LEVEL_3: {
+        "ROOM_TRAP": "Write one idea with a modal verb. Example: We must check the floor before we cross.",
+        "ROOM_COMBAT": "Write one idea with a modal verb. Example: We should attack together because the monster is strong.",
+        "ROOM_TREASURE": "Write one idea with a modal verb. Example: We should open the chest because we need help.",
+        "ROOM_SPECIAL": "Write one idea with a modal verb. Example: We must be careful because this room is dangerous.",
+        "BOSS_TURN": "Write one battle command with a modal verb. Example: We should protect the healer because the boss might attack.",
+    },
+    PlayerCharacter.EnglishLevel.LEVEL_4: {
+        "ROOM_TRAP": "Write one idea using a gerund or infinitive. Example: Avoiding the acid is important.",
+        "ROOM_COMBAT": "Write one idea using a gerund or infinitive. Example: I want to defeat the monster by using my strongest attack.",
+        "ROOM_TREASURE": "Write one idea using a gerund or infinitive. Example: Opening the chest could help us survive.",
+        "ROOM_SPECIAL": "Write one idea using a gerund or infinitive. Example: Checking the room helps us avoid danger.",
+        "BOSS_TURN": "Write one battle command using a gerund or infinitive. Example: I plan to use a shield before attacking.",
+    },
+    PlayerCharacter.EnglishLevel.LEVEL_5: {
+        "ROOM_TRAP": "Write one idea with present perfect or a strategy connector. Example: We have already found the safe path, so we should move together.",
+        "ROOM_COMBAT": "Write one idea with present perfect or a strategy connector. Example: I have fought monsters before, so I will protect the healer.",
+        "ROOM_TREASURE": "Write one idea with present perfect or a strategy connector. Example: We have already found two items, so maybe we should leave this one.",
+        "ROOM_SPECIAL": "Write one idea with present perfect or a strategy connector. Example: We have seen suspicious chests before; therefore, we should be careful.",
+        "BOSS_TURN": "Write one battle command with present perfect or a strategy connector. Example: We have already weakened the boss, so our best option is to attack together.",
+    },
+}
+
+
+def count_production_ideas(text):
+    cleaned = (text or "").strip()
+
+    if not cleaned:
+        return 0
+
+    chunks = re.split(r"(?:[.!?]+|\n+|;)", cleaned)
+
+    meaningful_chunks = [
+        chunk.strip()
+        for chunk in chunks
+        if len(chunk.strip().split()) >= 2
+    ]
+
+    return len(meaningful_chunks)
+
+
+def production_has_minimum_ideas(text, minimum_ideas=1):
+    return count_production_ideas(text) >= minimum_ideas
+
+
+def get_room_production_context(room):
+    if not room:
+        return "ROOM_COMBAT"
+
+    if room.room_type == DungeonRunRoom.RoomType.TRAP:
+        return "ROOM_TRAP"
+
+    if room.room_type == DungeonRunRoom.RoomType.COMBAT:
+        return "ROOM_COMBAT"
+
+    if room.room_type == DungeonRunRoom.RoomType.TREASURE:
+        return "ROOM_TREASURE"
+
+    if room.room_type == DungeonRunRoom.RoomType.SPECIAL:
+        return "ROOM_SPECIAL"
+
+    return "ROOM_COMBAT"
+
+
+def get_level_production_prompt(character, context_key):
+    if not character:
+        return "Write one clear idea before acting."
+
+    level_prompts = PRODUCTION_PROMPTS.get(
+        character.english_level,
+        PRODUCTION_PROMPTS[PlayerCharacter.EnglishLevel.LEVEL_2],
+    )
+
+    return level_prompts.get(
+        context_key,
+        "Write one clear idea before acting.",
+    )
+
+
+def get_room_production_prompt(character, room):
+    return get_level_production_prompt(
+        character,
+        get_room_production_context(room),
+    )
+
+
+def get_boss_production_prompt(character):
+    return get_level_production_prompt(
+        character,
+        "BOSS_TURN",
+    )
+
+
+def get_production_from_request(request, fallback_text=""):
+    response = (
+        request.POST.get("production_response", "").strip()
+        or fallback_text.strip()
+    )
+
+    prompt = request.POST.get("production_prompt", "").strip()
+
+    return prompt, response
 
 # ============================================================
 # Dungeon failure / status helpers
@@ -695,7 +818,16 @@ def consume_room_support_effects(effects):
         effect.uses_remaining = max(0, effect.uses_remaining - 1)
         effect.save(update_fields=["uses_remaining"])
 
-def submit_room_skill_action(request, session, run, room, character, membership):
+def submit_room_skill_action(
+    request,
+    session,
+    run,
+    room,
+    character,
+    membership,
+    production_prompt="",
+    production_response="",
+):
     skill_id = request.POST.get("skill_id")
 
     skill = get_object_or_404(
@@ -840,7 +972,9 @@ def submit_room_skill_action(request, session, run, room, character, membership)
         character=character,
         action_type=RoomAttempt.ActionType.SKILL,
         skill_used=skill,
-        action_text="",
+        action_text=production_response,
+        production_prompt=production_prompt,
+        production_response=production_response,
         die_roll=die_roll,
         roll_bonus=roll_modifier,
         roll_breakdown=roll_breakdown if die_roll is not None else [],
@@ -2510,13 +2644,15 @@ def apply_boss_ability_effect(encounter, ability):
                 f"{target.character_name} loses their next action."
             )
 
-        elif code == BossAbility.EffectCode.DAMAGE_PARTY_D6_PLUS:
-            ability_attempted_damage = True
-            die_roll = random.randint(1, 6)
-            base_damage = die_roll + ability.secondary_value
-            display_base_damage = base_damage
+    elif code == BossAbility.EffectCode.DAMAGE_PARTY_D6_PLUS:
+        ability_attempted_damage = True
+        die_roll = random.randint(1, 6)
+        base_damage = die_roll + ability.secondary_value
+        display_base_damage = base_damage
 
-        for character in get_boss_targetable_characters(encounter):
+        targetable_characters = get_boss_targetable_characters(encounter)
+
+        for character in targetable_characters:
             damage = apply_boss_damage_to_character(
                 encounter,
                 character,
@@ -2524,10 +2660,15 @@ def apply_boss_ability_effect(encounter, ability):
             )
             total_damage += damage
 
-        result_parts.append(
-            f"{ability.name} erupts across the battlefield. "
-            f"Roll: {die_roll}. The party takes {base_damage} base damage each."
-        )
+        if targetable_characters:
+            result_parts.append(
+                f"{ability.name} erupts across the battlefield. "
+                f"Roll: {die_roll}. The party takes {base_damage} base damage each."
+            )
+        else:
+            result_parts.append(
+                f"{ability.name} erupts, but no targetable heroes are available."
+            )
 
     elif code == BossAbility.EffectCode.DAMAGE_RANDOM_AND_PARALYZE:
         display_base_damage = ability.effect_value
@@ -2996,6 +3137,7 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
     elif code == ClassSkill.EffectCode.BOSS_DOUBLE_ATTACK:
         total_damage = 0
         difficulty = encounter.current_difficulty
+        collected_damage_breakdown = []
 
         for attack_number in [1, 2]:
             roll = random.randint(1, 6)
@@ -3011,15 +3153,12 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
                     base_damage,
                 )
 
-                damage_breakdown = [
-                    {
-                        "label": "Total damage",
-                        "value": damage_to_boss,
-                        "type": "final",
-                    }
-                ]
                 damage = damage_result["damage_to_boss"]
                 total_damage += damage
+
+                collected_damage_breakdown.extend(
+                    damage_result.get("damage_breakdown", [])
+                )
 
                 result_parts.extend(damage_result["text_parts"])
 
@@ -3040,6 +3179,14 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
             str(entry["die_roll"])
             for entry in roll_sequence
         ]
+
+        damage_breakdown = collected_damage_breakdown
+
+        damage_breakdown.append({
+            "label": "Total damage",
+            "value": damage_to_boss,
+            "type": "final",
+        })
 
         result_parts.append(
             f"{skill.name} rolls: {', '.join(roll_texts)}. "
@@ -3593,6 +3740,8 @@ def build_student_dungeon_context(request, session):
     latest_boss_player_animation_log = None
     latest_boss_skip_log = None
     latest_boss_transformation_log = None
+    room_production_prompt = ""
+    boss_production_prompt = ""
 
     if membership:
         is_current_dm = membership.party.current_dm_id == character.id
@@ -3813,6 +3962,15 @@ def build_student_dungeon_context(request, session):
             boss_encounter,
             run,
         )
+
+        if character and run and run.current_room:
+            room_production_prompt = get_room_production_prompt(
+                character,
+                run.current_room,
+            )
+
+        if character and boss_encounter:
+            boss_production_prompt = get_boss_production_prompt(character)
         
     return {
         "session": session,
@@ -3847,11 +4005,23 @@ def build_student_dungeon_context(request, session):
         "latest_boss_player_animation_log": latest_boss_player_animation_log,
         "latest_boss_skip_log": latest_boss_skip_log,
         "latest_boss_transformation_log": latest_boss_transformation_log,
+        "room_production_prompt": room_production_prompt,
+        "boss_production_prompt": boss_production_prompt,
     }
 
 # ============================================================
 # Character views
 # ============================================================
+
+def get_character_create_error_step(form):
+    if "character_class" in form.errors:
+        return 1
+
+    if "character_name" in form.errors or "visual_variant" in form.errors:
+        return 2
+
+    return 3
+
 
 def character_create(request, join_code):
     session = get_object_or_404(
@@ -3878,6 +4048,8 @@ def character_create(request, join_code):
 
     character_classes = CharacterClass.objects.filter(is_active=True)
 
+    initial_step = 1
+
     if request.method == "POST":
         form = PlayerCharacterForm(
             request.POST,
@@ -3894,6 +4066,9 @@ def character_create(request, join_code):
                 "fantasy_roles:character_detail",
                 join_code=session.join_code,
             )
+
+        initial_step = get_character_create_error_step(form)
+
     else:
         form = PlayerCharacterForm(character_classes=character_classes)
 
@@ -3905,6 +4080,7 @@ def character_create(request, join_code):
             "participant": participant,
             "form": form,
             "character_classes": character_classes,
+            "initial_step": initial_step,
         },
     )
 
@@ -4548,6 +4724,24 @@ def submit_room_action(request, join_code):
    
     action_text = request.POST.get("action_text", "").strip()
     submitted_action_type = request.POST.get("action_type", "").strip()
+
+    production_prompt, production_response = get_production_from_request(
+        request,
+        fallback_text=action_text,
+    )
+
+    if not production_prompt:
+        production_prompt = get_room_production_prompt(character, room)
+
+    if not production_has_minimum_ideas(production_response, minimum_ideas=1):
+        messages.warning(
+            request,
+            "Write at least one complete idea before taking your action.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    action_text = production_response
+
     if submitted_action_type == RoomAttempt.ActionType.SKILL:
         return submit_room_skill_action(
             request=request,
@@ -4556,6 +4750,8 @@ def submit_room_action(request, join_code):
             room=room,
             character=character,
             membership=membership,
+            production_prompt=production_prompt,
+            production_response=production_response,
         )
 
     skill = None
@@ -5097,6 +5293,8 @@ def submit_room_action(request, join_code):
         action_type=action_type,
         skill_used=skill,
         action_text=action_text,
+        production_prompt=production_prompt,
+        production_response=production_response,
         die_roll=die_roll,
         roll_bonus=roll_modifier if die_roll is not None else 0,
         roll_breakdown=roll_breakdown if die_roll is not None else [],
@@ -5733,6 +5931,18 @@ def boss_basic_attack(request, join_code):
 
     can_attack, reason = can_character_basic_attack_boss(encounter, character)
 
+    production_prompt, production_response = get_production_from_request(request)
+
+    if not production_prompt:
+        production_prompt = get_boss_production_prompt(character)
+
+    if not production_has_minimum_ideas(production_response, minimum_ideas=1):
+        messages.warning(
+            request,
+            "Write at least one battle command before taking your boss action.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
     if not can_attack:
         messages.warning(request, reason)
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
@@ -5805,6 +6015,8 @@ def boss_basic_attack(request, join_code):
             damage_to_boss=damage_to_boss,
             damage_to_players=0,
             healing_done=0,
+            production_prompt=production_prompt,
+            production_response=production_response,
             result_text=result_text,
         )
 
@@ -5874,6 +6086,18 @@ def boss_pass_turn(request, join_code):
     ):
         messages.warning(request, "It is not your boss turn.")
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+    
+    production_prompt, production_response = get_production_from_request(request)
+
+    if not production_prompt:
+        production_prompt = get_boss_production_prompt(character)
+
+    if not production_has_minimum_ideas(production_response, minimum_ideas=1):
+        messages.warning(
+            request,
+            "Write at least one battle command before taking your boss action.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
     with transaction.atomic():
         encounter = BossEncounter.objects.select_for_update().get(id=encounter.id)
@@ -5881,13 +6105,15 @@ def boss_pass_turn(request, join_code):
         BossActionLog.objects.create(
             encounter=encounter,
             actor_type=BossActionLog.ActorType.PLAYER,
-            action_type=BossActionLog.ActionType.PASS,
+            action_type=BossActionLog.ActionType.BASIC_ATTACK,
             character=character,
             phase=encounter.phase,
             round_number=encounter.round_number,
             player_phase_number=encounter.player_phase_number,
-            success=True,
-            result_text=f"{character.character_name} passes their turn.",
+            damage_to_players=0,
+            healing_done=0,
+            production_prompt=production_prompt,
+            production_response=production_response,
         )
 
         consume_character_turn_effects(encounter, character)
@@ -5937,6 +6163,18 @@ def boss_use_skill(request, join_code):
         or encounter.current_turn_character_id != character.id
     ):
         messages.warning(request, "It is not your boss turn.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    production_prompt, production_response = get_production_from_request(request)
+
+    if not production_prompt:
+        production_prompt = get_boss_production_prompt(character)
+
+    if not production_has_minimum_ideas(production_response, minimum_ideas=1):
+        messages.warning(
+            request,
+            "Write at least one battle command before taking your boss action.",
+        )
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
     skill_id = request.POST.get("skill_id")
@@ -6014,10 +6252,15 @@ def boss_use_skill(request, join_code):
             final_roll_total=skill_result.get("final_roll_total"),
             difficulty_at_roll=skill_result.get("difficulty"),
             success=skill_result.get("success", True),
-            damage_to_players=skill_result.get("damage_to_players", 0),
             damage_to_boss=skill_result.get("damage_to_boss", 0),
+            damage_to_players=skill_result.get("damage_to_players", 0),
             healing_done=skill_result.get("healing_done", 0),
-            result_text=skill_result.get("result_text", ""),
+            production_prompt=production_prompt,
+            production_response=production_response,
+            result_text=skill_result.get(
+                "result_text",
+                f"{character.character_name} used {skill.name}.",
+            ),
         )
 
         if check_boss_transformation_or_victory(

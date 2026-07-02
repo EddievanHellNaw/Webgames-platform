@@ -90,177 +90,232 @@
               <p>{{ boss_encounter.boss.defeat_text }}</p>
             </div>
 
-          {% elif is_boss_player_turn %}
-            <div class="fr-boss-action-header">
-              <span class="fr-kicker">Available Actions</span>
-              <strong>
-                Roll d6. You need {{ boss_encounter.current_difficulty }} or higher to damage the boss.
-              </strong>
-            </div>
+{% elif is_boss_player_turn %}
+  <section class="fr-boss-command-console">
+    <textarea
+      class="fr-production-source fr-boss-command-textarea"
+      data-production-source="boss-{{ boss_encounter.id }}"
+      rows="3"
+      placeholder="{% if character.english_level == 'LEVEL_1' %}Use can / can't.{% elif character.english_level == 'LEVEL_2' %}Use simple past.{% elif character.english_level == 'LEVEL_3' %}Use a modal verb.{% elif character.english_level == 'LEVEL_4' %}Use a gerund or infinitive.{% elif character.english_level == 'LEVEL_5' %}Use present perfect or a strategy connector.{% else %}Write your battle command.{% endif %}"
+      required
+    ></textarea>
 
-            <div class="fr-boss-action-rail">
-              <form
-                method="post"
-                action="{% url 'fantasy_roles:boss_basic_attack' session.join_code %}"
-                class="fr-boss-action-form"
-              >
-                {% csrf_token %}
+    <div class="fr-boss-command-status">
+      <span>Need {{ boss_encounter.current_difficulty }}+ to hit</span>
 
-                <button
-                  class="fr-boss-action-orb is-basic-attack"
-                  type="submit"
-                  title="Basic Attack"
-                  aria-label="Basic Attack"
-                  {% if not boss_can_basic_attack %}disabled{% endif %}
-                >
-                  {% include "fantasy_roles/partials/_png_icon.html" with name="basic_attack" extra_class="fr-boss-action-icon" alt="Basic attack" %}
-                  <span>Attack</span>
-                </button>
-              </form>
-
-              {% if available_boss_skills %}
-                <details class="fr-corner-popover fr-boss-skill-popover">
-                  <summary
-                    class="fr-boss-action-orb is-skill"
-                    title="Boss Skills"
-                    aria-label="Boss Skills"
-                  >
-                    {% include "fantasy_roles/partials/_png_icon.html" with name="skill" extra_class="fr-boss-action-icon" alt="Skill" %}
-                    <span>Skill</span>
-                  </summary>
-
-                  <div class="fr-corner-popover-panel fr-boss-skill-popover-panel">
-                    <div class="fr-popover-heading">
-                      <span class="fr-kicker">Boss Skills</span>
-                      <strong>Choose a skill</strong>
-                    </div>
-
-                    <div class="fr-room-skill-actions fr-boss-skill-actions">
-                      {% for skill in available_boss_skills %}
-                        <form
-                          method="post"
-                          action="{% url 'fantasy_roles:boss_use_skill' session.join_code %}"
-                        >
-                          {% csrf_token %}
-
-                          <input type="hidden" name="skill_id" value="{{ skill.id }}">
-                          {% if skill.effect_code == "BOSS_HEAL" or skill.effect_code == "BOSS_RESTORE_AP" %}
-                            <label class="fr-boss-target-select-label">
-                              <span class="fr-kicker">Target</span>
-
-                              <select name="target_character_id" class="fr-boss-target-select">
-                                {% for member in party_members %}
-                                  {% if member.character.current_life > 0 %}
-                                    <option
-                                      value="{{ member.character.id }}"
-                                      {% if member.character.id == character.id %}selected{% endif %}
-                                    >
-                                      {{ member.character.character_name }}
-                                      · Life {{ member.character.current_life }}/{{ member.character.character_class.max_life }}
-                                      · AP {{ member.character.current_action_points }}/{{ member.character.character_class.action_points }}
-                                    </option>
-                                  {% endif %}
-                                {% endfor %}
-                              </select>
-                            </label>
-                          {% endif %}
-                          <button
-                            class="fr-btn fr-btn-secondary"
-                            type="submit"
-                            {% if character.current_action_points < skill.ap_cost %}disabled{% endif %}
-                          >
-                            {{ skill.name }} · {{ skill.ap_cost }} AP
-                          </button>
-                        </form>
-                      {% endfor %}
-                    </div>
-                  </div>
-                </details>
-              {% endif %}
-                {% if party_inventory %}
-  <details class="fr-corner-popover fr-boss-item-popover">
-    <summary
-      class="fr-boss-action-orb is-item"
-      title="Use Item"
-      aria-label="Use Item"
-    >
-      {% include "fantasy_roles/partials/_png_icon.html" with name="inventory" extra_class="fr-boss-action-icon" alt="Use item" %}
-      <span>Item</span>
-    </summary>
-
-    <div class="fr-corner-popover-panel fr-boss-item-popover-panel">
-      <div class="fr-popover-heading">
-        <span class="fr-kicker">Party Inventory</span>
-        <strong>Use an item</strong>
-      </div>
-
-      <div class="fr-room-skill-actions fr-boss-item-actions">
-        {% for inventory_item in party_inventory %}
-          <article class="fr-boss-item-choice">
-            <div>
-              <strong>
-                {{ inventory_item.item.name }}
-                {% if inventory_item.quantity > 1 %}
-                  ×{{ inventory_item.quantity }}
-                {% endif %}
-              </strong>
-
-              <p>{{ inventory_item.item.effect_text }}</p>
-            </div>
-
-            <form
-              method="post"
-              action="{% url 'fantasy_roles:boss_use_item' session.join_code %}"
-            >
-              {% csrf_token %}
-
-              <input
-                type="hidden"
-                name="inventory_item_id"
-                value="{{ inventory_item.id }}"
-              >
-
-            <button
-              class="fr-use-item-icon-btn"
-              type="submit"
-              title="Use {{ inventory_item.item.name }}"
-              aria-label="Use {{ inventory_item.item.name }}"
-              {% if not inventory_item.item.can_use_in_boss %}disabled{% endif %}
-            >
-              {% include "fantasy_roles/partials/_png_icon.html" with name="use" extra_class="fr-use-item-icon" alt="Use item" %}
-              <span class="fr-sr-only">Use {{ inventory_item.item.name }}</span>
-            </button>
-            </form>
-          </article>
-        {% endfor %}
-      </div>
+      {% if not boss_can_basic_attack and boss_attack_block_reason %}
+        <span class="is-warning">{{ boss_attack_block_reason }}</span>
+      {% endif %}
     </div>
-  </details>
-{% endif %}
-              <form
-                method="post"
-                action="{% url 'fantasy_roles:boss_pass_turn' session.join_code %}"
-                class="fr-boss-action-form"
-              >
-                {% csrf_token %}
 
-                <button
-                  class="fr-boss-action-orb is-pass-turn"
-                  type="submit"
-                  title="Pass Turn"
-                  aria-label="Pass Turn"
-                >
-                  {% include "fantasy_roles/partials/_png_icon.html" with name="pass_turn" extra_class="fr-boss-action-icon" alt="Pass turn" %}
-                  <span>Pass</span>
-                </button>
-              </form>
+    <div class="fr-boss-command-actions">
+      <form
+        method="post"
+        action="{% url 'fantasy_roles:boss_basic_attack' session.join_code %}"
+        class="fr-boss-action-form"
+      >
+        {% csrf_token %}
+
+        <input
+          type="hidden"
+          name="production_prompt"
+          value="{{ boss_production_prompt }}"
+        >
+
+        <input
+          type="hidden"
+          name="production_response"
+          data-production-target="boss-{{ boss_encounter.id }}"
+        >
+
+        <button
+          class="fr-boss-action-orb is-basic-attack"
+          type="submit"
+          title="Basic Attack"
+          aria-label="Basic Attack"
+          {% if not boss_can_basic_attack %}disabled{% endif %}
+        >
+          {% include "fantasy_roles/partials/_png_icon.html" with name="basic_attack" extra_class="fr-boss-action-icon" alt="Basic attack" %}
+          <span>Attack</span>
+        </button>
+      </form>
+
+      {% if available_boss_skills %}
+        <details class="fr-corner-popover fr-boss-skill-popover">
+          <summary
+            class="fr-boss-action-orb is-skill"
+            title="Boss Skills"
+            aria-label="Boss Skills"
+          >
+            {% include "fantasy_roles/partials/_png_icon.html" with name="skill" extra_class="fr-boss-action-icon" alt="Skill" %}
+            <span>Skill</span>
+          </summary>
+
+          <div class="fr-corner-popover-panel fr-boss-skill-popover-panel">
+            <div class="fr-popover-heading">
+              <span class="fr-kicker">Boss Skills</span>
+              <strong>Choose a skill</strong>
             </div>
 
-            {% if not boss_can_basic_attack and boss_attack_block_reason %}
-              <p class="fr-muted-text">
-                {{ boss_attack_block_reason }}
-              </p>
-            {% endif %}
+            <div class="fr-room-skill-actions fr-boss-skill-actions">
+              {% for skill in available_boss_skills %}
+                <form
+                  method="post"
+                  action="{% url 'fantasy_roles:boss_use_skill' session.join_code %}"
+                >
+                  {% csrf_token %}
+
+                  <input
+                    type="hidden"
+                    name="production_prompt"
+                    value="{{ boss_production_prompt }}"
+                  >
+
+                  <input
+                    type="hidden"
+                    name="production_response"
+                    data-production-target="boss-{{ boss_encounter.id }}"
+                  >
+
+                  <input type="hidden" name="skill_id" value="{{ skill.id }}">
+
+                  {% if skill.effect_code == "BOSS_HEAL" or skill.effect_code == "BOSS_RESTORE_AP" %}
+                    <label class="fr-boss-target-select-label">
+                      <span class="fr-kicker">Target</span>
+
+                      <select name="target_character_id" class="fr-boss-target-select">
+                        {% for member in party_members %}
+                          {% if member.character.current_life > 0 %}
+                            <option
+                              value="{{ member.character.id }}"
+                              {% if member.character.id == character.id %}selected{% endif %}
+                            >
+                              {{ member.character.character_name }}
+                              · Life {{ member.character.current_life }}/{{ member.character.character_class.max_life }}
+                              · AP {{ member.character.current_action_points }}/{{ member.character.character_class.action_points }}
+                            </option>
+                          {% endif %}
+                        {% endfor %}
+                      </select>
+                    </label>
+                  {% endif %}
+
+                  <button
+                    class="fr-btn fr-btn-secondary"
+                    type="submit"
+                    {% if character.current_action_points < skill.ap_cost %}disabled{% endif %}
+                  >
+                    {{ skill.name }} · {{ skill.ap_cost }} AP
+                  </button>
+                </form>
+              {% endfor %}
+            </div>
+          </div>
+        </details>
+      {% else %}
+        <span class="fr-boss-action-orb is-disabled-placeholder" aria-hidden="true">
+          {% include "fantasy_roles/partials/_png_icon.html" with name="skill" extra_class="fr-boss-action-icon" alt="" %}
+          <span>Skill</span>
+        </span>
+      {% endif %}
+
+      {% if party_inventory %}
+        <details class="fr-corner-popover fr-boss-item-popover">
+          <summary
+            class="fr-boss-action-orb is-item"
+            title="Use Item"
+            aria-label="Use Item"
+          >
+            {% include "fantasy_roles/partials/_png_icon.html" with name="inventory" extra_class="fr-boss-action-icon" alt="Use item" %}
+            <span>Item</span>
+          </summary>
+
+          <div class="fr-corner-popover-panel fr-boss-item-popover-panel">
+            <div class="fr-popover-heading">
+              <span class="fr-kicker">Party Inventory</span>
+              <strong>Use an item</strong>
+            </div>
+
+            <div class="fr-room-skill-actions fr-boss-item-actions">
+              {% for inventory_item in party_inventory %}
+                <article class="fr-boss-item-choice">
+                  <div>
+                    <strong>
+                      {{ inventory_item.item.name }}
+                      {% if inventory_item.quantity > 1 %}
+                        ×{{ inventory_item.quantity }}
+                      {% endif %}
+                    </strong>
+
+                    <p>{{ inventory_item.item.effect_text }}</p>
+                  </div>
+
+                  <form
+                    method="post"
+                    action="{% url 'fantasy_roles:boss_use_item' session.join_code %}"
+                  >
+                    {% csrf_token %}
+
+                    <input
+                      type="hidden"
+                      name="inventory_item_id"
+                      value="{{ inventory_item.id }}"
+                    >
+
+                    <button
+                      class="fr-use-item-icon-btn"
+                      type="submit"
+                      title="Use {{ inventory_item.item.name }}"
+                      aria-label="Use {{ inventory_item.item.name }}"
+                      {% if not inventory_item.item.can_use_in_boss %}disabled{% endif %}
+                    >
+                      {% include "fantasy_roles/partials/_png_icon.html" with name="use" extra_class="fr-use-item-icon" alt="Use item" %}
+                      <span class="fr-sr-only">Use {{ inventory_item.item.name }}</span>
+                    </button>
+                  </form>
+                </article>
+              {% endfor %}
+            </div>
+          </div>
+        </details>
+      {% else %}
+        <span class="fr-boss-action-orb is-disabled-placeholder" aria-hidden="true">
+          {% include "fantasy_roles/partials/_png_icon.html" with name="inventory" extra_class="fr-boss-action-icon" alt="" %}
+          <span>Item</span>
+        </span>
+      {% endif %}
+
+      <form
+        method="post"
+        action="{% url 'fantasy_roles:boss_pass_turn' session.join_code %}"
+        class="fr-boss-action-form"
+      >
+        {% csrf_token %}
+
+        <input
+          type="hidden"
+          name="production_prompt"
+          value="{{ boss_production_prompt }}"
+        >
+
+        <input
+          type="hidden"
+          name="production_response"
+          data-production-target="boss-{{ boss_encounter.id }}"
+        >
+
+        <button
+          class="fr-boss-action-orb is-pass-turn"
+          type="submit"
+          title="Pass Turn"
+          aria-label="Pass Turn"
+        >
+          {% include "fantasy_roles/partials/_png_icon.html" with name="pass_turn" extra_class="fr-boss-action-icon" alt="Pass turn" %}
+          <span>Pass</span>
+        </button>
+      </form>
+    </div>
+  </section>
 
           {% elif boss_encounter.current_turn_character %}
             <div class="fr-boss-waiting-card">
@@ -437,6 +492,21 @@
                 {{ log.result_text }}
               </p>
             {% endif %}
+            {% if log.production_response %}
+              <div class="fr-production-evidence">
+                <span class="fr-kicker">Student Production</span>
+
+                {% if log.production_prompt %}
+                  <p class="fr-production-prompt">
+                    {{ log.production_prompt }}
+                  </p>
+                {% endif %}
+
+                <blockquote>
+                  {{ log.production_response }}
+                </blockquote>
+              </div>
+{% endif %}
           </article>
         {% endfor %}
       </div>

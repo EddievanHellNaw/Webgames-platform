@@ -4213,4 +4213,58 @@ window.frBossPlayerEventDebug = {
   };
 })();
 </script>
+
+<!-- Language Production Utilities -->
+
+<script>
+  (function () {
+    function getProductionSource(scope) {
+      return document.querySelector(
+        '[data-production-source="' + scope + '"]'
+      );
+    }
+
+    function markProductionError(source) {
+      if (!source) return;
+
+      source.classList.add("is-production-missing");
+      source.focus();
+
+      window.setTimeout(function () {
+        source.classList.remove("is-production-missing");
+      }, 1200);
+    }
+
+    document.addEventListener("submit", function (event) {
+      const form = event.target;
+
+      if (!form || !form.querySelector) {
+        return;
+      }
+
+      const target = form.querySelector("[data-production-target]");
+
+      if (!target) {
+        return;
+      }
+
+      const scope = target.dataset.productionTarget;
+      const source = getProductionSource(scope);
+
+      if (!source) {
+        return;
+      }
+
+      const value = source.value.trim();
+
+      if (!value) {
+        event.preventDefault();
+        markProductionError(source);
+        return;
+      }
+
+      target.value = value;
+    });
+  })();
+</script>
 {% endblock %}

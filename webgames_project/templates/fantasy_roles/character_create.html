@@ -26,8 +26,16 @@
     {% if form and form.errors %}
       <section class="fr-message-list">
         <div class="fr-message">
-          Please check your character information before continuing.
-          {{ form.errors }}
+          <strong>Please check your character information before continuing.</strong>
+
+          <ul class="fr-form-error-list">
+            {% for field, errors in form.errors.items %}
+              <li>
+                <strong>{{ field|title }}:</strong>
+                {{ errors|striptags }}
+              </li>
+            {% endfor %}
+          </ul>
         </div>
       </section>
     {% endif %}
@@ -61,6 +69,7 @@
                 name="character_class"
                 value="{{ character_class.id }}"
                 required
+                {% if form.data.character_class == character_class.id|stringformat:"s" %}checked{% endif %}
               >
 
               <div class="fr-class-card-image fr-class-card-icon-frame">
@@ -118,6 +127,7 @@
               type="text"
               id="character_name"
               name="character_name"
+              value="{{ form.data.character_name|default:'' }}"
               placeholder="Example: Lyra Stormblade"
               required
             >
@@ -146,6 +156,7 @@
                   name="visual_variant"
                   value="FEMALE"
                   required
+                  {% if form.data.visual_variant == "FEMALE" %}checked{% endif %}
                 >
 
                 <div class="fr-portrait-image">
@@ -167,6 +178,7 @@
                   name="visual_variant"
                   value="MALE"
                   required
+                  {% if form.data.visual_variant == "MALE" %}checked{% endif %}
                 >
 
                 <div class="fr-portrait-image">
@@ -210,11 +222,26 @@
             <label for="english_level">Choose your English level</label>
             <select id="english_level" name="english_level" required>
               <option value="">Choose your level</option>
-              <option value="LEVEL_1">Level 1 · Can / Can’t</option>
-              <option value="LEVEL_2">Level 2 · Simple Past</option>
-              <option value="LEVEL_3">Level 3 · Modal Verbs</option>
-              <option value="LEVEL_4">Level 4 · Infinitives and Gerunds</option>
-              <option value="LEVEL_5">Level 5 · Present Perfect and Strategies</option>
+
+              <option value="LEVEL_1" {% if form.data.english_level == "LEVEL_1" %}selected{% endif %}>
+                Level 1 · Can / Can’t
+              </option>
+
+              <option value="LEVEL_2" {% if form.data.english_level == "LEVEL_2" %}selected{% endif %}>
+                Level 2 · Simple Past
+              </option>
+
+              <option value="LEVEL_3" {% if form.data.english_level == "LEVEL_3" %}selected{% endif %}>
+                Level 3 · Modal Verbs
+              </option>
+
+              <option value="LEVEL_4" {% if form.data.english_level == "LEVEL_4" %}selected{% endif %}>
+                Level 4 · Infinitives and Gerunds
+              </option>
+
+              <option value="LEVEL_5" {% if form.data.english_level == "LEVEL_5" %}selected{% endif %}>
+                Level 5 · Present Perfect and Strategies
+              </option>
             </select>
           </div>
         </article>
@@ -279,9 +306,9 @@
             id="backstory"
             name="backstory"
             rows="6"
-            placeholder="Write 4–6 sentences about your character."
+            placeholder="Write at least 5 ideas about your character. Use the language mission for your level."
             required
-          ></textarea>
+          >{{ form.data.backstory|default:'' }}</textarea>
         </div>
       </section>
 
@@ -348,6 +375,7 @@
 <script>
   document.addEventListener("DOMContentLoaded", function () {
     const form = document.getElementById("character-create-form");
+    const initialStep = Number("{{ initial_step|default:1 }}");
     const steps = Array.from(document.querySelectorAll("[data-step]"));
     const stepDots = Array.from(document.querySelectorAll("[data-step-dot]"));
 
@@ -387,6 +415,14 @@
       return checkedClass.closest("[data-class-card]");
     }
 
+    function countIdeas(text) {
+      return text
+        .split(/[.!?;\n]+/)
+        .map((chunk) => chunk.trim())
+        .filter((chunk) => chunk.split(/\s+/).filter(Boolean).length >= 2)
+        .length;
+    }
+
     function validateStep(stepNumber) {
       if (stepNumber === 1) {
         if (!document.querySelector('input[name="character_class"]:checked')) {
@@ -421,21 +457,30 @@
           backstory.reportValidity();
           return false;
         }
+
+        if (countIdeas(backstory.value) < 5) {
+          alert("Please write at least 5 ideas for your hero backstory.");
+          backstory.focus();
+          return false;
+        }
       }
 
       return true;
     }
 
-    function updatePortraitChoices() {
+    function updatePortraitChoices(options = {}) {
+      const preserveSelection = options.preserveSelection === true;
       const selectedClassCard = getSelectedClassCard();
 
       portraitGroups.forEach((group) => {
         group.hidden = true;
       });
 
-      portraitRadios.forEach((radio) => {
-        radio.checked = false;
-      });
+      if (!preserveSelection) {
+        portraitRadios.forEach((radio) => {
+          radio.checked = false;
+        });
+      }
 
       if (!selectedClassCard) {
         selectedClassHelper.textContent = "Choose a class first.";
@@ -533,11 +578,37 @@
       confirmation.hidden = true;
     });
 
-    confirmation.addEventListener("click", function (event) {
+        confirmation.addEventListener("click", function (event) {
       if (event.target === confirmation) {
         confirmation.hidden = true;
       }
     });
+
+    form.addEventListener("submit", function (event) {
+      if (!validateStep(1)) {
+        event.preventDefault();
+        confirmation.hidden = true;
+        showStep(1);
+        return;
+      }
+
+      if (!validateStep(2)) {
+        event.preventDefault();
+        confirmation.hidden = true;
+        showStep(2);
+        return;
+      }
+
+      if (!validateStep(3)) {
+        event.preventDefault();
+        confirmation.hidden = true;
+        showStep(3);
+      }
+    });
+
+    updatePortraitChoices({ preserveSelection: true });
+    updateLanguageMission();
+    showStep(initialStep);
   });
 </script>
 {% endblock %}

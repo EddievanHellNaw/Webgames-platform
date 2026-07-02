@@ -5138,11 +5138,6 @@
   gap: 0.65rem;
 }
 
-.fr-trap-action-form::after {
-  content: "Write your action, then press the roll icon on the room card.";
-  color: var(--fr-muted, #b9ad93);
-  font-size: 0.82rem;
-}
 
 /* Responsive adjustments */
 @media (max-width: 800px) {
@@ -9624,4 +9619,616 @@
     0 0 18px rgb(var(--dungeon-rgb, 180 180 190) / 0.42),
     0 0 38px rgb(var(--dungeon-rgb, 180 180 190) / 0.18),
     0 8px 28px rgba(0, 0, 0, 0.55);
+}
+
+.fr-production-card {
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.28);
+  border-radius: 18px;
+  padding: 0.85rem;
+  margin: 0.75rem 0;
+  background:
+    radial-gradient(circle at top left, rgb(var(--dungeon-rgb, 243 196 91) / 0.14), transparent 18rem),
+    rgba(0, 0, 0, 0.24);
+  box-shadow:
+    0 0 18px rgb(var(--dungeon-rgb, 243 196 91) / 0.12),
+    inset 0 0 18px rgba(0, 0, 0, 0.34);
+}
+
+.fr-production-card-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.fr-production-card textarea,
+.fr-production-source {
+  width: 100%;
+  resize: vertical;
+  min-height: 5.5rem;
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.26);
+  border-radius: 14px;
+  padding: 0.75rem;
+  color: var(--fr-text);
+  background: rgba(0, 0, 0, 0.34);
+}
+
+.fr-production-source.is-production-missing {
+  border-color: rgba(255, 107, 107, 0.78) !important;
+  box-shadow:
+    0 0 0 3px rgba(255, 107, 107, 0.16),
+    0 0 18px rgba(255, 107, 107, 0.22);
+}
+
+.fr-production-evidence {
+  margin-top: 0.65rem;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  padding: 0.65rem;
+  background: rgba(0, 0, 0, 0.22);
+}
+
+.fr-production-evidence blockquote {
+  margin: 0.45rem 0 0;
+  padding-left: 0.75rem;
+  border-left: 3px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.55);
+  color: #fff4d6;
+}
+
+.fr-production-prompt {
+  margin: 0.35rem 0 0;
+  color: var(--fr-muted);
+  font-size: 0.86rem;
+}
+
+.fr-production-card-head-with-action {
+  align-items: center;
+}
+
+.fr-production-card-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  flex: 0 0 auto;
+}
+
+.fr-production-main-action {
+  width: 64px;
+  height: 64px;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.fr-production-main-action .fr-room-action-icon {
+  width: 42px;
+  height: 42px;
+}
+
+.fr-production-action-label {
+  display: block;
+  margin-top: 0.15rem;
+  font-size: 0.65rem;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.fr-trap-progress-card-compact {
+  margin: 0.55rem 0 0.7rem;
+  padding: 0.65rem 0.75rem;
+}
+
+.fr-trap-progress-card-compact p {
+  margin: 0.25rem 0 0;
+}
+
+.fr-hidden-action-form {
+  display: none !important;
+}
+
+@media (max-width: 640px) {
+  .fr-production-card-head-with-action {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    gap: 0.75rem;
+  }
+
+  .fr-production-main-action {
+    width: 58px;
+    height: 58px;
+  }
+
+  .fr-production-main-action .fr-room-action-icon {
+    width: 38px;
+    height: 38px;
+  }
+}
+
+/* ============================================================
+   Compact Room Language Console
+   Keeps production practice visible without turning it into
+   a large instruction card.
+   ============================================================ */
+
+.fr-room-stage-actions-compact {
+  left: clamp(0.75rem, 5vw, 2rem) !important;
+  right: clamp(0.75rem, 5vw, 2rem) !important;
+  bottom: clamp(0.85rem, 5vw, 2rem) !important;
+  display: block !important;
+  pointer-events: none;
+}
+
+.fr-room-action-console {
+  position: relative;
+  pointer-events: auto;
+  width: min(540px, 82%);
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr) 74px;
+  grid-template-rows: auto auto;
+  grid-template-areas:
+    "skill main pass"
+    "skill main primary";
+  gap: 0.45rem 0.7rem;
+  align-items: center;
+  padding: 0.72rem;
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.34);
+  border-radius: 22px;
+  background:
+    radial-gradient(circle at top left, rgb(var(--dungeon-rgb, 243 196 91) / 0.16), transparent 14rem),
+    linear-gradient(180deg, rgba(12, 12, 14, 0.54), rgba(4, 5, 8, 0.68));
+  box-shadow:
+    0 0 24px rgb(var(--dungeon-rgb, 243 196 91) / 0.20),
+    0 18px 46px rgba(0, 0, 0, 0.38),
+    inset 0 0 18px rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(8px);
+}
+
+.fr-room-console-glass {
+  position: absolute;
+  inset: 7px;
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.18);
+  border-radius: 17px;
+  pointer-events: none;
+}
+
+.fr-room-console-slot {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  min-width: 0;
+}
+
+.fr-room-console-slot.is-skill {
+  grid-area: skill;
+}
+
+.fr-room-console-slot.is-pass {
+  grid-area: pass;
+}
+
+.fr-room-console-slot.is-primary {
+  grid-area: primary;
+}
+
+.fr-room-console-main {
+  position: relative;
+  z-index: 2;
+  grid-area: main;
+  min-width: 0;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.fr-room-console-status {
+  justify-self: center;
+  max-width: 100%;
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.25);
+  border-radius: 999px;
+  padding: 0.22rem 0.7rem;
+  color: rgba(255, 244, 214, 0.94);
+  background: rgba(0, 0, 0, 0.34);
+  font-size: 0.82rem;
+  font-weight: 900;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.85);
+}
+
+.fr-room-console-textarea {
+  min-height: 4.25rem !important;
+  max-height: 7.5rem;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.25) !important;
+  border-radius: 16px !important;
+  padding: 0.75rem !important;
+  color: var(--fr-text, #fff4d6) !important;
+  background: rgba(0, 0, 0, 0.42) !important;
+  box-shadow:
+    inset 0 0 16px rgba(0, 0, 0, 0.42),
+    0 0 12px rgb(var(--dungeon-rgb, 243 196 91) / 0.08);
+  font-size: 0.95rem;
+}
+
+.fr-room-console-textarea::placeholder {
+  color: rgba(255, 244, 214, 0.62);
+}
+
+.fr-room-action-label {
+  position: absolute;
+  top: calc(100% - 0.15rem);
+  left: 50%;
+  transform: translateX(-50%);
+  color: rgba(255, 244, 214, 0.92);
+  font-size: 0.68rem;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  text-shadow:
+    0 0 8px rgb(var(--dungeon-rgb, 243 196 91) / 0.7),
+    0 2px 4px rgba(0, 0, 0, 0.9);
+  pointer-events: none;
+}
+
+.fr-room-console-note {
+  grid-column: 1 / -1;
+  position: relative;
+  z-index: 2;
+  margin: 0;
+  color: var(--fr-muted, #b9ad93);
+  font-size: 0.78rem;
+  text-align: center;
+}
+
+.fr-room-action-console .fr-room-action-orb {
+  width: 58px !important;
+  height: 58px !important;
+}
+
+.fr-room-action-console .fr-room-action-icon {
+  width: 100% !important;
+  height: 100% !important;
+}
+
+.fr-room-action-console .fr-room-treasure-actions {
+  display: flex !important;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.fr-room-action-console .fr-room-treasure-actions .fr-room-action-orb {
+  width: 50px !important;
+  height: 50px !important;
+}
+
+.fr-room-action-console .fr-room-skill-popover {
+  position: relative !important;
+}
+
+.fr-room-action-console .fr-room-skill-popover-panel {
+  bottom: calc(100% + 1rem) !important;
+}
+
+@media (max-width: 720px) {
+  .fr-room-stage-actions-compact {
+    left: 0.7rem !important;
+    right: 0.7rem !important;
+    bottom: 0.75rem !important;
+  }
+
+  .fr-room-action-console {
+    width: min(92vw, 420px);
+    grid-template-columns: 58px minmax(0, 1fr) 58px;
+    gap: 0.35rem 0.45rem;
+    padding: 0.62rem;
+    border-radius: 20px;
+  }
+
+  .fr-room-console-status {
+    font-size: 0.74rem;
+    padding: 0.18rem 0.52rem;
+  }
+
+  .fr-room-console-textarea {
+    min-height: 3.85rem !important;
+    max-height: 6.25rem;
+    font-size: 0.88rem;
+    padding: 0.62rem !important;
+  }
+
+  .fr-room-action-console .fr-room-action-orb {
+    width: 48px !important;
+    height: 48px !important;
+  }
+
+  .fr-room-action-console .fr-room-treasure-actions .fr-room-action-orb {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .fr-room-action-label {
+    font-size: 0.58rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .fr-room-action-console {
+    width: calc(100vw - 2rem);
+    grid-template-columns: 52px minmax(0, 1fr) 52px;
+  }
+
+  .fr-room-console-textarea {
+    min-height: 3.45rem !important;
+  }
+
+  .fr-room-console-status {
+    max-width: 12rem;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+}
+
+/* Smaller compact room console icons */
+.fr-room-action-console .fr-room-action-orb {
+  width: 48px !important;
+  height: 48px !important;
+  padding: 0.2rem !important;
+}
+
+.fr-room-action-console .fr-room-action-icon,
+.fr-room-action-console .fr-png-icon,
+.fr-room-action-console .fr-png-icon-art {
+  width: 38px !important;
+  height: 38px !important;
+  max-width: 38px !important;
+  max-height: 38px !important;
+  object-fit: contain !important;
+}
+
+.fr-room-action-console .fr-room-action-label {
+  top: calc(100% - 0.05rem);
+  font-size: 0.56rem;
+}
+
+.fr-room-action-console .fr-room-icon-action-form {
+  display: grid;
+  place-items: center;
+  margin: 0;
+}
+
+.fr-room-action-console .fr-room-treasure-actions {
+  display: contents !important;
+}
+
+.fr-room-action-console .is-disabled-placeholder {
+  opacity: 0.32;
+  pointer-events: none;
+  filter: grayscale(0.5);
+}
+
+@media (max-width: 720px) {
+  .fr-room-action-console .fr-room-action-orb {
+    width: 44px !important;
+    height: 44px !important;
+  }
+
+  .fr-room-action-console .fr-room-action-icon,
+  .fr-room-action-console .fr-png-icon,
+  .fr-room-action-console .fr-png-icon-art {
+    width: 34px !important;
+    height: 34px !important;
+    max-width: 34px !important;
+    max-height: 34px !important;
+  }
+
+  .fr-room-action-console .fr-room-action-label {
+    font-size: 0.52rem;
+  }
+}
+
+.fr-room-action-console {
+  grid-template-columns: 56px minmax(0, 1fr) 56px !important;
+}
+
+@media (max-width: 720px) {
+  .fr-room-action-console {
+    grid-template-columns: 50px minmax(0, 1fr) 50px !important;
+  }
+}
+
+/* ============================================================
+   Compact Boss Command Console
+   ============================================================ */
+
+.fr-boss-command-console {
+  position: relative;
+  display: grid;
+  gap: 0.7rem;
+  width: min(100%, 760px);
+  margin: 0 auto;
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.34);
+  border-radius: 22px;
+  padding: 0.85rem;
+  background:
+    radial-gradient(circle at top left, rgb(var(--dungeon-rgb, 243 196 91) / 0.14), transparent 16rem),
+    linear-gradient(180deg, rgba(12, 12, 14, 0.56), rgba(4, 5, 8, 0.72));
+  box-shadow:
+    0 0 24px rgb(var(--dungeon-rgb, 243 196 91) / 0.18),
+    0 18px 46px rgba(0, 0, 0, 0.36),
+    inset 0 0 18px rgba(255, 255, 255, 0.035);
+  backdrop-filter: blur(8px);
+}
+
+.fr-boss-command-textarea {
+  min-height: 5.1rem !important;
+  max-height: 8rem;
+  width: 100%;
+  resize: vertical;
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.28) !important;
+  border-radius: 16px !important;
+  padding: 0.8rem !important;
+  color: var(--fr-text, #fff4d6) !important;
+  background: rgba(0, 0, 0, 0.42) !important;
+  box-shadow:
+    inset 0 0 16px rgba(0, 0, 0, 0.42),
+    0 0 12px rgb(var(--dungeon-rgb, 243 196 91) / 0.08);
+  font-size: 0.96rem;
+}
+
+.fr-boss-command-textarea::placeholder {
+  color: rgba(255, 244, 214, 0.62);
+}
+
+.fr-boss-command-status {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.45rem;
+  margin-top: -0.1rem;
+}
+
+.fr-boss-command-status span {
+  border: 1px solid rgb(var(--dungeon-rgb, 243 196 91) / 0.25);
+  border-radius: 999px;
+  padding: 0.22rem 0.7rem;
+  color: rgba(255, 244, 214, 0.92);
+  background: rgba(0, 0, 0, 0.34);
+  font-size: 0.76rem;
+  font-weight: 900;
+  text-align: center;
+}
+
+.fr-boss-command-status .is-warning {
+  border-color: rgba(255, 107, 107, 0.42);
+  color: #ffb3b3;
+}
+
+.fr-boss-command-actions {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(54px, 1fr));
+  gap: 0.65rem;
+  align-items: end;
+  justify-items: center;
+}
+
+.fr-boss-command-actions .fr-boss-action-form {
+  display: grid;
+  place-items: center;
+  margin: 0;
+}
+
+.fr-boss-command-actions .fr-boss-action-orb {
+  width: 54px !important;
+  height: 54px !important;
+  padding: 0.2rem !important;
+}
+
+.fr-boss-command-actions .fr-boss-action-icon,
+.fr-boss-command-actions .fr-png-icon,
+.fr-boss-command-actions .fr-png-icon-art {
+  width: 42px !important;
+  height: 42px !important;
+  max-width: 42px !important;
+  max-height: 42px !important;
+  object-fit: contain !important;
+}
+
+.fr-boss-command-actions .fr-boss-action-orb span {
+  font-size: 0.62rem !important;
+  font-weight: 950;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.fr-boss-command-actions .is-disabled-placeholder {
+  opacity: 0.3;
+  pointer-events: none;
+  filter: grayscale(0.5);
+}
+
+.fr-boss-command-actions .fr-corner-popover {
+  position: relative;
+  display: grid;
+  place-items: center;
+}
+
+.fr-boss-command-actions .fr-boss-skill-popover-panel,
+.fr-boss-command-actions .fr-boss-item-popover-panel {
+  bottom: calc(100% + 1rem);
+  top: auto;
+}
+
+.fr-boss-cinematic-actions {
+  padding-top: 0.9rem;
+}
+
+@media (max-width: 720px) {
+  .fr-boss-command-console {
+    width: min(100%, 94vw);
+    padding: 0.72rem;
+    border-radius: 20px;
+    gap: 0.58rem;
+  }
+
+  .fr-boss-command-textarea {
+    min-height: 4.35rem !important;
+    max-height: 6.8rem;
+    font-size: 0.88rem;
+    padding: 0.68rem !important;
+  }
+
+  .fr-boss-command-actions {
+    grid-template-columns: repeat(4, minmax(44px, 1fr));
+    gap: 0.42rem;
+  }
+
+  .fr-boss-command-actions .fr-boss-action-orb {
+    width: 46px !important;
+    height: 46px !important;
+  }
+
+  .fr-boss-command-actions .fr-boss-action-icon,
+  .fr-boss-command-actions .fr-png-icon,
+  .fr-boss-command-actions .fr-png-icon-art {
+    width: 36px !important;
+    height: 36px !important;
+    max-width: 36px !important;
+    max-height: 36px !important;
+  }
+
+  .fr-boss-command-actions .fr-boss-action-orb span {
+    font-size: 0.52rem !important;
+  }
+
+  .fr-boss-command-status span {
+    font-size: 0.68rem;
+    padding: 0.18rem 0.55rem;
+  }
+}
+
+@media (max-width: 430px) {
+  .fr-boss-command-console {
+    width: calc(100vw - 2rem);
+  }
+
+  .fr-boss-command-actions {
+    gap: 0.32rem;
+  }
+
+  .fr-boss-command-actions .fr-boss-action-orb {
+    width: 42px !important;
+    height: 42px !important;
+  }
+
+  .fr-boss-command-actions .fr-boss-action-icon,
+  .fr-boss-command-actions .fr-png-icon,
+  .fr-boss-command-actions .fr-png-icon-art {
+    width: 32px !important;
+    height: 32px !important;
+    max-width: 32px !important;
+    max-height: 32px !important;
+  }
 }

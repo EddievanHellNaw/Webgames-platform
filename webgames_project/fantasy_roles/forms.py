@@ -1,5 +1,26 @@
+import re
 from django import forms
 from .models import PlayerCharacter
+
+
+# ============================================================
+# Language production helpers
+# ============================================================
+def count_backstory_ideas(text):
+    cleaned = (text or "").strip()
+
+    if not cleaned:
+        return 0
+
+    chunks = re.split(r"(?:[.!?]+|\n+|;)", cleaned)
+
+    meaningful_chunks = [
+        chunk.strip()
+        for chunk in chunks
+        if len(chunk.strip().split()) >= 2
+    ]
+
+    return len(meaningful_chunks)
 
 
 class PlayerCharacterForm(forms.ModelForm):
@@ -31,6 +52,16 @@ class PlayerCharacterForm(forms.ModelForm):
             "english_level": "English practice level",
             "backstory": "Character backstory",
         }
+
+    def clean_backstory(self):
+        backstory = self.cleaned_data.get("backstory", "")
+
+        if count_backstory_ideas(backstory) < 5:
+            raise forms.ValidationError(
+                "Write at least 5 ideas for your hero backstory."
+            )
+
+        return backstory
 
     def __init__(self, *args, **kwargs):
         character_classes = kwargs.pop("character_classes", None)

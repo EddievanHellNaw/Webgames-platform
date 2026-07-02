@@ -70,6 +70,29 @@
               </div>
             {% endif %}
           </div>
+
+          {% if attempt.production_response %}
+  <div class="fr-production-evidence">
+    <span class="fr-kicker">Student Production</span>
+
+    {% if attempt.production_prompt %}
+      <p class="fr-production-prompt">
+        {{ attempt.production_prompt }}
+      </p>
+    {% endif %}
+
+    <blockquote>
+      {{ attempt.production_response }}
+    </blockquote>
+  </div>
+{% elif attempt.action_text %}
+  <div class="fr-production-evidence">
+    <span class="fr-kicker">Student Production</span>
+    <blockquote>
+      {{ attempt.action_text }}
+    </blockquote>
+  </div>
+{% endif %}
         </article>
       {% endfor %}
     </div>
