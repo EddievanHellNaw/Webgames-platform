@@ -15,6 +15,7 @@
     <div class="fr-roll-card-header">
       <span class="fr-kicker" id="roll-result-kicker">Dungeon Roll</span>
       <strong id="roll-result-title">Rolling...</strong>
+      <p class="fr-roll-action-quote" id="roll-action-quote" hidden></p>
     </div>
 
     <div class="fr-roll-dice-wrap" id="roll-dice-wrap">
@@ -255,7 +256,11 @@
     <div class="fr-boss-transformation-meta" id="boss-transformation-meta"></div>
   </article>
 </div>
-<div id="boss-ending-overlay" class="fr-ending-overlay" hidden>
+<div
+  id="boss-ending-overlay"
+  class="fr-ending-overlay {% if run and run.dungeon %}fr-dungeon-theme-{{ run.dungeon.name|slugify }}{% endif %}"
+  hidden
+>
   <div class="fr-ending-stage">
     <div class="fr-ending-art">
       <img id="boss-ending-image" alt="">
@@ -304,6 +309,7 @@
     const kicker = document.getElementById("roll-result-kicker");
     const main = document.getElementById("roll-result-main");
     const detail = document.getElementById("roll-result-detail");
+    const actionQuote = document.getElementById("roll-action-quote");
     const closeButton = document.getElementById("close-roll-result");
 
     if (!overlay || !card || !dice || !closeButton) {
@@ -359,16 +365,38 @@
 
     function closeOverlay() {
       overlay.hidden = true;
-      card.classList.remove("is-success", "is-failure", "has-item");
+      overlay.setAttribute("hidden", "");
+
+      card.classList.remove(
+        "is-success",
+        "is-failure",
+        "has-item",
+        "is-resolving-total"
+      );
+
       diceWrap.classList.remove(
         "is-rolling",
         "is-success-pop",
         "is-failure-pop",
         "is-final-total"
       );
+
       if (sequenceWrap) sequenceWrap.hidden = true;
       if (sequenceList) sequenceList.innerHTML = "";
       if (diceWrap) diceWrap.hidden = false;
+      if (actionQuote) {
+        actionQuote.hidden = true;
+        actionQuote.textContent = "";
+      }
+      document.body.classList.remove("fr-modal-open");
+      document.documentElement.classList.remove("fr-modal-open");
+
+      if (
+        window.frBossPlayerEventGate &&
+        typeof window.frBossPlayerEventGate.notifyAdvanced === "function"
+      ) {
+        window.frBossPlayerEventGate.notifyAdvanced();
+      }
     }
 
 function showAttemptAnimation(payload) {
@@ -402,6 +430,17 @@ function showAttemptAnimation(payload) {
   const item = payload.dataset.item || "";
   const characterName = payload.dataset.characterName || "A hero";
   const characterId = payload.dataset.characterId;
+  const productionResponse = (payload.dataset.productionResponse || "").trim();
+
+  if (actionQuote) {
+    if (productionResponse) {
+      actionQuote.textContent = characterName + ': “' + productionResponse + '”';
+      actionQuote.hidden = false;
+    } else {
+      actionQuote.textContent = "";
+      actionQuote.hidden = true;
+    }
+  }
 
   const totalRow = document.getElementById("roll-total-row");
   const modifierList = document.getElementById("roll-modifier-list");
@@ -830,11 +869,34 @@ function showDamageChips(row, list, breakdown, finalDamage) {
     const TEXTAREA_KEY_PREFIX = "fantasy_roles_textarea_";
     let inputBlurTimeout = null;
 
-    function getTextareaKey(textarea) {
-      return TEXTAREA_KEY_PREFIX + window.location.pathname + "_" + textarea.id;
+    function getTextareaIdentity(textarea) {
+      return (
+        textarea.dataset.productionSource ||
+        textarea.id ||
+        textarea.name ||
+        ""
+      );
     }
 
-    function isDungeonInput(element) {
+    function getTextareaIdentity(textarea) {
+      return (
+        textarea.dataset.productionSource ||
+        textarea.id ||
+        textarea.name ||
+        ""
+      );
+    }
+
+    function getTextareaKey(textarea) {
+      const identity = getTextareaIdentity(textarea);
+
+      if (!identity) {
+        return "";
+      }
+
+      return TEXTAREA_KEY_PREFIX + window.location.pathname + "_" + identity;
+    }
+        function isDungeonInput(element) {
       return (
         element &&
         element.matches &&
@@ -861,22 +923,35 @@ function showDamageChips(row, list, breakdown, finalDamage) {
       }, 1200);
     }
 
-    function saveTextarea(textarea) {
-      if (!textarea.id) {
-        return;
-      }
+    function restoreTextareas() {
+      const textareas = document.querySelectorAll("#dungeon-live-panel textarea");
 
-      sessionStorage.setItem(
-        getTextareaKey(textarea),
-        textarea.value
-      );
+      textareas.forEach(function (textarea) {
+        const key = getTextareaKey(textarea);
+
+        if (!key) {
+          return;
+        }
+
+        const savedValue = sessionStorage.getItem(key);
+
+        if (savedValue !== null && textarea.value === "") {
+          textarea.value = savedValue;
+        }
+      });
     }
 
     function restoreTextareas() {
-      const textareas = document.querySelectorAll("#dungeon-live-panel textarea[id]");
+      const textareas = document.querySelectorAll("#dungeon-live-panel textarea");
 
       textareas.forEach(function (textarea) {
-        const savedValue = sessionStorage.getItem(getTextareaKey(textarea));
+        const key = getTextareaKey(textarea);
+
+        if (!key) {
+          return;
+        }
+
+        const savedValue = sessionStorage.getItem(key);
 
         if (savedValue !== null && textarea.value === "") {
           textarea.value = savedValue;
@@ -885,10 +960,49 @@ function showDamageChips(row, list, breakdown, finalDamage) {
     }
 
     function clearSubmittedTextareas(form) {
-      const textareas = form.querySelectorAll("textarea[id]");
+      const textareas = form.querySelectorAll("textarea");
 
       textareas.forEach(function (textarea) {
-        sessionStorage.removeItem(getTextareaKey(textarea));
+        const key = getTextareaKey(textarea);
+
+        if (key) {
+          sessionStorage.removeItem(key);
+        }
+      });
+    }
+
+    function findProductionSource(sourceKey) {
+      if (!sourceKey) {
+        return null;
+      }
+
+      const sources = document.querySelectorAll("[data-production-source]");
+
+      for (const source of sources) {
+        if (source.dataset.productionSource === sourceKey) {
+          return source;
+        }
+      }
+
+      return null;
+    }
+
+    function copyProductionResponseToForm(form) {
+      if (!form) {
+        return;
+      }
+
+      const targets = form.querySelectorAll("[data-production-target]");
+
+      targets.forEach(function (target) {
+        const sourceKey = target.dataset.productionTarget;
+        const source = findProductionSource(sourceKey);
+
+        if (!source) {
+          return;
+        }
+
+        target.value = source.value.trim();
       });
     }
 
@@ -907,7 +1021,7 @@ function showDamageChips(row, list, breakdown, finalDamage) {
     document.addEventListener("input", function (event) {
       if (
         event.target &&
-        event.target.matches("#dungeon-live-panel textarea[id]")
+        event.target.matches("#dungeon-live-panel textarea")
       ) {
         setInputActive();
         saveTextarea(event.target);
@@ -916,7 +1030,10 @@ function showDamageChips(row, list, breakdown, finalDamage) {
 
     document.addEventListener("submit", function (event) {
       if (event.target && event.target.closest("#dungeon-live-panel")) {
+        copyProductionResponseToForm(event.target);
+
         clearSubmittedTextareas(event.target);
+
         document.body.classList.remove("fr-dungeon-input-active");
       }
     });
@@ -1151,43 +1268,58 @@ function showDamageChips(row, list, breakdown, finalDamage) {
       }, 800);
     }
 
-    function showBossDamageIndicators(payload) {
-  const totalDamage = Number(payload.dataset.damage || 0);
-  const healing = Number(payload.dataset.healing || 0);
+  function showBossDamageIndicators(payload) {
+    const totalDamage = Number(payload.dataset.damage || 0);
+    const damageToBoss = Number(payload.dataset.damageToBoss || 0);
+    const healing = Number(payload.dataset.healing || 0);
 
-  if (totalDamage > 0) {
-    const targets = getDamageTargetElements(payload);
+    if (damageToBoss > 0) {
+      const bossTarget =
+        document.querySelector("[data-boss-card]") ||
+        document.querySelector(".fr-boss-health-card-v2") ||
+        document.querySelector(".fr-boss-card-v2") ||
+        document.querySelector(".fr-boss-board-panel") ||
+        document.querySelector(".fr-boss-encounter-panel");
 
-    const damagePerTarget = Number(payload.dataset.damagePerTarget || 0) || (
-      targets.length > 1
-        ? Math.ceil(totalDamage / targets.length)
-        : totalDamage
-    );
+      if (bossTarget) {
+        pulseDamageTarget(bossTarget);
+        showFloatingIndicator(bossTarget, "-" + damageToBoss, "damage");
+      }
+    }
 
-    targets.forEach(function (target, index) {
-      window.setTimeout(function () {
-        pulseDamageTarget(target);
-        showFloatingIndicator(target, "-" + damagePerTarget, "damage");
-      }, index * 120);
-    });
-  }
+    if (totalDamage > 0) {
+      const targets = getDamageTargetElements(payload);
 
-  if (healing > 0) {
-    const bossCard = document.querySelector("[data-boss-card]");
+      const damagePerTarget = Number(payload.dataset.damagePerTarget || 0) || (
+        targets.length > 1
+          ? Math.ceil(totalDamage / targets.length)
+          : totalDamage
+      );
 
-    if (bossCard) {
-      bossCard.classList.remove("is-boss-heal-pulse");
-      void bossCard.offsetWidth;
-      bossCard.classList.add("is-boss-heal-pulse");
+      targets.forEach(function (target, index) {
+        window.setTimeout(function () {
+          pulseDamageTarget(target);
+          showFloatingIndicator(target, "-" + damagePerTarget, "damage");
+        }, index * 120);
+      });
+    }
 
-      showFloatingIndicator(bossCard, "+" + healing, "healing");
+    if (healing > 0) {
+      const bossCard = document.querySelector("[data-boss-card]");
 
-      window.setTimeout(function () {
+      if (bossCard) {
         bossCard.classList.remove("is-boss-heal-pulse");
-      }, 1000);
+        void bossCard.offsetWidth;
+        bossCard.classList.add("is-boss-heal-pulse");
+
+        showFloatingIndicator(bossCard, "+" + healing, "healing");
+
+        window.setTimeout(function () {
+          bossCard.classList.remove("is-boss-heal-pulse");
+        }, 1000);
+      }
     }
   }
-}
 
 
 function appendMomentMetaPill(text, className) {
@@ -1242,6 +1374,7 @@ function getBreakdownValue(effect) {
 
 function buildBossMomentSequence(options) {
   const sequence = [];
+  const damageBreakdown = options.damageBreakdown || [];
 
   if (options.dieRoll) {
     sequence.push({
@@ -1250,7 +1383,7 @@ function buildBossMomentSequence(options) {
     });
   }
 
-  options.damageBreakdown.forEach(function (effect) {
+  damageBreakdown.forEach(function (effect) {
     const value = getBreakdownValue(effect);
 
     if (effect.type === "base") {
@@ -1268,7 +1401,7 @@ function buildBossMomentSequence(options) {
         type: "final",
       });
 
-      if (value === 0 && options.damageBreakdown.length) {
+      if (value === 0 && damageBreakdown.length) {
         sequence.push({
           text: "Damage blocked",
           type: "blocked",
@@ -1288,7 +1421,14 @@ function buildBossMomentSequence(options) {
     });
   });
 
-  if (!options.damageBreakdown.length && options.damage > 0) {
+  if (!damageBreakdown.length && options.damageToBoss > 0) {
+    sequence.push({
+      text: "Boss damage: " + options.damageToBoss,
+      type: "damage",
+    });
+  }
+
+  if (!damageBreakdown.length && options.damage > 0) {
     sequence.push({
       text: "Total party damage: " + options.damage,
       type: "damage",
@@ -1348,6 +1488,7 @@ function playBossMomentSequence(sequence, afterSequence) {
       const abilityName = payload.dataset.abilityName || "Boss Ability";
       const resultText = payload.dataset.resultText || "";
       const damage = Number(payload.dataset.damage || 0);
+      const damageToBoss = Number(payload.dataset.damageToBoss || 0);
       const healing = Number(payload.dataset.healing || 0);
       const dieRoll = payload.dataset.dieRoll || "";
 
@@ -1367,16 +1508,17 @@ function playBossMomentSequence(sequence, afterSequence) {
 
       const damageBreakdown = getBossDamageBreakdownRaw();
 
-const momentSequence = buildBossMomentSequence({
-  dieRoll: dieRoll,
-  damage: damage,
-  healing: healing,
-  damageBreakdown: damageBreakdown,
-});
+      const momentSequence = buildBossMomentSequence({
+        dieRoll: dieRoll,
+        damage: damage,
+        damageToBoss: damageToBoss,
+        healing: healing,
+        damageBreakdown: damageBreakdown,
+      });
 
-playBossMomentSequence(momentSequence, function () {
-  showBossDamageIndicators(payload);
-});
+      playBossMomentSequence(momentSequence, function () {
+        showBossDamageIndicators(payload);
+      });
       bossMomentIsShowing = true;
 
       moment.hidden = false;
@@ -1495,6 +1637,7 @@ window.setTimeout(function () {
   (function () {
     const ROOM_SEEN_PREFIX = "fantasy_roles_seen_room_";
     const ROOM_FAILURE_SEEN_PREFIX = "fantasy_roles_seen_room_failure_";
+    const MIMIC_REVEAL_SEEN_PREFIX = "fantasy_roles_seen_mimic_reveal_";
 
     function getOverlay() {
       return document.getElementById("room-story-overlay");
@@ -1637,6 +1780,53 @@ window.setTimeout(function () {
     return shown;
   }
 
+  function checkMimicReveal() {
+    const payload = document.getElementById("latest-mimic-reveal-payload");
+
+    if (!payload || anotherOverlayIsOpen()) {
+      return false;
+    }
+
+    const attemptId = payload.dataset.attemptId;
+
+    if (!attemptId) {
+      return false;
+    }
+
+    const storageKey = MIMIC_REVEAL_SEEN_PREFIX + attemptId;
+
+    if (sessionStorage.getItem(storageKey) === "true") {
+      return false;
+    }
+
+    const meta = ["Mimic", "Combat Room"];
+
+    if (payload.dataset.success === "false") {
+      const damage = Number(payload.dataset.damage || 0);
+
+      if (damage > 0) {
+        meta.push("Damage: " + damage);
+      }
+    }
+
+    const shown = showRoomStory({
+      kicker: "Room " + payload.dataset.roomNumber + " · Mimic Revealed",
+      title: payload.dataset.roomName || "Mimic Ambush",
+      text:
+        payload.dataset.flavorText ||
+        payload.dataset.resultText ||
+        "The chest snaps open with teeth and claws. It was a mimic!",
+      imageUrl: payload.dataset.imageUrl,
+      meta: meta,
+    });
+
+    if (shown) {
+      sessionStorage.setItem(storageKey, "true");
+    }
+
+    return shown;
+  }
+
     function checkRoomFailure() {
       const payload = document.getElementById("latest-room-failure-payload");
 
@@ -1688,7 +1878,9 @@ window.setTimeout(function () {
       }
 
       if (event.target && event.target.id === "close-roll-result") {
-        window.setTimeout(checkRoomFailure, 220);
+        window.setTimeout(function () {
+          checkMimicReveal() || checkRoomFailure();
+        }, 220);
       }
 
       if (event.target && event.target.id === "boss-attack-close") {
@@ -1699,12 +1891,12 @@ window.setTimeout(function () {
 
 function scheduleRoomStoryCheck(delay) {
   window.setTimeout(function () {
-    if (checkRoomFailure() || checkRoomEntry()) {
+    if (checkMimicReveal() || checkRoomFailure() || checkRoomEntry()) {
       return;
     }
 
     window.setTimeout(function () {
-      if (checkRoomFailure() || checkRoomEntry()) {
+      if (checkMimicReveal() || checkRoomFailure() || checkRoomEntry()) {
         return;
       }
 
@@ -1736,71 +1928,73 @@ document.body.addEventListener("htmx:afterSettle", function () {
     });
 
     window.frRoomStoryDebug = {
-  checkRoomEntry,
-  checkRoomFailure,
-  showRoomStory,
-  closeRoomStory,
+      checkRoomEntry,
+      checkMimicReveal,
+      checkRoomFailure,
+      showRoomStory,
+      closeRoomStory,
 
-  state: function () {
-    const payload = document.getElementById("current-room-entry-payload");
-    const overlay = document.getElementById("room-story-overlay");
-    const rollOverlay = document.getElementById("roll-result-overlay");
-    const bossOverlay = document.getElementById("boss-attack-overlay");
+      state: function () {
+        const payload = document.getElementById("current-room-entry-payload");
+        const overlay = document.getElementById("room-story-overlay");
+        const rollOverlay = document.getElementById("roll-result-overlay");
+        const bossOverlay = document.getElementById("boss-attack-overlay");
 
-    let storageKey = null;
-    let seen = null;
+        let storageKey = null;
+        let seen = null;
 
-    if (payload) {
-      storageKey =
-        "fantasy_roles_seen_room_" +
-        payload.dataset.runId +
-        "_" +
-        payload.dataset.roomId;
+        if (payload) {
+          storageKey =
+            "fantasy_roles_seen_room_" +
+            payload.dataset.runId +
+            "_" +
+            payload.dataset.roomId;
 
-      seen = sessionStorage.getItem(storageKey);
-    }
+          seen = sessionStorage.getItem(storageKey);
+        }
 
-    return {
-      payloadExists: !!payload,
-      payloadDataset: payload ? { ...payload.dataset } : null,
-      overlayExists: !!overlay,
-      overlayHidden: overlay ? overlay.hidden : null,
-      rollOverlayHidden: rollOverlay ? rollOverlay.hidden : null,
-      bossOverlayHidden: bossOverlay ? bossOverlay.hidden : null,
-      storageKey: storageKey,
-      seen: seen,
-      overlayCount: document.querySelectorAll("#room-story-overlay").length,
-      payloadCount: document.querySelectorAll("#current-room-entry-payload").length,
+        return {
+          payloadExists: !!payload,
+          payloadDataset: payload ? { ...payload.dataset } : null,
+          overlayExists: !!overlay,
+          overlayHidden: overlay ? overlay.hidden : null,
+          rollOverlayHidden: rollOverlay ? rollOverlay.hidden : null,
+          bossOverlayHidden: bossOverlay ? bossOverlay.hidden : null,
+          storageKey: storageKey,
+          seen: seen,
+          overlayCount: document.querySelectorAll("#room-story-overlay").length,
+          payloadCount: document.querySelectorAll("#current-room-entry-payload").length,
+        };
+      },
+
+      clearRoomMemory: function () {
+        Object.keys(sessionStorage)
+          .filter((key) =>
+            key.startsWith("fantasy_roles_seen_room_") ||
+            key.startsWith("fantasy_roles_seen_room_failure_") ||
+            key.startsWith("fantasy_roles_seen_mimic_reveal_")
+          )
+          .forEach((key) => sessionStorage.removeItem(key));
+
+        return "Room memory cleared.";
+      },
+
+      forceRoomEntry: function () {
+        const payload = document.getElementById("current-room-entry-payload");
+
+        if (!payload) {
+          return "No current-room-entry-payload found.";
+        }
+
+        return showRoomStory({
+          kicker: "Room " + payload.dataset.roomNumber + " · " + payload.dataset.roomType,
+          title: payload.dataset.roomName,
+          text: payload.dataset.flavorText || "The party enters a new room.",
+          imageUrl: payload.dataset.imageUrl,
+          meta: ["New Room"],
+        });
+      },
     };
-  },
-
-  clearRoomMemory: function () {
-    Object.keys(sessionStorage)
-      .filter((key) =>
-        key.startsWith("fantasy_roles_seen_room_") ||
-        key.startsWith("fantasy_roles_seen_room_failure_")
-      )
-      .forEach((key) => sessionStorage.removeItem(key));
-
-    return "Room memory cleared.";
-  },
-
-  forceRoomEntry: function () {
-    const payload = document.getElementById("current-room-entry-payload");
-
-    if (!payload) {
-      return "No current-room-entry-payload found.";
-    }
-
-    return showRoomStory({
-      kicker: "Room " + payload.dataset.roomNumber + " · " + payload.dataset.roomType,
-      title: payload.dataset.roomName,
-      text: payload.dataset.flavorText || "The party enters a new room.",
-      imageUrl: payload.dataset.imageUrl,
-      meta: ["New Room"],
-    });
-  },
-};
   })();
 </script>
 <script>
@@ -1871,31 +2065,28 @@ document.body.addEventListener("htmx:afterSettle", function () {
       );
     }
 
-function setLife(heroCard, value, maxValue) {
-  const stat = heroCard.querySelector('.fr-hero-stat-value[data-stat="life"]');
+    function setLife(heroCard, value, maxValue) {
+      const statCard = heroCard.querySelector('[data-stat="life"]');
+      const statValue = statCard
+        ? statCard.querySelector(".fr-hero-stat-value")
+        : null;
 
-  if (!stat) return;
+      if (!statCard || !statValue) return;
 
-  stat.dataset.current = String(value);
-  stat.textContent = value + "/" + maxValue;
-}
-
-function setAp(heroCard, value, maxValue) {
-  const stat = heroCard.querySelector('.fr-hero-stat-value[data-stat="ap"]');
-
-  if (!stat) return;
-
-  stat.dataset.current = String(value);
-  stat.textContent = value + "/" + maxValue;
-}
+      statCard.dataset.current = String(value);
+      statValue.textContent = value + "/" + maxValue;
+    }
 
     function setAp(heroCard, value, maxValue) {
-      const stat = heroCard.querySelector('[data-stat="ap"]');
+      const statCard = heroCard.querySelector('[data-stat="ap"]');
+      const statValue = statCard
+        ? statCard.querySelector(".fr-hero-stat-value")
+        : null;
 
-      if (!stat) return;
+      if (!statCard || !statValue) return;
 
-      stat.dataset.current = String(value);
-      stat.textContent = "✦ " + value + "/" + maxValue;
+      statCard.dataset.current = String(value);
+      statValue.textContent = value + "/" + maxValue;
     }
 
     function animateNumber(options) {
@@ -2783,6 +2974,113 @@ function setAp(heroCard, value, maxValue) {
 </script>
 <script>
   (function () {
+    const BOSS_LOG_OPEN_KEY = "fr_boss_log_open";
+    const BOSS_LOG_SCROLL_KEY = "fr_boss_log_scroll";
+
+    function getBossLog() {
+      return document.getElementById("fr-boss-log-details");
+    }
+
+    function getBossLogScrollTarget(log) {
+      if (!log) return null;
+
+      return (
+        log.querySelector(".fr-boss-log-list-compact") ||
+        log.querySelector(".fr-party-log-list") ||
+        log
+      );
+    }
+
+    function bossLogIsOpen() {
+      const log = getBossLog();
+
+      return !!(log && log.open);
+    }
+
+    function saveBossLogState() {
+      const log = getBossLog();
+
+      if (!log) return;
+
+      sessionStorage.setItem(
+        BOSS_LOG_OPEN_KEY,
+        log.open ? "true" : "false"
+      );
+
+      const scrollTarget = getBossLogScrollTarget(log);
+
+      if (scrollTarget) {
+        sessionStorage.setItem(
+          BOSS_LOG_SCROLL_KEY,
+          String(scrollTarget.scrollTop || 0)
+        );
+      }
+    }
+
+    function restoreBossLogState() {
+      const log = getBossLog();
+
+      if (!log) return;
+
+      const shouldOpen =
+        sessionStorage.getItem(BOSS_LOG_OPEN_KEY) === "true";
+
+      if (shouldOpen) {
+        log.open = true;
+      }
+
+      const scrollTarget = getBossLogScrollTarget(log);
+      const savedScroll = Number(
+        sessionStorage.getItem(BOSS_LOG_SCROLL_KEY) || 0
+      );
+
+      if (scrollTarget && savedScroll) {
+        scrollTarget.scrollTop = savedScroll;
+      }
+    }
+
+    document.addEventListener("toggle", function (event) {
+      if (
+        event.target &&
+        event.target.id === "fr-boss-log-details"
+      ) {
+        saveBossLogState();
+      }
+    }, true);
+
+    document.body.addEventListener("htmx:beforeRequest", function (event) {
+      const requestElement = event.detail && event.detail.elt
+        ? event.detail.elt
+        : event.target;
+
+      if (!requestElement || requestElement.id !== "dungeon-live-panel") {
+        return;
+      }
+
+      if (bossLogIsOpen()) {
+        saveBossLogState();
+        event.preventDefault();
+      }
+    });
+
+    document.body.addEventListener("htmx:beforeSwap", function (event) {
+      const swapTarget = event.detail && event.detail.target
+        ? event.detail.target
+        : event.target;
+
+      if (!swapTarget || swapTarget.id !== "dungeon-live-panel") {
+        return;
+      }
+
+      saveBossLogState();
+    });
+
+    document.body.addEventListener("htmx:afterSettle", restoreBossLogState);
+    document.addEventListener("DOMContentLoaded", restoreBossLogState);
+  })();
+</script>
+<script>
+  (function () {
     const BOSS_TRANSFORM_SEEN_PREFIX = "fantasy_roles_boss_transform_seen_";
     let transformationIsShowing = false;
 
@@ -3099,6 +3397,7 @@ function setAp(heroCard, value, maxValue) {
         kicker: document.getElementById("roll-result-kicker"),
         main: document.getElementById("roll-result-main"),
         detail: document.getElementById("roll-result-detail"),
+        actionQuote: document.getElementById("roll-action-quote"),
       };
     }
 
@@ -3356,6 +3655,17 @@ function showBossPlayerDamageChips(row, list, breakdown) {
 
   const skillName = payload.dataset.skillName || "";
   const characterName = payload.dataset.characterName || "Hero";
+  const productionResponse = (payload.dataset.productionResponse || "").trim();
+
+    if (parts.actionQuote) {
+      if (productionResponse) {
+        parts.actionQuote.textContent = characterName + ': “' + productionResponse + '”';
+        parts.actionQuote.hidden = false;
+      } else {
+        parts.actionQuote.textContent = "";
+        parts.actionQuote.hidden = true;
+      }
+    }
   const damageToBoss = Number(payload.dataset.damageToBoss || 0);
   const damageToPlayers = Number(payload.dataset.damageToPlayers || 0);
   const healing = Number(payload.dataset.healing || 0);
@@ -3565,6 +3875,7 @@ function showBossPlayerDamageChips(row, list, breakdown) {
 
     parts.main.textContent = "Damage modifiers changed the hit.";
   }, 450);
+
 } else if (damageBreakdown.length && damageToPlayers > 0) {
   window.setTimeout(function () {
     helpers.showDamageChips(
@@ -3585,7 +3896,6 @@ function showBossPlayerDamageChips(row, list, breakdown) {
     if (damageToBoss > 0) {
       pulseBossPanel();
     }
-
     window.setTimeout(function () {
       parts.diceWrap.classList.remove(
         "is-success-pop",
@@ -4212,59 +4522,5 @@ window.frBossPlayerEventDebug = {
     },
   };
 })();
-</script>
-
-<!-- Language Production Utilities -->
-
-<script>
-  (function () {
-    function getProductionSource(scope) {
-      return document.querySelector(
-        '[data-production-source="' + scope + '"]'
-      );
-    }
-
-    function markProductionError(source) {
-      if (!source) return;
-
-      source.classList.add("is-production-missing");
-      source.focus();
-
-      window.setTimeout(function () {
-        source.classList.remove("is-production-missing");
-      }, 1200);
-    }
-
-    document.addEventListener("submit", function (event) {
-      const form = event.target;
-
-      if (!form || !form.querySelector) {
-        return;
-      }
-
-      const target = form.querySelector("[data-production-target]");
-
-      if (!target) {
-        return;
-      }
-
-      const scope = target.dataset.productionTarget;
-      const source = getProductionSource(scope);
-
-      if (!source) {
-        return;
-      }
-
-      const value = source.value.trim();
-
-      if (!value) {
-        event.preventDefault();
-        markProductionError(source);
-        return;
-      }
-
-      target.value = value;
-    });
-  })();
 </script>
 {% endblock %}

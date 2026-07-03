@@ -385,6 +385,14 @@ def update_run_status_after_room_result(run):
 
     check_dungeon_failure_state(run)
 
+def attach_room_statuses_to_party_members(party_members, run):
+    for member in party_members:
+        member.character.room_statuses = build_room_statuses_for_character(
+            run,
+            run.current_room if run else None,
+            member.character,
+        )
+
 # ============================================================
 # Room skill / weakness helpers
 # ============================================================
@@ -1339,7 +1347,6 @@ def character_is_boss_untargetable(encounter, character):
         effect_code=BossCombatEffect.EffectCode.PLAYER_UNTARGETABLE,
     ).exists()
 
-
 def get_boss_taunt_target(encounter):
     effect = (
         get_active_boss_effects(
@@ -1363,7 +1370,6 @@ def get_boss_taunt_target(encounter):
 
     return effect.target_character
 
-
 def get_boss_targetable_characters(encounter):
     characters = get_living_boss_characters(encounter.run.party)
 
@@ -1373,7 +1379,6 @@ def get_boss_targetable_characters(encounter):
         if not character_is_boss_untargetable(encounter, character)
     ]
 
-
 def get_single_target_boss_pool(encounter):
     taunt_target = get_boss_taunt_target(encounter)
 
@@ -1382,7 +1387,6 @@ def get_single_target_boss_pool(encounter):
 
     return get_boss_targetable_characters(encounter)
 
-
 def get_random_boss_target(encounter):
     characters = get_single_target_boss_pool(encounter)
 
@@ -1390,7 +1394,6 @@ def get_random_boss_target(encounter):
         return None
 
     return random.choice(characters)
-
 
 def get_lowest_life_boss_target(encounter):
     characters = get_single_target_boss_pool(encounter)
@@ -1408,7 +1411,6 @@ def get_lowest_life_boss_target(encounter):
 
     return random.choice(tied)
 
-
 def get_highest_life_boss_target(encounter):
     characters = get_single_target_boss_pool(encounter)
 
@@ -1424,7 +1426,6 @@ def get_highest_life_boss_target(encounter):
     ]
 
     return random.choice(tied)
-
 
 def get_highest_attack_boss_target(encounter):
     characters = get_single_target_boss_pool(encounter)
@@ -1482,6 +1483,16 @@ def consume_boss_effect(effect):
         ]
     )
 
+def expire_boss_effect_now(effect):
+    effect.remaining_turns = 0
+    effect.is_active = False
+    effect.save(
+        update_fields=[
+            "remaining_turns",
+            "is_active",
+        ]
+    )
+
 def get_active_boss_effects(encounter, **filters):
     return BossCombatEffect.objects.filter(
         encounter=encounter,
@@ -1489,14 +1500,12 @@ def get_active_boss_effects(encounter, **filters):
         **filters,
     )
 
-
 def add_status(statuses, label, status_type="buff", icon="✦"):
     statuses.append({
         "label": label,
         "type": status_type,
         "icon": icon,
     })
-
 
 def build_boss_statuses_for_character(encounter, run, character):
     statuses = []
@@ -1572,15 +1581,69 @@ def build_boss_statuses_for_character(encounter, run, character):
     if taunt_effects.exists():
         add_status(statuses, "Taunt", "debuff", "!")
 
-    skip_effects = get_active_boss_effects(
+        # Party-wide / individual turn control.
+    party_skip_effects = get_party_skip_effects(encounter)
+
+    for effect in party_skip_effects:
+        if boss_effect_is_paralyze(effect):
+            append_status(
+                statuses,
+                f"Paralyzed{get_effect_turn_label(effect)}",
+                "control",
+                "⛓",
+                turns=effect.remaining_turns,
+                title=get_effect_short_note(
+                    effect,
+                    "Paralyzed: basic attack only, with -1 to the roll.",
+                ),
+                code=effect.effect_code,
+            )
+        else:
+            append_status(
+                statuses,
+                f"Skip{get_effect_turn_label(effect)}",
+                "control",
+                "⛔",
+                turns=effect.remaining_turns,
+                title=get_effect_short_note(
+                    effect,
+                    "This hero must pass this turn.",
+                ),
+                code=effect.effect_code,
+            )
+
+    individual_skip_effects = get_character_individual_skip_effects(
         encounter,
-        target_type=BossCombatEffect.TargetType.PLAYER,
-        target_character=character,
-        effect_code=BossCombatEffect.EffectCode.PLAYER_SKIP_TURN,
+        character,
     )
 
-    if skip_effects.exists():
-        add_status(statuses, "Skip", "debuff", "⛔")
+    for effect in individual_skip_effects:
+        if boss_effect_is_paralyze(effect):
+            append_status(
+                statuses,
+                f"Paralyzed{get_effect_turn_label(effect)}",
+                "control",
+                "⛓",
+                turns=effect.remaining_turns,
+                title=get_effect_short_note(
+                    effect,
+                    "Paralyzed: basic attack only, with -1 to the roll.",
+                ),
+                code=effect.effect_code,
+            )
+        else:
+            append_status(
+                statuses,
+                f"Skip{get_effect_turn_label(effect)}",
+                "control",
+                "⛔",
+                turns=effect.remaining_turns,
+                title=get_effect_short_note(
+                    effect,
+                    "This hero must pass this turn.",
+                ),
+                code=effect.effect_code,
+            )
 
     cannot_attack_effects = get_active_boss_effects(
         encounter,
@@ -1602,7 +1665,6 @@ def build_boss_statuses_for_character(encounter, run, character):
         add_status(statuses, "Party No Attack", "debuff", "×")
 
     return statuses
-
 
 def attach_boss_statuses_to_party_members(party_members, boss_encounter, run):
     if not boss_encounter:
@@ -1628,7 +1690,6 @@ def consume_boss_effects_by_ids(effect_ids):
 
     for effect in effects:
         consume_boss_effect(effect)
-
 
 def get_player_boss_damage_bonus_breakdown(encounter, character):
     effects = list(
@@ -1681,7 +1742,6 @@ def get_player_boss_damage_bonus_breakdown(encounter, character):
         "damage_breakdown": damage_breakdown,
     }
 
-
 def apply_player_damage_to_boss(encounter, character, base_damage):
     bonus_result = get_player_boss_damage_bonus_breakdown(
         encounter,
@@ -1725,14 +1785,38 @@ def apply_player_damage_to_boss(encounter, character, base_damage):
         "damage_breakdown": damage_breakdown,
     }
 
-def get_boss_damage_bonus(encounter):
+def get_boss_damage_bonus_breakdown(encounter):
     effects = get_active_boss_effects(
         encounter,
         target_type=BossCombatEffect.TargetType.PARTY,
         effect_code=BossCombatEffect.EffectCode.PARTY_EXTRA_BOSS_DAMAGE_TAKEN,
     )
 
-    return sum(effect.value for effect in effects)
+    total_bonus = 0
+    damage_breakdown = []
+    effect_ids = []
+
+    for effect in effects:
+        if effect.value <= 0:
+            continue
+
+        total_bonus += effect.value
+        effect_ids.append(effect.id)
+
+        damage_breakdown.append({
+            "label": effect.note or "Vulnerability",
+            "value": effect.value,
+            "type": "curse",
+        })
+
+    return {
+        "total_bonus": total_bonus,
+        "damage_breakdown": damage_breakdown,
+        "effect_ids": effect_ids,
+    }
+
+def get_boss_damage_bonus(encounter):
+    return get_boss_damage_bonus_breakdown(encounter)["total_bonus"]
 
 def consume_boss_damage_bonus_effects(encounter, effect_ids):
     effects = BossCombatEffect.objects.filter(
@@ -1808,6 +1892,24 @@ def resolve_boss_ability_once(encounter):
     pending_result = resolve_boss_pending_effects(encounter)
     ability = get_current_boss_ability(encounter)
 
+    if pending_result.get("damage_to_boss", 0) > 0:
+        if check_boss_transformation_or_victory(encounter):
+            boss_log = BossActionLog.objects.create(
+                encounter=encounter,
+                actor_type=BossActionLog.ActorType.SYSTEM,
+                action_type=BossActionLog.ActionType.BOSS_ABILITY,
+                phase=encounter.phase,
+                round_number=encounter.round_number,
+                player_phase_number=encounter.player_phase_number,
+                success=True,
+                damage_to_boss=pending_result.get("damage_to_boss", 0),
+                damage_to_players=pending_result.get("damage_to_players", 0),
+                damage_breakdown=pending_result.get("damage_breakdown", []),
+                result_text=pending_result.get("result_text", ""),
+            )
+
+            return boss_log
+
     consume_boss_shield_effects(
         encounter,
         pending_result.get("shield_effect_ids", []),
@@ -1839,6 +1941,7 @@ def resolve_boss_ability_once(encounter):
             success=True,
             damage_to_boss=pending_result.get("damage_to_boss", 0),
             damage_to_players=pending_result.get("damage_to_players", 0),
+            damage_breakdown=pending_result.get("damage_breakdown", []),
             result_text=combined_result_text,
         )
 
@@ -1862,23 +1965,16 @@ def resolve_boss_ability_once(encounter):
             ]
         )
 
+        consume_player_untargetable_effects_after_boss_action(encounter)
         set_next_boss_player_turn_or_boss(encounter)
 
         return boss_log
-
-    boss_damage_bonus_effect_ids = list(
-        get_active_boss_effects(
-            encounter,
-            target_type=BossCombatEffect.TargetType.PARTY,
-            effect_code=BossCombatEffect.EffectCode.PARTY_EXTRA_BOSS_DAMAGE_TAKEN,
-        ).values_list("id", flat=True)
-    )
 
     previous_slot = encounter.next_boss_ability_slot
 
     if ability:
         ability_result = apply_boss_ability_effect(encounter, ability)
-
+        
         combined_result_text = " ".join(
             text
             for text in [
@@ -1903,9 +1999,17 @@ def resolve_boss_ability_once(encounter):
                 + ability_result.get("damage_to_players", 0)
             ),
             damage_to_boss=pending_result.get("damage_to_boss", 0),
-            damage_breakdown=ability_result.get("damage_breakdown", []),
+            damage_breakdown=(
+                pending_result.get("damage_breakdown", [])
+                + ability_result.get("damage_breakdown", [])
+            ),
             healing_done=ability_result.get("healing_done", 0),
             result_text=combined_result_text,
+        )
+
+        consume_boss_damage_bonus_effects(
+            encounter,
+            ability_result.get("boss_damage_bonus_effect_ids", []),
         )
 
         consume_boss_shield_effects(
@@ -1929,14 +2033,12 @@ def resolve_boss_ability_once(encounter):
             round_number=encounter.round_number,
             player_phase_number=encounter.player_phase_number,
             success=True,
+            damage_to_boss=pending_result.get("damage_to_boss", 0),
             damage_to_players=pending_result.get("damage_to_players", 0),
+            damage_breakdown=pending_result.get("damage_breakdown", []),
             result_text=combined_result_text,
         )
 
-    consume_boss_damage_bonus_effects(
-        encounter,
-        boss_damage_bonus_effect_ids,
-    )
 
     if check_boss_party_defeat_state(encounter):
         return boss_log
@@ -1961,12 +2063,19 @@ def resolve_boss_ability_once(encounter):
         ]
     )
 
+    consume_player_untargetable_effects_after_boss_action(encounter)
+
     set_next_boss_player_turn_or_boss(encounter)
 
     return boss_log
 
 def calculate_boss_damage_result(encounter, base_damage):
-    raw_damage = max(0, base_damage + get_boss_damage_bonus(encounter))
+    base_damage = max(0, base_damage)
+
+    bonus_result = get_boss_damage_bonus_breakdown(encounter)
+    bonus_damage = bonus_result["total_bonus"]
+
+    raw_damage = max(0, base_damage + bonus_damage)
 
     reduction_result = get_boss_damage_reduction_breakdown(encounter)
     total_reduction = reduction_result["total_reduction"]
@@ -1976,12 +2085,18 @@ def calculate_boss_damage_result(encounter, base_damage):
     damage_breakdown = [
         {
             "label": "Base damage",
-            "value": raw_damage,
+            "value": base_damage,
             "type": "base",
         }
     ]
 
-    damage_breakdown.extend(reduction_result["damage_breakdown"])
+    damage_breakdown.extend(
+        bonus_result["damage_breakdown"]
+    )
+
+    damage_breakdown.extend(
+        reduction_result["damage_breakdown"]
+    )
 
     damage_breakdown.append({
         "label": "Final damage",
@@ -1990,12 +2105,672 @@ def calculate_boss_damage_result(encounter, base_damage):
     })
 
     return {
-        "base_damage": raw_damage,
+        "base_damage": base_damage,
+        "bonus_damage": bonus_damage,
+        "raw_damage": raw_damage,
         "final_damage": final_damage,
         "damage_breakdown": damage_breakdown,
         "shield_effect_ids": reduction_result["shield_effect_ids"],
+        "bonus_effect_ids": bonus_result["effect_ids"],
     }
 
+def consume_player_untargetable_effects_after_boss_action(encounter):
+    effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_UNTARGETABLE,
+    )
+
+    for effect in effects:
+        consume_boss_effect(effect)
+# ============================================================
+# Boss visual status helpers
+# ============================================================
+
+def build_status_chip(
+    label,
+    status_type="neutral",
+    icon="◆",
+    value=None,
+    turns=None,
+    title="",
+    code="",
+):
+    return {
+        "label": label,
+        "type": status_type,
+        "icon": icon,
+        "value": value,
+        "turns": turns,
+        "title": title or label,
+        "code": code,
+    }
+
+
+def append_status(
+    statuses,
+    label,
+    status_type="neutral",
+    icon="◆",
+    value=None,
+    turns=None,
+    title="",
+    code="",
+):
+    statuses.append(
+        build_status_chip(
+            label=label,
+            status_type=status_type,
+            icon=icon,
+            value=value,
+            turns=turns,
+            title=title,
+            code=code,
+        )
+    )
+
+def get_room_support_effect_display_value(effect):
+    if not effect:
+        return 0
+
+    if effect.effect_value:
+        return effect.effect_value
+
+    if effect.skill and getattr(effect.skill, "roll_bonus", 0):
+        return effect.skill.roll_bonus
+
+    if effect.secondary_value:
+        return effect.secondary_value
+
+    return 0
+
+def build_room_statuses_for_character(run, character):
+    statuses = []
+
+    if not run or not character:
+        return statuses
+
+    if run.status != PartyDungeonRun.Status.ACTIVE:
+        return statuses
+
+    if not run.current_room or run.current_room.is_cleared:
+        return statuses
+
+    if character.current_life <= 0:
+        append_status(
+            statuses,
+            "Down",
+            "debuff",
+            "☠",
+            title="This hero is defeated.",
+            code="DOWN",
+        )
+        return statuses
+
+    room = run.current_room
+
+    run_roll_bonus = get_run_roll_bonus(run)
+    if run_roll_bonus:
+        append_status(
+            statuses,
+            f"Roll +{run_roll_bonus}",
+            "buff",
+            "🎲",
+            value=run_roll_bonus,
+            title=f"Party roll bonus: +{run_roll_bonus}.",
+            code="RUN_ROLL_BONUS",
+        )
+
+    run_damage_reduction = get_run_damage_reduction(run)
+    if run_damage_reduction:
+        append_status(
+            statuses,
+            f"Ring -{run_damage_reduction}",
+            "shield",
+            "🛡",
+            value=-run_damage_reduction,
+            title=f"Room damage is reduced by {run_damage_reduction}.",
+            code="RUN_DAMAGE_REDUCTION",
+        )
+
+    support_effects = get_applicable_room_support_effects(room, character)
+
+    for effect in support_effects:
+        source_name = effect.skill.name if effect.skill else "Support Effect"
+        value = get_room_support_effect_display_value(effect)
+
+        if effect.effect_code == ClassSkill.EffectCode.ROOM_ROLL_BONUS:
+            append_status(
+                statuses,
+                f"Roll +{value}",
+                "buff",
+                "🎲",
+                value=value,
+                title=f"{source_name}: +{value} to the next room roll.",
+                code=effect.effect_code,
+            )
+
+        elif effect.effect_code == ClassSkill.EffectCode.ROOM_REDUCE_DIFFICULTY:
+            append_status(
+                statuses,
+                f"Diff -{value}",
+                "buff",
+                "◇",
+                value=-value,
+                title=f"{source_name}: room difficulty -{value}.",
+                code=effect.effect_code,
+            )
+
+        elif effect.effect_code in [
+            ClassSkill.EffectCode.ROOM_REDUCE_FAILURE_DAMAGE,
+            ClassSkill.EffectCode.ROOM_FIELD_AID,
+        ]:
+            append_status(
+                statuses,
+                f"Shield -{value}",
+                "shield",
+                "🛡",
+                value=-value,
+                title=f"{source_name}: failure damage -{value}.",
+                code=effect.effect_code,
+            )
+
+        elif effect.effect_code == ClassSkill.EffectCode.ROOM_REROLL_AFTER_FAIL:
+            append_status(
+                statuses,
+                "Reroll",
+                "buff",
+                "↻",
+                title=f"{source_name}: reroll the next failed room roll once.",
+                code=effect.effect_code,
+            )
+
+        elif effect.effect_code == ClassSkill.EffectCode.ROOM_RECOVER_LIFE_ON_SUCCESS:
+            heal_value = effect.secondary_value or 0
+
+            append_status(
+                statuses,
+                f"Diff -{value}",
+                "buff",
+                "✚",
+                value=-value,
+                title=f"{source_name}: difficulty -{value}; recover {heal_value} Life on success.",
+                code=effect.effect_code,
+            )
+
+    room_weaknesses = get_room_weaknesses(character)
+
+    if room.room_type == DungeonRunRoom.RoomType.TRAP:
+        weakness_label, trap_penalty = get_weakness_label_and_value(
+            room_weaknesses,
+            ClassWeakness.EffectCode.ROOM_TRAP_ROLL_PENALTY,
+        )
+
+        if trap_penalty:
+            append_status(
+                statuses,
+                f"Trap -{trap_penalty}",
+                "curse",
+                "!",
+                value=-trap_penalty,
+                title=f"{weakness_label}: trap rolls get -{trap_penalty}.",
+                code=ClassWeakness.EffectCode.ROOM_TRAP_ROLL_PENALTY,
+            )
+
+    if room.room_type == DungeonRunRoom.RoomType.COMBAT:
+        weakness_label, combat_penalty = get_weakness_label_and_value(
+            room_weaknesses,
+            ClassWeakness.EffectCode.ROOM_COMBAT_ROLL_PENALTY,
+        )
+
+        if combat_penalty:
+            append_status(
+                statuses,
+                f"Combat -{combat_penalty}",
+                "curse",
+                "!",
+                value=-combat_penalty,
+                title=f"{weakness_label}: combat rolls get -{combat_penalty}.",
+                code=ClassWeakness.EffectCode.ROOM_COMBAT_ROLL_PENALTY,
+            )
+
+    return statuses
+
+def attach_room_statuses_to_party_members(party_members, run):
+    for member in party_members:
+        member.character.room_statuses = build_room_statuses_for_character(
+            run,
+            member.character,
+        )
+        member.character.combat_statuses = member.character.room_statuses
+
+def get_effect_turn_label(effect):
+    if not effect:
+        return ""
+
+    if effect.remaining_turns > 1:
+        return f" ×{effect.remaining_turns}"
+
+    return ""
+
+
+def get_effect_short_note(effect, fallback):
+    if effect and effect.note:
+        return effect.note
+
+    return fallback
+
+
+def build_boss_statuses_for_character(encounter, run, character):
+    statuses = []
+
+    if not encounter or not character:
+        return statuses
+
+    if character.current_life <= 0:
+        append_status(
+            statuses,
+            "Down",
+            "debuff",
+            "☠",
+            title="This hero is defeated.",
+            code="DOWN",
+        )
+        return statuses
+
+    # Run-wide item effects.
+    run_roll_bonus = get_run_roll_bonus(run)
+    if run_roll_bonus:
+        append_status(
+            statuses,
+            f"Roll +{run_roll_bonus}",
+            "buff",
+            "🎲",
+            value=run_roll_bonus,
+            title=f"Party roll bonus: +{run_roll_bonus}.",
+            code="RUN_ROLL_BONUS",
+        )
+
+    run_damage_reduction = get_run_damage_reduction(run)
+    if run_damage_reduction:
+        append_status(
+            statuses,
+            f"Ring -{run_damage_reduction}",
+            "shield",
+            "🛡",
+            value=-run_damage_reduction,
+            title=f"Boss damage is reduced by {run_damage_reduction}.",
+            code="RUN_DAMAGE_REDUCTION",
+        )
+
+    # Party-wide turn control.
+    party_skip_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_SKIP_TURN,
+    )
+
+    for effect in party_skip_effects:
+        append_status(
+            statuses,
+            f"Stun{get_effect_turn_label(effect)}",
+            "control",
+            "⛔",
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                "The party loses this player phase.",
+            ),
+            code=effect.effect_code,
+        )
+
+    # Individual skip/paralyze/stun.
+    skip_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_SKIP_TURN,
+    )
+
+    for effect in skip_effects:
+        append_status(
+            statuses,
+            f"Skip{get_effect_turn_label(effect)}",
+            "control",
+            "⛔",
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                "This hero loses their next action.",
+            ),
+            code=effect.effect_code,
+        )
+
+    # Cannot attack.
+    party_cannot_attack = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_CANNOT_ATTACK,
+    )
+
+    for effect in party_cannot_attack:
+        append_status(
+            statuses,
+            f"No Atk{get_effect_turn_label(effect)}",
+            "debuff",
+            "×",
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                "The party cannot use attack actions this turn.",
+            ),
+            code=effect.effect_code,
+        )
+
+    cannot_attack_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_CANNOT_ATTACK,
+    )
+
+    for effect in cannot_attack_effects:
+        append_status(
+            statuses,
+            f"No Atk{get_effect_turn_label(effect)}",
+            "debuff",
+            "×",
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                "This hero cannot use attack actions this turn.",
+            ),
+            code=effect.effect_code,
+        )
+
+    # Damage override / weakness effects.
+    damage_override_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_DAMAGE_DEALT_OVERRIDE,
+    )
+
+    for effect in damage_override_effects:
+        append_status(
+            statuses,
+            f"Weaken {effect.value}",
+            "debuff",
+            "↓",
+            value=effect.value,
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                f"Boss damage dealt by this hero is limited to {effect.value}.",
+            ),
+            code=effect.effect_code,
+        )
+
+    failed_throw_damage_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_EXTRA_DAMAGE_ON_FAILED_THROW,
+    )
+
+    for effect in failed_throw_damage_effects:
+        append_status(
+            statuses,
+            f"Backlash +{effect.value}",
+            "curse",
+            "!",
+            value=effect.value,
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                f"Failed boss rolls deal +{effect.value} damage.",
+            ),
+            code=effect.effect_code,
+        )
+
+    # Incoming boss damage modifiers.
+    party_extra_damage = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_EXTRA_BOSS_DAMAGE_TAKEN,
+    )
+
+    for effect in party_extra_damage:
+        append_status(
+            statuses,
+            f"Vuln +{effect.value}",
+            "curse",
+            "!",
+            value=effect.value,
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                f"The next boss damage is increased by {effect.value}.",
+            ),
+            code=effect.effect_code,
+        )
+
+    party_shields = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_DAMAGE_REDUCTION,
+    )
+
+    for effect in party_shields:
+        append_status(
+            statuses,
+            f"Shield -{effect.value}",
+            "shield",
+            "🛡",
+            value=-effect.value,
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                f"Boss damage is reduced by {effect.value}.",
+            ),
+            code=effect.effect_code,
+        )
+
+    # Player and party damage buffs against the boss.
+    party_damage_buffs = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PARTY,
+        effect_code=BossCombatEffect.EffectCode.PARTY_BOSS_DAMAGE_BONUS,
+    )
+
+    for effect in party_damage_buffs:
+        append_status(
+            statuses,
+            f"Party DMG +{effect.value}",
+            "buff",
+            "✦",
+            value=effect.value,
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                f"Party boss damage gains +{effect.value}.",
+            ),
+            code=effect.effect_code,
+        )
+
+    player_damage_buffs = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_BOSS_DAMAGE_BONUS,
+    )
+
+    for effect in player_damage_buffs:
+        append_status(
+            statuses,
+            f"DMG +{effect.value}",
+            "buff",
+            "✦",
+            value=effect.value,
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                f"This hero's next boss damage gains +{effect.value}.",
+            ),
+            code=effect.effect_code,
+        )
+
+    # Targeting effects.
+    untargetable_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_UNTARGETABLE,
+    )
+
+    for effect in untargetable_effects:
+        append_status(
+            statuses,
+            f"Hidden{get_effect_turn_label(effect)}",
+            "buff",
+            "◇",
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                "The boss cannot target this hero.",
+            ),
+            code=effect.effect_code,
+        )
+
+    taunt_effects = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.PLAYER,
+        target_character=character,
+        effect_code=BossCombatEffect.EffectCode.PLAYER_TAUNT,
+    )
+
+    for effect in taunt_effects:
+        append_status(
+            statuses,
+            f"Taunt{get_effect_turn_label(effect)}",
+            "control",
+            "!",
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                "The boss prefers targeting this hero.",
+            ),
+            code=effect.effect_code,
+        )
+
+    return statuses
+
+
+def build_boss_statuses_for_boss(encounter):
+    statuses = []
+
+    if not encounter:
+        return statuses
+
+    boss_untargetable = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.BOSS,
+        effect_code=BossCombatEffect.EffectCode.BOSS_UNTARGETABLE,
+    )
+
+    for effect in boss_untargetable:
+        append_status(
+            statuses,
+            f"Hidden{get_effect_turn_label(effect)}",
+            "boss",
+            "◇",
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                "The boss cannot be attacked right now.",
+            ),
+            code=effect.effect_code,
+        )
+
+    boss_dots = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.BOSS,
+        effect_code=BossCombatEffect.EffectCode.BOSS_DAMAGE_OVER_TIME,
+    )
+
+    for effect in boss_dots:
+        append_status(
+            statuses,
+            f"Poison {effect.value}{get_effect_turn_label(effect)}",
+            "poison",
+            "☣",
+            value=effect.value,
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                f"The boss takes {effect.value} poison damage at the start of its boss turn.",
+            ),
+            code=effect.effect_code,
+        )
+
+    boss_skip = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.BOSS,
+        effect_code=BossCombatEffect.EffectCode.BOSS_SKIP_NEXT_TURN,
+    )
+
+    for effect in boss_skip:
+        append_status(
+            statuses,
+            f"Skip{get_effect_turn_label(effect)}",
+            "control",
+            "⏳",
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                "The boss will lose its next action.",
+            ),
+            code=effect.effect_code,
+        )
+
+    pending_damage = get_active_boss_effects(
+        encounter,
+        target_type=BossCombatEffect.TargetType.BOSS,
+        effect_code=BossCombatEffect.EffectCode.BOSS_PENDING_DAMAGE_HIGHEST_LIFE,
+    )
+
+    for effect in pending_damage:
+        append_status(
+            statuses,
+            f"Burst {effect.value}",
+            "damage",
+            "☄",
+            value=effect.value,
+            turns=effect.remaining_turns,
+            title=get_effect_short_note(
+                effect,
+                f"The boss will hit the highest-life hero for {effect.value} base damage.",
+            ),
+            code=effect.effect_code,
+        )
+
+    return statuses
+
+
+def attach_boss_statuses_to_party_members(party_members, boss_encounter, run):
+    if not boss_encounter:
+        for member in party_members:
+            member.character.boss_statuses = []
+        return
+
+    for member in party_members:
+        member.character.boss_statuses = build_boss_statuses_for_character(
+            boss_encounter,
+            run,
+            member.character,
+        )
+        member.character.combat_statuses = member.character.boss_statuses
+        
 # ============================================================
 # Boss turn-cycle / combat / victory helpers
 # ============================================================
@@ -2240,6 +3015,148 @@ def party_has_boss_skip_effect(encounter):
         effect_code=BossCombatEffect.EffectCode.PARTY_SKIP_TURN,
     ).first()
 
+PARALYZE_BOSS_ABILITY_CODES = {
+    BossAbility.EffectCode.PARALYZE_HIGHEST_ATTACK,
+    BossAbility.EffectCode.DAMAGE_RANDOM_AND_PARALYZE,
+    BossAbility.EffectCode.PARTY_PARALYZE_AND_DAMAGE_TAKEN_UP,
+}
+
+
+def get_boss_effect_source_code(effect):
+    if not effect or not effect.source_ability:
+        return ""
+
+    return effect.source_ability.effect_code
+
+
+def boss_effect_is_paralyze(effect):
+    return get_boss_effect_source_code(effect) in PARALYZE_BOSS_ABILITY_CODES
+
+
+def get_character_individual_skip_effects(encounter, character):
+    return list(
+        get_active_boss_effects(
+            encounter,
+            target_type=BossCombatEffect.TargetType.PLAYER,
+            target_character=character,
+            effect_code=BossCombatEffect.EffectCode.PLAYER_SKIP_TURN,
+        )
+        .select_related("source_ability")
+        .order_by("created_at")
+    )
+
+
+def get_party_skip_effects(encounter):
+    return list(
+        get_active_boss_effects(
+            encounter,
+            target_type=BossCombatEffect.TargetType.PARTY,
+            effect_code=BossCombatEffect.EffectCode.PARTY_SKIP_TURN,
+        )
+        .select_related("source_ability")
+        .order_by("created_at")
+    )
+
+
+def get_character_paralyze_effects(encounter, character):
+    effects = []
+
+    for effect in get_character_individual_skip_effects(encounter, character):
+        if boss_effect_is_paralyze(effect):
+            effects.append(effect)
+
+    for effect in get_party_skip_effects(encounter):
+        if boss_effect_is_paralyze(effect):
+            effects.append(effect)
+
+    return effects
+
+
+def get_character_hard_skip_effects(encounter, character):
+    effects = []
+
+    for effect in get_character_individual_skip_effects(encounter, character):
+        if not boss_effect_is_paralyze(effect):
+            effects.append(effect)
+
+    for effect in get_party_skip_effects(encounter):
+        if not boss_effect_is_paralyze(effect):
+            effects.append(effect)
+
+    return effects
+
+
+def character_is_paralyzed_in_boss(encounter, character):
+    return bool(get_character_paralyze_effects(encounter, character))
+
+
+def character_is_hard_skipped_in_boss(encounter, character):
+    return bool(get_character_hard_skip_effects(encounter, character))
+
+
+def get_boss_control_state(encounter, character):
+    if not encounter or not character:
+        return {
+            "is_hard_skipped": False,
+            "is_paralyzed": False,
+            "can_basic_attack": True,
+            "can_use_skills": True,
+            "can_use_items": True,
+            "roll_penalty": 0,
+            "notice": "",
+        }
+
+    if character_is_hard_skipped_in_boss(encounter, character):
+        return {
+            "is_hard_skipped": True,
+            "is_paralyzed": False,
+            "can_basic_attack": False,
+            "can_use_skills": False,
+            "can_use_items": False,
+            "roll_penalty": 0,
+            "notice": "You are stunned. You cannot take an action this turn. Pass to continue.",
+        }
+
+    if character_is_paralyzed_in_boss(encounter, character):
+        return {
+            "is_hard_skipped": False,
+            "is_paralyzed": True,
+            "can_basic_attack": True,
+            "can_use_skills": False,
+            "can_use_items": False,
+            "roll_penalty": -1,
+            "notice": "You are paralyzed. You can only make a basic attack with -1 to the roll, or pass.",
+        }
+
+    return {
+        "is_hard_skipped": False,
+        "is_paralyzed": False,
+        "can_basic_attack": True,
+        "can_use_skills": True,
+        "can_use_items": True,
+        "roll_penalty": 0,
+        "notice": "",
+    }
+
+
+def consume_character_individual_hard_skip_effects(encounter, character):
+    for effect in get_character_individual_skip_effects(encounter, character):
+        if not boss_effect_is_paralyze(effect):
+            expire_boss_effect_now(effect)
+
+
+def consume_character_individual_paralyze_effects(encounter, character):
+    for effect in get_character_individual_skip_effects(encounter, character):
+        if boss_effect_is_paralyze(effect):
+            expire_boss_effect_now(effect)
+
+
+def consume_party_turn_control_effects(encounter):
+    for effect in get_party_skip_effects(encounter):
+        expire_boss_effect_now(effect)
+
+    consume_party_cannot_attack_effects(encounter)
+
 def consume_party_cannot_attack_effects(encounter):
     effects = get_active_boss_effects(
         encounter,
@@ -2266,7 +3183,7 @@ def consume_character_turn_effects(encounter, character):
         consume_boss_effect(effect)
 
 def finish_boss_player_phase(encounter):
-    consume_party_cannot_attack_effects(encounter)
+    consume_party_turn_control_effects(encounter)
 
     encounter.current_actor = BossEncounter.CurrentActor.BOSS
     encounter.current_turn_character = None
@@ -2396,6 +3313,8 @@ def set_next_boss_player_turn_or_boss(encounter):
         encounter.current_actor = BossEncounter.CurrentActor.PLAYER
         encounter.current_turn_character = next_character
     else:
+        consume_party_turn_control_effects(encounter)
+
         encounter.current_actor = BossEncounter.CurrentActor.BOSS
         encounter.current_turn_character = None
 
@@ -2410,6 +3329,11 @@ def set_next_boss_player_turn_or_boss(encounter):
     return encounter
 
 def can_character_basic_attack_boss(encounter, character):
+    control_state = get_boss_control_state(encounter, character)
+
+    if control_state["is_hard_skipped"]:
+        return False, control_state["notice"]
+    
     boss_untargetable = get_active_boss_effects(
         encounter,
         target_type=BossCombatEffect.TargetType.BOSS,
@@ -2489,8 +3413,14 @@ def resolve_boss_pending_effects(encounter):
         damage = apply_damage_to_boss(encounter, dot_effect.value)
         total_damage_to_boss += damage
 
+        damage_breakdown.append({
+            "label": dot_effect.note or "Poison",
+            "value": damage,
+            "type": "poison",
+        })
+
         result_parts.append(
-            f"{dot_effect.note or 'Damage over time'} deals {damage} damage to "
+            f"{dot_effect.note or 'Poison'} deals {damage} poison damage to "
             f"{encounter.current_boss_name}."
         )
 
@@ -2532,6 +3462,13 @@ def resolve_boss_pending_effects(encounter):
 
         consume_boss_effect(pending_effect)
 
+    if total_damage_to_boss > 0:
+        damage_breakdown.append({
+            "label": "Final poison damage",
+            "value": total_damage_to_boss,
+            "type": "final",
+        })
+
     return {
         "result_text": " ".join(result_parts),
         "damage_to_players": total_damage_to_players,
@@ -2549,6 +3486,7 @@ def apply_boss_ability_effect(encounter, ability):
     shield_effect_ids = []
     display_base_damage = None
     ability_attempted_damage = False
+    boss_damage_bonus_effect_ids = []
     total_damage = 0
     healing_done = 0
 
@@ -2578,11 +3516,11 @@ def apply_boss_ability_effect(encounter, ability):
                 target_type=BossCombatEffect.TargetType.PLAYER,
                 target_character=target,
                 effect_code=BossCombatEffect.EffectCode.PLAYER_SKIP_TURN,
-                remaining_turns=ability.duration_turns,
+                remaining_turns=1,
                 note=ability.description,
             )
             result_parts.append(
-                f"{target.character_name} is paralyzed for {ability.duration_turns} turn(s)."
+                f"{target.character_name} is paralyzed until they attack or pass."   
             )
 
     elif code == BossAbility.EffectCode.WEAKEN_HIGHEST_ATTACK:
@@ -2635,7 +3573,7 @@ def apply_boss_ability_effect(encounter, ability):
                 target_type=BossCombatEffect.TargetType.PLAYER,
                 target_character=target,
                 effect_code=BossCombatEffect.EffectCode.PLAYER_SKIP_TURN,
-                remaining_turns=ability.duration_turns,
+                remaining_turns=1,
                 note=ability.description,
             )
 
@@ -2689,7 +3627,7 @@ def apply_boss_ability_effect(encounter, ability):
                 target_type=BossCombatEffect.TargetType.PLAYER,
                 target_character=target,
                 effect_code=BossCombatEffect.EffectCode.PLAYER_SKIP_TURN,
-                remaining_turns=ability.duration_turns,
+                remaining_turns=1,
                 note=ability.description,
             )
 
@@ -2706,7 +3644,7 @@ def apply_boss_ability_effect(encounter, ability):
             source_ability=ability,
             target_type=BossCombatEffect.TargetType.PARTY,
             effect_code=BossCombatEffect.EffectCode.PARTY_SKIP_TURN,
-            remaining_turns=ability.duration_turns,
+            remaining_turns=1,
             note=ability.description,
         )
 
@@ -2911,13 +3849,14 @@ def apply_boss_ability_effect(encounter, ability):
         )
 
     if ability_attempted_damage and display_base_damage is not None:
-        display_damage_result = calculate_boss_damage_result(
+        damage_result = calculate_boss_damage_result(
             encounter,
             display_base_damage,
         )
 
-        damage_breakdown = display_damage_result["damage_breakdown"]
-        shield_effect_ids = display_damage_result["shield_effect_ids"]
+        damage_breakdown = damage_result.get("damage_breakdown", [])
+        shield_effect_ids = damage_result.get("shield_effect_ids", [])
+        boss_damage_bonus_effect_ids = damage_result.get("bonus_effect_ids", [])
     return {
         "result_text": " ".join(result_parts),
         "die_roll": die_roll,
@@ -2925,124 +3864,11 @@ def apply_boss_ability_effect(encounter, ability):
         "healing_done": healing_done,
         "damage_breakdown": damage_breakdown,
         "shield_effect_ids": shield_effect_ids,
+        "boss_damage_bonus_effect_ids": boss_damage_bonus_effect_ids,
     }
 
 def resolve_boss_turn(encounter):
-    """
-    Automatically resolves the boss's turn.
-
-    Flow:
-    1. Resolve delayed boss effects.
-    2. Use the current boss ability slot.
-    3. Log the result.
-    4. Advance to the player phase.
-    """
-    encounter.refresh_from_db()
-
-    if encounter.status != BossEncounter.Status.ACTIVE:
-        return
-
-    if encounter.current_actor != BossEncounter.CurrentActor.BOSS:
-        return
-
-    pending_result = resolve_boss_pending_effects(encounter)
-
-    ability = get_current_boss_ability(encounter)
-
-    boss_damage_bonus_effect_ids = list(
-        get_active_boss_effects(
-            encounter,
-            target_type=BossCombatEffect.TargetType.PARTY,
-            effect_code=BossCombatEffect.EffectCode.PARTY_EXTRA_BOSS_DAMAGE_TAKEN,
-        ).values_list("id", flat=True)
-    )
-
-    previous_slot = encounter.next_boss_ability_slot
-
-    if ability:
-        ability_result = apply_boss_ability_effect(encounter, ability)
-
-        combined_result_text = " ".join(
-            text
-            for text in [
-                pending_result.get("result_text", ""),
-                ability_result.get("result_text", ""),
-            ]
-            if text
-        )
-
-        BossActionLog.objects.create(
-            encounter=encounter,
-            actor_type=BossActionLog.ActorType.BOSS,
-            action_type=BossActionLog.ActionType.BOSS_ABILITY,
-            boss_ability=ability,
-            phase=encounter.phase,
-            round_number=encounter.round_number,
-            player_phase_number=encounter.player_phase_number,
-            die_roll=ability_result.get("die_roll"),
-            success=True,
-            damage_to_players=(
-                pending_result.get("damage_to_players", 0)
-                + ability_result.get("damage_to_players", 0)
-            ),
-            damage_to_boss=pending_result.get("damage_to_boss", 0),
-            damage_breakdown=ability_result.get("damage_breakdown", []),
-            healing_done=ability_result.get("healing_done", 0),
-            result_text=combined_result_text,
-        )
-        consume_boss_shield_effects(
-            encounter,
-            ability_result.get("shield_effect_ids", []),
-        )
-    else:
-        combined_result_text = pending_result.get("result_text", "")
-
-        if not combined_result_text:
-            combined_result_text = (
-                f"{encounter.current_boss_name} has no ability in this slot."
-            )
-
-        BossActionLog.objects.create(
-            encounter=encounter,
-            actor_type=BossActionLog.ActorType.BOSS,
-            action_type=BossActionLog.ActionType.BOSS_ABILITY,
-            phase=encounter.phase,
-            round_number=encounter.round_number,
-            player_phase_number=encounter.player_phase_number,
-            success=True,
-            damage_to_players=pending_result.get("damage_to_players", 0),
-            result_text=combined_result_text,
-        )
-        
-    consume_boss_damage_bonus_effects(
-        encounter,
-        boss_damage_bonus_effect_ids,
-    )
-
-    if check_boss_party_defeat_state(encounter):
-        return
-
-    if previous_slot == BossAbility.Slot.FIRST:
-        encounter.next_boss_ability_slot = BossAbility.Slot.SECOND
-    else:
-        encounter.next_boss_ability_slot = BossAbility.Slot.FIRST
-        encounter.round_number += 1
-
-    encounter.player_phase_number += 1
-    encounter.current_actor = BossEncounter.CurrentActor.PLAYER
-    encounter.current_turn_character = None
-    encounter.save(
-        update_fields=[
-            "next_boss_ability_slot",
-            "round_number",
-            "player_phase_number",
-            "current_actor",
-            "current_turn_character",
-            "updated_at",
-        ]
-    )
-
-    set_next_boss_player_turn_or_boss(encounter)
+    return resolve_boss_ability_once(encounter)
 
 def resolve_direct_boss_skill(encounter, character, skill, target_character=None):
     code = skill.effect_code
@@ -3255,19 +4081,43 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
         damage_value = skill.effect_value or 1
         duration = skill.duration_turns or 2
 
-        add_boss_effect(
-            encounter=encounter,
-            effect_code=BossCombatEffect.EffectCode.BOSS_DAMAGE_OVER_TIME,
-            target_type=BossCombatEffect.TargetType.BOSS,
-            value=damage_value,
-            remaining_turns=duration,
-            note=skill.name,
-        )
+        difficulty = encounter.current_difficulty
+        die_roll = random.randint(1, 6)
+        final_roll_total = die_roll
+        success = final_roll_total >= difficulty
 
-        result_parts.append(
-            f"{encounter.current_boss_name} will take {damage_value} damage "
-            f"at the start of its next {duration} boss turn(s)."
-        )
+        if success:
+            add_boss_effect(
+                encounter=encounter,
+                effect_code=BossCombatEffect.EffectCode.BOSS_DAMAGE_OVER_TIME,
+                target_type=BossCombatEffect.TargetType.BOSS,
+                value=damage_value,
+                remaining_turns=duration,
+                note=skill.name,
+            )
+
+            damage_breakdown = [
+                {
+                    "label": "Poison tick",
+                    "value": damage_value,
+                    "type": "damage",
+                },
+                {
+                    "label": "Duration",
+                    "value": duration,
+                    "type": "status",
+                },
+            ]
+
+            result_parts.append(
+                f"{skill.name} hits. {encounter.current_boss_name} is poisoned "
+                f"for {duration} boss turn(s), taking {damage_value} damage each tick."
+            )
+        else:
+            result_parts.append(
+                f"{skill.name} missed. Rolled {die_roll}, but needed "
+                f"{difficulty} or higher. No poison was applied."
+            )
 
     elif code == ClassSkill.EffectCode.BOSS_DAMAGE_BUFF:
         bonus_value = skill.effect_value or skill.secondary_value or 1
@@ -3336,7 +4186,7 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
         )
 
     elif code == ClassSkill.EffectCode.BOSS_UNTARGETABLE:
-        duration = skill.duration_turns or 1
+        duration = 1
 
         add_boss_effect(
             encounter=encounter,
@@ -3348,7 +4198,8 @@ def resolve_direct_boss_skill(encounter, character, skill, target_character=None
         )
 
         result_parts.append(
-            f"{character.character_name} cannot be targeted for {duration} boss action(s)."
+            f"{character.character_name} steps into shadow and cannot be targeted "
+            f"by the next boss action."
         )
 
     else:
@@ -3611,6 +4462,24 @@ def build_party_room_attempt_log(party, limit=8):
         .order_by("-created_at")[:limit]
     )
 
+def build_party_boss_action_log(party, limit=8):
+    return list(
+        BossActionLog.objects
+        .filter(
+            encounter__run__party=party,
+            actor_type=BossActionLog.ActorType.PLAYER,
+        )
+        .select_related(
+            "encounter",
+            "encounter__boss",
+            "character",
+            "character__character_class",
+            "player_skill",
+            "player_item",
+        )
+        .order_by("-created_at")[:limit]
+    )
+
 def build_teacher_room_attempt_log(session, limit=24):
     return list(
         RoomAttempt.objects
@@ -3698,6 +4567,7 @@ def build_teacher_dungeon_cards(session):
                 "cleared_rooms_count": cleared_rooms_count,
                 "total_rooms_count": total_rooms_count,
                 "attempt_log": build_party_room_attempt_log(party),
+                "boss_action_log": build_party_boss_action_log(party) if boss_encounter else [],
                 "boss_template": boss_template,
                 "boss_encounter": boss_encounter,
                 "boss_hp_percent": boss_hp_percent,
@@ -3735,6 +4605,7 @@ def build_student_dungeon_context(request, session):
     boss_can_basic_attack = False
     boss_attack_block_reason = ""
     available_boss_skills = []
+    latest_mimic_reveal_attempt = None
     latest_boss_log = None
     latest_boss_ability_log = None
     latest_boss_player_animation_log = None
@@ -3742,6 +4613,13 @@ def build_student_dungeon_context(request, session):
     latest_boss_transformation_log = None
     room_production_prompt = ""
     boss_production_prompt = ""
+    boss_statuses = []
+    boss_action_notice = ""
+    boss_is_hard_skipped = False
+    boss_is_paralyzed = False
+    boss_can_use_skills = True
+    boss_can_use_items = True
+    boss_basic_roll_penalty = 0
 
     if membership:
         is_current_dm = membership.party.current_dm_id == character.id
@@ -3828,12 +4706,21 @@ def build_student_dungeon_context(request, session):
                         "skill_used",
                         "item_awarded",
                         "room",
+                        "room__source_room",
+                        "room__source_template",
                     )
                     .order_by("-created_at")[:8]
                 )
 
                 if recent_attempts:
                     latest_attempt = recent_attempts[0]
+                
+                if (
+                    latest_attempt
+                    and latest_attempt.action_type == RoomAttempt.ActionType.OPEN_CHEST
+                    and room_is_mimic(latest_attempt.room)
+                ):
+                    latest_mimic_reveal_attempt = latest_attempt
 
             if run and run.current_room:
                 room_skills = (
@@ -3851,6 +4738,16 @@ def build_student_dungeon_context(request, session):
             ensure_run_has_turn(run)
             run.refresh_from_db()
 
+        if (
+            run
+            and run.status == PartyDungeonRun.Status.ACTIVE
+            and run.current_room
+        ):
+            attach_room_statuses_to_party_members(
+                party_members,
+                run,
+            )
+        
         if (run
             and run.current_room
             and run.current_room.room_type == DungeonRunRoom.RoomType.TRAP
@@ -3865,6 +4762,7 @@ def build_student_dungeon_context(request, session):
         boss_template = get_boss_template_for_run(run)
         boss_encounter = get_boss_encounter_for_run(run)
 
+
         if boss_encounter:
             boss_hp_percent = get_boss_hp_percent(boss_encounter)
             boss_logs = list(
@@ -3876,6 +4774,24 @@ def build_student_dungeon_context(request, session):
                     "player_skill",
                 )
                 .order_by("-created_at")[:12]
+            )
+
+            if run and run.status == PartyDungeonRun.Status.ACTIVE:
+                attach_room_statuses_to_party_members(
+                    party_members,
+                    run,
+                )
+            else:
+                for member in party_members:
+                    member.character.room_statuses = []
+
+            if boss_encounter:
+                boss_statuses = build_boss_statuses_for_boss(boss_encounter)
+
+            attach_boss_statuses_to_party_members(
+                party_members,
+                boss_encounter,
+                run,
             )
 
             latest_boss_log = (
@@ -3944,6 +4860,18 @@ def build_student_dungeon_context(request, session):
             ):
                 is_boss_player_turn = True
 
+                control_state = get_boss_control_state(
+                    boss_encounter,
+                    character,
+                )
+
+                boss_action_notice = control_state["notice"]
+                boss_is_hard_skipped = control_state["is_hard_skipped"]
+                boss_is_paralyzed = control_state["is_paralyzed"]
+                boss_can_use_skills = control_state["can_use_skills"]
+                boss_can_use_items = control_state["can_use_items"]
+                boss_basic_roll_penalty = control_state["roll_penalty"]
+
                 boss_can_basic_attack, boss_attack_block_reason = can_character_basic_attack_boss(
                     boss_encounter,
                     character,
@@ -4000,6 +4928,7 @@ def build_student_dungeon_context(request, session):
         "boss_can_basic_attack": boss_can_basic_attack,
         "boss_attack_block_reason": boss_attack_block_reason,
         "available_boss_skills": available_boss_skills,
+        "latest_mimic_reveal_attempt": latest_mimic_reveal_attempt,
         "latest_boss_log": latest_boss_log,
         "latest_boss_ability_log": latest_boss_ability_log,
         "latest_boss_player_animation_log": latest_boss_player_animation_log,
@@ -4007,6 +4936,13 @@ def build_student_dungeon_context(request, session):
         "latest_boss_transformation_log": latest_boss_transformation_log,
         "room_production_prompt": room_production_prompt,
         "boss_production_prompt": boss_production_prompt,
+        "boss_statuses": boss_statuses,
+        "boss_action_notice": boss_action_notice,
+        "boss_is_hard_skipped": boss_is_hard_skipped,
+        "boss_is_paralyzed": boss_is_paralyzed,
+        "boss_can_use_skills": boss_can_use_skills,
+        "boss_can_use_items": boss_can_use_items,
+        "boss_basic_roll_penalty": boss_basic_roll_penalty,
     }
 
 # ============================================================
@@ -4046,7 +4982,27 @@ def character_create(request, join_code):
             join_code=session.join_code,
         )
 
-    character_classes = CharacterClass.objects.filter(is_active=True)
+    character_classes = (
+        CharacterClass.objects
+        .filter(is_active=True)
+        .prefetch_related(
+            models.Prefetch(
+                "skills",
+                queryset=ClassSkill.objects.order_by(
+                    "skill_scope",
+                    "ap_cost",
+                    "name",
+                ),
+            ),
+            models.Prefetch(
+                "weaknesses",
+                queryset=ClassWeakness.objects.order_by(
+                    "weakness_scope",
+                    "name",
+                ),
+            ),
+        )
+    )
 
     initial_step = 1
 
@@ -5953,6 +6909,9 @@ def boss_basic_attack(request, join_code):
         die_roll = random.randint(1, 6)
         item_roll_bonus = get_run_roll_bonus(run)
 
+        control_state = get_boss_control_state(encounter, character)
+        control_roll_penalty = control_state["roll_penalty"]
+
         roll_breakdown = []
         difficulty_breakdown = []
         damage_breakdown = []
@@ -5964,7 +6923,14 @@ def boss_basic_attack(request, join_code):
                 "type": "item",
             })
 
-        final_roll_total = die_roll + item_roll_bonus
+        if control_roll_penalty:
+            roll_breakdown.append({
+                "label": "Paralyzed",
+                "value": control_roll_penalty,
+                "type": "debuff",
+            })
+
+        final_roll_total = die_roll + item_roll_bonus + control_roll_penalty
         difficulty = encounter.current_difficulty
 
         success = final_roll_total >= encounter.current_difficulty
@@ -5996,6 +6962,11 @@ def boss_basic_attack(request, join_code):
                 f"{character.character_name} rolled {die_roll}, but needed "
                 f"{difficulty} or higher. The attack missed."
             )
+        
+        if control_roll_penalty:
+            result_text = (
+                f"Paralyzed: roll -1. {result_text}"
+            )
 
         BossActionLog.objects.create(
             encounter=encounter,
@@ -6026,17 +6997,20 @@ def boss_basic_attack(request, join_code):
         ):
             return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
+        if control_state["is_paralyzed"]:
+            consume_character_individual_paralyze_effects(encounter, character)
+
         consume_character_turn_effects(encounter, character)
 
         if check_boss_party_defeat_state(encounter):
             return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
         advance_boss_after_player_action(encounter)
+        
 
     return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
 def boss_pass_turn(request, join_code):
-
     session = get_object_or_404(
         GameSession,
         join_code=join_code,
@@ -6067,53 +7041,72 @@ def boss_pass_turn(request, join_code):
     if request.method != "POST":
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
-    print(
-        "BOSS PASS DEBUG:",
-        {
-            "character": character.id,
-            "character_name": character.character_name,
-            "current_actor": encounter.current_actor,
-            "current_turn_character_id": encounter.current_turn_character_id,
-            "status": encounter.status,
-            "round": encounter.round_number,
-            "player_phase": encounter.player_phase_number,
-        },
-    )
-
     if (
         encounter.current_actor != BossEncounter.CurrentActor.PLAYER
         or encounter.current_turn_character_id != character.id
     ):
         messages.warning(request, "It is not your boss turn.")
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
-    
+
     production_prompt, production_response = get_production_from_request(request)
 
     if not production_prompt:
         production_prompt = get_boss_production_prompt(character)
 
-    if not production_has_minimum_ideas(production_response, minimum_ideas=1):
+    control_state = get_boss_control_state(encounter, character)
+
+    forced_pass = (
+        control_state["is_hard_skipped"]
+        or control_state["is_paralyzed"]
+    )
+
+    if (
+        not forced_pass
+        and not production_has_minimum_ideas(production_response, minimum_ideas=1)
+    ):
         messages.warning(
             request,
-            "Write at least one battle command before taking your boss action.",
+            "Write at least one battle command before passing your boss turn.",
         )
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
     with transaction.atomic():
         encounter = BossEncounter.objects.select_for_update().get(id=encounter.id)
 
+        control_state = get_boss_control_state(encounter, character)
+
+        if control_state["is_hard_skipped"]:
+            result_text = (
+                f"{character.character_name} is stunned and cannot act. "
+                "They pass their turn."
+            )
+            consume_character_individual_hard_skip_effects(encounter, character)
+
+        elif control_state["is_paralyzed"]:
+            result_text = (
+                f"{character.character_name} is paralyzed and chooses not to attack. "
+                "They pass their turn."
+            )
+            consume_character_individual_paralyze_effects(encounter, character)
+
+        else:
+            result_text = f"{character.character_name} passes their boss turn."
+
         BossActionLog.objects.create(
             encounter=encounter,
             actor_type=BossActionLog.ActorType.PLAYER,
-            action_type=BossActionLog.ActionType.BASIC_ATTACK,
+            action_type=BossActionLog.ActionType.PASS,
             character=character,
             phase=encounter.phase,
             round_number=encounter.round_number,
             player_phase_number=encounter.player_phase_number,
+            success=True,
+            damage_to_boss=0,
             damage_to_players=0,
             healing_done=0,
             production_prompt=production_prompt,
             production_response=production_response,
+            result_text=result_text,
         )
 
         consume_character_turn_effects(encounter, character)
@@ -6163,6 +7156,22 @@ def boss_use_skill(request, join_code):
         or encounter.current_turn_character_id != character.id
     ):
         messages.warning(request, "It is not your boss turn.")
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    control_state = get_boss_control_state(encounter, character)
+
+    if control_state["is_hard_skipped"]:
+        messages.warning(
+            request,
+            "You are stunned and cannot use a skill. Pass to continue.",
+        )
+        return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+    if control_state["is_paralyzed"]:
+        messages.warning(
+            request,
+            "You are paralyzed. You cannot use skills, but you may basic attack with -1 or pass.",
+        )
         return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
     production_prompt, production_response = get_production_from_request(request)
@@ -6344,6 +7353,22 @@ def boss_use_item(request, join_code):
         )
 
         item = inventory_item.item
+
+        control_state = get_boss_control_state(encounter, character)
+
+        if control_state["is_hard_skipped"]:
+            messages.warning(
+                request,
+                "You are stunned and cannot use an item. Pass to continue.",
+            )
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
+
+        if control_state["is_paralyzed"]:
+            messages.warning(
+                request,
+                "You are paralyzed. You cannot use items, but you may basic attack with -1 or pass.",
+            )
+            return redirect("fantasy_roles:student_dungeon_detail", join_code=session.join_code)
 
         if not item.is_active or not item.can_use_in_boss:
             messages.warning(request, "This item cannot be used during boss combat.")

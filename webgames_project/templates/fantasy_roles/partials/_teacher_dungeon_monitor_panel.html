@@ -180,6 +180,60 @@
             {% endfor %}
           </div>
           {% include "fantasy_roles/partials/_teacher_party_language_log.html" %}
+          {% if card.boss_action_log %}
+            <details class="fr-teacher-boss-language-log">
+              <summary>
+                <span>
+                  <span class="fr-kicker">Boss Language Log</span>
+                  <strong>Boss Actions</strong>
+                </span>
+
+                <span class="fr-log-summary-hint">
+                  Tap to view
+                </span>
+              </summary>
+
+              <div class="fr-party-log-list fr-boss-log-list-compact">
+                {% for log in card.boss_action_log %}
+                  <article class="fr-party-log-entry {% if log.success %}is-success{% else %}is-failure{% endif %}">
+                    <span class="fr-kicker">
+                      Round {{ log.round_number }} · {{ log.get_action_type_display }}
+                    </span>
+
+                    <strong>
+                      {% if log.character %}
+                        {{ log.character.character_name }}
+                      {% else %}
+                        Player
+                      {% endif %}
+                    </strong>
+
+                    {% if log.result_text %}
+                      <p class="fr-teacher-result-text">
+                        {{ log.result_text }}
+                      </p>
+                    {% endif %}
+
+                    {% if log.production_response %}
+                      <div class="fr-production-evidence">
+                        <span class="fr-kicker">Student Production</span>
+
+                        {% if log.production_prompt %}
+                          <p class="fr-production-prompt">
+                            {{ log.production_prompt }}
+                          </p>
+                        {% endif %}
+
+                        <blockquote>
+                          {{ log.production_response }}
+                        </blockquote>
+                      </div>
+                    {% endif %}
+                  </article>
+                {% endfor %}
+              </div>
+            </details>
+          {% endif %}
         </section>
       </article>
     {% endfor %}
