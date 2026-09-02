@@ -1,0 +1,692 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+    .rpm-page {
+        min-height: 100vh;
+
+        background:
+            radial-gradient(
+                circle at 85% 8%,
+                rgba(32, 99, 244, .16),
+                transparent 28rem
+            ),
+            #03101f;
+
+        color: #f5f8ff;
+
+        padding: 2.5rem 1rem;
+
+        font-family:
+            Inter,
+            system-ui,
+            sans-serif;
+    }
+
+
+    .rpm-container {
+        width: min(1200px, 100%);
+        margin: auto;
+    }
+
+
+    .rpm-kicker {
+        color: #448cff;
+
+        letter-spacing: .17em;
+
+        text-transform: uppercase;
+
+        font-weight: 800;
+
+        font-size: .8rem;
+    }
+
+
+    .rpm-title {
+        font-size: clamp(
+            2.3rem,
+            6vw,
+            4rem
+        );
+
+        margin:
+            .5rem 0
+            .5rem;
+
+        letter-spacing: -.04em;
+    }
+
+
+    .rpm-subtitle {
+        color: #aeb8c9;
+        margin-bottom: 2rem;
+    }
+
+
+    .rpm-stats {
+        display: grid;
+
+        grid-template-columns:
+            repeat(3, 1fr);
+
+        gap: 1rem;
+
+        margin-bottom: 2rem;
+    }
+
+
+    .rpm-stat {
+        padding: 1.2rem;
+
+        border-radius: 1.2rem;
+
+        border:
+            1px solid
+            rgba(91, 129, 199, .28);
+
+        background:
+            rgba(8, 27, 51, .82);
+    }
+
+
+    .rpm-stat-value {
+        font-size: 2rem;
+        font-weight: 850;
+    }
+
+
+    .rpm-stat-label {
+        color: #8fa0b9;
+        font-size: .85rem;
+    }
+
+
+    .rpm-grid {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                auto-fit,
+                minmax(280px, 1fr)
+            );
+
+        gap: 1rem;
+    }
+
+
+    .rpm-student {
+        border-radius: 1.25rem;
+
+        padding: 1.2rem;
+
+        background:
+            rgba(9, 29, 54, .85);
+
+        border:
+            1px solid
+            rgba(109, 137, 183, .25);
+    }
+
+
+    .rpm-student-top {
+        display: flex;
+
+        justify-content:
+            space-between;
+
+        gap: 1rem;
+
+        align-items: start;
+    }
+
+
+    .rpm-student-name {
+        font-size: 1.15rem;
+        font-weight: 800;
+    }
+
+
+    .rpm-role {
+        color: #5792ff;
+        margin-top: .3rem;
+    }
+
+
+    .rpm-statuses {
+        display: flex;
+        gap: .5rem;
+
+        flex-wrap: wrap;
+
+        margin-top: 1rem;
+    }
+
+
+    .rpm-badge {
+        padding:
+            .4rem .7rem;
+
+        border-radius: 999px;
+
+        font-size: .78rem;
+
+        background:
+            rgba(40, 56, 83, .75);
+
+        color: #9faec2;
+
+        border:
+            1px solid
+            rgba(120, 145, 181, .22);
+    }
+
+
+    .rpm-badge.active {
+        color: #bfe4ff;
+
+        background:
+            rgba(41, 104, 194, .2);
+
+        border-color:
+            rgba(64, 137, 255, .35);
+    }
+
+
+    .rpm-badge.complete {
+        color: #b8f3d5;
+
+        background:
+            rgba(32, 126, 90, .2);
+
+        border-color:
+            rgba(55, 193, 137, .3);
+    }
+
+
+    @media (max-width: 600px) {
+
+        .rpm-stats {
+            grid-template-columns: 1fr;
+        }
+
+    }
+
+    .rpm-title-row {
+        display: flex;
+
+        justify-content: space-between;
+        align-items: end;
+
+        gap: 1rem;
+
+        flex-wrap: wrap;
+    }
+
+
+    .rpm-meta {
+        color: #9dacbf;
+        margin-top: .5rem;
+    }
+
+
+    .rpm-new-round {
+        min-height: 48px;
+
+        border-radius: 1rem;
+
+        padding:
+            .8rem
+            1.2rem;
+
+        border:
+            1px solid
+            rgba(104, 126, 255, .75);
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(80, 46, 213, .95),
+                rgba(34, 99, 232, .95)
+            );
+
+        color: white;
+
+        font: inherit;
+        font-weight: 800;
+
+        cursor: pointer;
+    }
+
+
+    .rpm-new-round:hover {
+        filter: brightness(1.1);
+    }
+
+    .rpm-report-link {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    margin-top: 1.15rem;
+
+    padding:
+        .9rem
+        1rem;
+
+    border-radius: .9rem;
+
+    text-decoration: none;
+
+    color: #ffffff;
+
+    font-weight: 750;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(47, 83, 190, .78),
+            rgba(72, 57, 190, .75)
+        );
+
+    border:
+        1px solid
+        rgba(100, 139, 255, .48);
+
+    transition:
+        border-color .15s ease,
+        transform .15s ease,
+        filter .15s ease;
+}
+
+
+.rpm-report-link:hover {
+    color: white;
+
+    border-color:
+        rgba(120, 166, 255, .85);
+
+    filter: brightness(1.08);
+
+    transform: translateY(-1px);
+}
+
+
+.rpm-report-arrow {
+    font-size: 1.25rem;
+}
+
+
+.rpm-round-number {
+    color: #8296b6;
+
+    font-size: .78rem;
+
+    white-space: nowrap;
+}
+</style>
+
+
+<div class="rpm-page">
+
+    <main class="rpm-container">
+
+
+        <header class="rpm-header">
+
+            <div class="rpm-kicker">
+                {{ situation.title }}
+            </div>
+
+
+            <div class="rpm-title-row">
+
+                <div>
+
+                    <h1 class="rpm-title">
+                        Teacher Monitor
+                    </h1>
+
+
+                    <div class="rpm-meta">
+
+                        Round
+                        {{ current_round|stringformat:"02d" }}
+
+                        &nbsp; • &nbsp;
+
+                        Join Code
+                        <strong>
+                            {{ session.join_code }}
+                        </strong>
+
+                    </div>
+
+                </div>
+
+
+                <form
+                    method="post"
+                    action="{% url 'roleplay:reassign_roles' session.join_code %}"
+                    onsubmit="
+                        return confirm(
+                            'Start a new round? Existing reports will be preserved and every student will receive a new role.'
+                        );
+                    "
+                >
+
+                    {% csrf_token %}
+
+
+                    <button
+                        class="rpm-new-round"
+                        type="submit"
+                    >
+                        ↻ New Round
+                    </button>
+
+                </form>
+
+            </div>
+
+        </header>
+
+
+        <section class="rpm-stats">
+
+            <article class="rpm-stat">
+
+                <div
+                    class="rpm-stat-value"
+                    id="studentCount"
+                >
+                    {{ total_students }}
+                </div>
+
+                <div class="rpm-stat-label">
+                    Students
+                </div>
+
+            </article>
+
+
+            <article class="rpm-stat">
+
+                <div
+                    class="rpm-stat-value"
+                    id="viewedCount"
+                >
+                    {{ viewed_count }}
+                </div>
+
+                <div class="rpm-stat-label">
+                    Roles Viewed
+                </div>
+
+            </article>
+
+
+            <article class="rpm-stat">
+
+                <div
+                    class="rpm-stat-value"
+                    id="submittedCount"
+                >
+                    {{ submitted_count }}
+                </div>
+
+                <div class="rpm-stat-label">
+                    Reports Submitted
+                </div>
+
+            </article>
+
+        </section>
+
+
+        <section class="rpm-grid">
+
+        {% for assignment in assignments %}
+
+            <article
+                class="rpm-student"
+                data-assignment-id="{{ assignment.id }}"
+            >
+
+                <div class="rpm-student-top">
+
+                    <div>
+
+                        <div class="rpm-student-name">
+                            {{ assignment.participant.display_name }}
+                        </div>
+
+                        <div class="rpm-role">
+                            {{ assignment.role.name }}
+                        </div>
+
+                    </div>
+
+                    <div class="rpm-round-number">
+                        Round {{ assignment.round_number|stringformat:"02d" }}
+                    </div>
+
+                </div>
+
+
+                <div class="rpm-statuses">
+
+                    <span
+                        class="
+                            rpm-badge
+                            rpm-viewed
+                            {% if assignment.viewed_at %}
+                                active
+                            {% endif %}
+                        "
+                    >
+                        {% if assignment.viewed_at %}
+                            Role viewed
+                        {% else %}
+                            Not viewed
+                        {% endif %}
+                    </span>
+
+
+                    <span
+                        class="
+                            rpm-badge
+                            rpm-submitted
+                            {% for submission in assignment.record_submissions.all %}
+                                {% if submission.is_submitted %}
+                                    complete
+                                {% endif %}
+                            {% endfor %}
+                        "
+                    >
+                        {% if assignment.record_submissions.all %}
+                            {% for submission in assignment.record_submissions.all %}
+                                {% if submission.is_submitted %}
+                                    Report submitted
+                                {% else %}
+                                    Report pending
+                                {% endif %}
+                            {% endfor %}
+                        {% else %}
+                            Report pending
+                        {% endif %}
+                    </span>
+
+                </div>
+
+
+                <a
+                    class="rpm-report-link"
+                    href="{% url 'roleplay:teacher_student_reports' session.join_code assignment.participant.id %}"
+                >
+                    <span>
+                        Read Report & Give Feedback
+                    </span>
+
+                    <span class="rpm-report-arrow">
+                        →
+                    </span>
+                </a>
+
+            </article>
+
+        {% endfor %}    
+        </section>
+
+
+    </main>
+
+</div>
+
+
+<script>
+
+(function () {
+
+    const statusUrl =
+        "{% url 'roleplay:teacher_monitor_status' session.join_code %}";
+
+
+    async function refreshMonitor() {
+
+        try {
+
+            const response = await fetch(
+                statusUrl,
+                {
+                    headers: {
+                        "X-Requested-With":
+                            "XMLHttpRequest"
+                    }
+                }
+            );
+
+
+            if (!response.ok) {
+                return;
+            }
+
+
+            const data = await response.json();
+
+
+            let viewed = 0;
+            let submitted = 0;
+
+
+            data.students.forEach(function (student) {
+
+                const card =
+                    document.querySelector(
+                        `[data-assignment-id="${student.assignment_id}"]`
+                    );
+
+
+                if (!card) {
+                    return;
+                }
+
+
+                const viewedBadge =
+                    card.querySelector(
+                        ".rpm-viewed"
+                    );
+
+
+                const submittedBadge =
+                    card.querySelector(
+                        ".rpm-submitted"
+                    );
+
+
+                if (student.viewed) {
+
+                    viewed++;
+
+                    viewedBadge.textContent =
+                        "Role viewed";
+
+                    viewedBadge.classList.add(
+                        "active"
+                    );
+
+                } else {
+
+                    viewedBadge.textContent =
+                        "Not viewed";
+
+                    viewedBadge.classList.remove(
+                        "active"
+                    );
+
+                }
+
+
+                if (student.submitted) {
+
+                    submitted++;
+
+                    submittedBadge.textContent =
+                        "Report submitted";
+
+                    submittedBadge.classList.add(
+                        "complete"
+                    );
+
+                } else {
+
+                    submittedBadge.textContent =
+                        "Report pending";
+
+                    submittedBadge.classList.remove(
+                        "complete"
+                    );
+
+                }
+
+            });
+
+
+            document.getElementById(
+                "viewedCount"
+            ).textContent = viewed;
+
+
+            document.getElementById(
+                "submittedCount"
+            ).textContent = submitted;
+
+        }
+
+        catch (error) {
+
+            console.debug(
+                "Monitor refresh failed",
+                error
+            );
+
+        }
+
+    }
+
+
+    refreshMonitor();
+
+    setInterval(
+        refreshMonitor,
+        3000
+    );
+
+})();
+
+</script>
+
+{% endblock %}

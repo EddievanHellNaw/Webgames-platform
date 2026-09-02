@@ -1,0 +1,1234 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+    .rp-page {
+        min-height: 100vh;
+        background:
+            radial-gradient(
+                circle at 92% 5%,
+                rgba(21, 94, 239, .18),
+                transparent 24rem
+            ),
+            radial-gradient(
+                circle at 5% 32%,
+                rgba(132, 54, 255, .10),
+                transparent 24rem
+            ),
+            #03101f;
+
+        color: #f7f9ff;
+        padding:
+            2rem
+            1rem
+            7rem;
+
+        font-family:
+            Inter,
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
+    }
+
+
+    .rp-container {
+        width: min(100%, 900px);
+        margin: 0 auto;
+    }
+
+
+    /* -------------------------------------------
+       HEADER
+    ------------------------------------------- */
+
+    .rp-kicker {
+        color: #428cff;
+
+        font-weight: 800;
+        letter-spacing: .18em;
+
+        text-transform: uppercase;
+
+        font-size: .8rem;
+
+        margin-bottom: .8rem;
+    }
+
+
+    .rp-role-title {
+        font-size: clamp(
+            2.3rem,
+            9vw,
+            4.2rem
+        );
+
+        line-height: 1;
+
+        margin: 0 0 1rem;
+
+        font-weight: 850;
+
+        letter-spacing: -.04em;
+
+        text-shadow:
+            0 4px 20px
+            rgba(0, 0, 0, .3);
+    }
+
+
+    .rp-meta {
+        color: #c0c8da;
+
+        display: flex;
+        flex-wrap: wrap;
+
+        gap: .55rem;
+
+        font-size: 1rem;
+
+        margin-bottom: 2rem;
+    }
+
+
+    .rp-meta-role {
+        color: #4c8eff;
+    }
+
+
+    /* -------------------------------------------
+       MISSION
+    ------------------------------------------- */
+
+    .rp-mission {
+        position: relative;
+        overflow: hidden;
+
+        border-radius: 1.6rem;
+
+        border: 1px solid #5b7cff;
+
+        padding: 1.7rem;
+
+        background:
+            linear-gradient(
+                125deg,
+                rgba(103, 35, 206, .72),
+                rgba(15, 79, 215, .78)
+            );
+
+        box-shadow:
+            0 0 30px
+            rgba(69, 76, 255, .18);
+
+        margin-bottom: 1.4rem;
+    }
+
+
+    .rp-mission::after {
+        content: "";
+
+        position: absolute;
+
+        right: -70px;
+        bottom: -120px;
+
+        width: 250px;
+        height: 250px;
+
+        border-radius: 50%;
+
+        border: 1px solid
+            rgba(120, 194, 255, .3);
+
+        box-shadow:
+            inset 0 0 50px
+            rgba(58, 145, 255, .12);
+    }
+
+
+    .rp-mission-label {
+        color: #b47bff;
+
+        font-weight: 800;
+
+        letter-spacing: .12em;
+
+        text-transform: uppercase;
+
+        font-size: .8rem;
+
+        margin-bottom: .7rem;
+    }
+
+
+    .rp-mission-text {
+        position: relative;
+        z-index: 2;
+
+        font-size: clamp(
+            1.25rem,
+            5vw,
+            1.8rem
+        );
+
+        font-weight: 750;
+
+        line-height: 1.35;
+    }
+
+
+    /* -------------------------------------------
+       INFORMATION CARDS
+    ------------------------------------------- */
+
+    .rp-section-card {
+        display: grid;
+
+        grid-template-columns:
+            64px 1fr;
+
+        gap: 1rem;
+
+        align-items: start;
+
+        background:
+            rgba(9, 28, 52, .82);
+
+        border:
+            1px solid
+            rgba(125, 151, 194, .24);
+
+        border-radius: 1.35rem;
+
+        padding: 1.25rem;
+
+        margin-top: 1rem;
+
+        box-shadow:
+            inset 0 0 35px
+            rgba(16, 71, 133, .08);
+    }
+
+
+    .rp-icon {
+        width: 58px;
+        height: 58px;
+
+        border-radius: 50%;
+
+        display: grid;
+        place-items: center;
+
+        font-size: 1.55rem;
+
+        color: #5d9cff;
+
+        background:
+            radial-gradient(
+                circle,
+                rgba(46, 92, 220, .25),
+                rgba(10, 35, 77, .55)
+            );
+
+        border:
+            1px solid
+            rgba(79, 131, 255, .25);
+    }
+
+
+    .rp-icon-secret {
+        color: #ad6dff;
+    }
+
+
+    .rp-section-title {
+        font-size: 1.25rem;
+
+        margin:
+            .15rem 0
+            .45rem;
+
+        font-weight: 800;
+    }
+
+
+    .rp-section-text {
+        color: #c7cfdd;
+
+        line-height: 1.55;
+
+        font-size: 1rem;
+    }
+
+
+    /* -------------------------------------------
+       LANGUAGE
+    ------------------------------------------- */
+
+    .rp-language-grid {
+        display: grid;
+
+        gap: .8rem;
+
+        margin-top: 1rem;
+    }
+
+
+    .rp-language-chip {
+        border:
+            1px solid
+            rgba(72, 131, 239, .45);
+
+        background:
+            rgba(20, 53, 101, .65);
+
+        color: #eef4ff;
+
+        padding:
+            .85rem
+            1rem;
+
+        border-radius: 1rem;
+
+        line-height: 1.35;
+    }
+
+
+    /* -------------------------------------------
+       REPORT
+    ------------------------------------------- */
+
+    .rp-report-intro {
+        border:
+            1px solid
+            rgba(89, 127, 255, .4);
+
+        background:
+            linear-gradient(
+                135deg,
+                rgba(32, 49, 105, .65),
+                rgba(20, 28, 70, .65)
+            );
+
+        border-radius: 1.3rem;
+
+        padding: 1.3rem;
+
+        margin-bottom: 1.2rem;
+    }
+
+
+    .rp-report-intro strong {
+        display: block;
+
+        color: #a674ff;
+
+        text-transform: uppercase;
+
+        letter-spacing: .08em;
+
+        font-size: .8rem;
+
+        margin-bottom: .45rem;
+    }
+
+
+    .rp-field {
+        margin-bottom: 1.2rem;
+    }
+
+
+    .rp-field label {
+        display: block;
+
+        font-weight: 750;
+
+        margin-bottom: .45rem;
+    }
+
+
+    .rp-field-help {
+        display: block;
+
+        color: #8392aa;
+
+        font-size: .88rem;
+
+        margin-bottom: .55rem;
+    }
+
+
+    .rp-input,
+    .rp-textarea {
+        box-sizing: border-box;
+
+        width: 100%;
+
+        border-radius: 1rem;
+
+        border:
+            1px solid
+            rgba(77, 121, 201, .42);
+
+        background:
+            rgba(4, 20, 41, .92);
+
+        color: white;
+
+        padding:
+            .95rem 1rem;
+
+        font: inherit;
+
+        font-size: 1rem;
+
+        outline: none;
+    }
+
+
+    .rp-textarea {
+        min-height: 130px;
+        resize: vertical;
+    }
+
+
+    .rp-input:focus,
+    .rp-textarea:focus {
+        border-color: #548dff;
+
+        box-shadow:
+            0 0 0 3px
+            rgba(62, 124, 255, .14);
+    }
+
+
+    .rp-actions {
+        display: grid;
+
+        grid-template-columns:
+            1fr 1fr;
+
+        gap: .8rem;
+    }
+
+
+    .rp-button {
+        min-height: 48px;
+
+        border-radius: .9rem;
+
+        border:
+            1px solid
+            rgba(88, 131, 224, .5);
+
+        font-weight: 750;
+
+        cursor: pointer;
+
+        font-size: 1rem;
+    }
+
+
+    .rp-button-secondary {
+        background:
+            rgba(19, 42, 79, .85);
+
+        color: #eaf1ff;
+    }
+
+
+    .rp-button-primary {
+        background:
+            linear-gradient(
+                135deg,
+                #335cff,
+                #6b52ff
+            );
+
+        color: white;
+
+        border-color:
+            rgba(117, 146, 255, .8);
+    }
+
+
+    .rp-submitted {
+        padding: .9rem 1rem;
+
+        border-radius: 1rem;
+
+        margin-bottom: 1rem;
+
+        color: #baf5da;
+
+        background:
+            rgba(21, 105, 74, .20);
+
+        border:
+            1px solid
+            rgba(50, 194, 133, .28);
+    }
+
+
+    .rp-error {
+        padding: .9rem 1rem;
+
+        border-radius: 1rem;
+
+        margin-bottom: 1rem;
+
+        color: #ffd0d0;
+
+        background:
+            rgba(159, 40, 61, .2);
+
+        border:
+            1px solid
+            rgba(239, 74, 97, .3);
+    }
+
+
+    /* -------------------------------------------
+       TABS
+    ------------------------------------------- */
+
+    .rp-panel {
+        display: none;
+    }
+
+
+    .rp-panel.is-active {
+        display: block;
+    }
+
+
+    .rp-bottom-nav {
+        position: fixed;
+
+        left: 0;
+        right: 0;
+        bottom: 0;
+
+        z-index: 100;
+
+        display: grid;
+
+        grid-template-columns:
+            repeat(3, 1fr);
+
+        padding:
+            .5rem
+            max(1rem, env(safe-area-inset-right))
+            calc(.5rem + env(safe-area-inset-bottom))
+            max(1rem, env(safe-area-inset-left));
+
+        background:
+            rgba(7, 23, 43, .96);
+
+        border-top:
+            1px solid
+            rgba(116, 142, 181, .25);
+
+        backdrop-filter:
+            blur(18px);
+    }
+
+
+    .rp-tab-button {
+        appearance: none;
+
+        border: 0;
+
+        background: none;
+
+        color: #aeb7c7;
+
+        padding:
+            .65rem .4rem;
+
+        font: inherit;
+
+        font-size: .85rem;
+
+        cursor: pointer;
+
+        border-radius: .7rem;
+    }
+
+
+    .rp-tab-button span {
+        display: block;
+
+        font-size: 1.35rem;
+
+        margin-bottom: .15rem;
+    }
+
+
+    .rp-tab-button.is-active {
+        color: #448aff;
+    }
+
+
+    @media (min-width: 720px) {
+
+        .rp-page {
+            padding-top: 3rem;
+        }
+
+        .rp-language-grid {
+            grid-template-columns:
+                repeat(2, 1fr);
+        }
+
+    }
+
+
+    @media (max-width: 420px) {
+
+        .rp-section-card {
+            grid-template-columns:
+                50px 1fr;
+
+            padding: 1rem;
+        }
+
+        .rp-icon {
+            width: 48px;
+            height: 48px;
+        }
+
+        .rp-actions {
+            grid-template-columns: 1fr;
+        }
+
+    }
+
+    .rp-teacher-feedback {
+    margin-top: 1.4rem;
+
+    padding: 1.2rem;
+
+    border-radius: 1.2rem;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(82, 43, 180, .28),
+            rgba(24, 65, 143, .35)
+        );
+
+    border:
+        1px solid
+        rgba(115, 101, 255, .38);
+}
+
+
+.rp-teacher-feedback-label {
+    color: #a979ff;
+
+    text-transform: uppercase;
+
+    letter-spacing: .09em;
+
+    font-size: .78rem;
+
+    font-weight: 850;
+
+    margin-bottom: .6rem;
+}
+
+
+.rp-teacher-feedback-text {
+    color: #ecf1ff;
+
+    line-height: 1.55;
+}
+
+
+.rp-teacher-feedback-status {
+    color: #9fdcc2;
+
+    font-size: .82rem;
+
+    margin-top: .8rem;
+}
+
+</style>
+
+
+<div class="rp-page">
+
+    <main class="rp-container">
+
+
+        <!-- ==================================================
+             HEADER
+        =================================================== -->
+
+        <header>
+
+            <div class="rp-kicker">
+                {{ role.situation.title }}
+            </div>
+
+            <h1 class="rp-role-title">
+                {{ role.name }}
+            </h1>
+
+            <div class="rp-meta">
+
+                <span>
+                    Playing as {{ participant.display_name }}
+                </span>
+
+                <span>•</span>
+
+                <span class="rp-meta-role">
+                    Round {{ assignment.round_number|stringformat:"02d" }}
+                </span>
+
+            </div>
+
+        </header>
+
+
+        <!-- ==================================================
+             ROLE TAB
+        =================================================== -->
+
+        <section
+            class="rp-panel is-active"
+            data-panel="role"
+        >
+
+            <article class="rp-mission">
+
+                <div class="rp-mission-label">
+                    Your Mission
+                </div>
+
+                <div class="rp-mission-text">
+                    {{ role.objective }}
+                </div>
+
+            </article>
+
+
+            <article class="rp-section-card">
+
+                <div class="rp-icon">
+                    👥
+                </div>
+
+                <div>
+
+                    <h2 class="rp-section-title">
+                        Situation
+                    </h2>
+
+                    <div class="rp-section-text">
+                        {{ role.situation.student_briefing }}
+                    </div>
+
+                </div>
+
+            </article>
+
+
+            <article class="rp-section-card">
+
+                <div class="rp-icon">
+                    ◎
+                </div>
+
+                <div>
+
+                    <h2 class="rp-section-title">
+                        About Your Character
+                    </h2>
+
+                    <div class="rp-section-text">
+                        {{ role.public_description }}
+                    </div>
+
+                </div>
+
+            </article>
+
+
+            <article class="rp-section-card">
+
+                <div class="rp-icon rp-icon-secret">
+                    🔒
+                </div>
+
+                <div>
+
+                    <h2 class="rp-section-title">
+                        Private Information
+                    </h2>
+
+                    <div class="rp-section-text">
+                        {{ role.private_briefing }}
+                    </div>
+
+                </div>
+
+            </article>
+
+
+            {% if role.secret_information %}
+
+                <article class="rp-section-card">
+
+                    <div class="rp-icon rp-icon-secret">
+                        ◉
+                    </div>
+
+                    <div>
+
+                        <h2 class="rp-section-title">
+                            Secret
+                        </h2>
+
+                        <div class="rp-section-text">
+                            {{ role.secret_information }}
+                        </div>
+
+                    </div>
+
+                </article>
+
+            {% endif %}
+
+        </section>
+
+
+        <!-- ==================================================
+             LANGUAGE TAB
+        =================================================== -->
+
+        <section
+            class="rp-panel"
+            data-panel="language"
+        >
+
+            <article class="rp-mission">
+
+                <div class="rp-mission-label">
+                    Language Support
+                </div>
+
+                <div class="rp-mission-text">
+                    Use these questions to keep the conversation going.
+                </div>
+
+            </article>
+
+
+            <article class="rp-section-card">
+
+                <div class="rp-icon">
+                    💬
+                </div>
+
+                <div>
+
+                    <h2 class="rp-section-title">
+                        Useful Language
+                    </h2>
+
+
+                    <div class="rp-language-grid">
+
+                        {% for sentence in useful_language %}
+
+                            <div class="rp-language-chip">
+                                {{ sentence }}
+                            </div>
+
+                        {% empty %}
+
+                            <div class="rp-section-text">
+                                No language support has been added
+                                to this role.
+                            </div>
+
+                        {% endfor %}
+
+                    </div>
+
+                </div>
+
+            </article>
+
+        </section>
+
+
+        <!-- ==================================================
+             NOTES / REPORT TAB
+        =================================================== -->
+
+        <section
+            class="rp-panel"
+            data-panel="notes"
+        >
+
+            <article class="rp-mission">
+
+                <div class="rp-mission-label">
+                    Your Report
+                </div>
+
+                <div class="rp-mission-text">
+                    Report what happened while completing your mission.
+                </div>
+
+            </article>
+
+
+            {% if report_template %}
+
+                <div class="rp-report-intro">
+
+                    <strong>
+                        Your Mission
+                    </strong>
+
+                    {{ role.objective }}
+
+                </div>
+
+
+                {% if submission.is_submitted %}
+
+                    <div class="rp-submitted">
+                        ✓ Your report has been submitted.
+                        You can still update it and submit again.
+                    </div>
+
+                {% endif %}
+
+
+                {% if report_error %}
+
+                    <div class="rp-error">
+                        {{ report_error }}
+                    </div>
+
+                {% endif %}
+
+
+                <form method="post">
+
+                    {% csrf_token %}
+
+                    <input
+                        type="hidden"
+                        name="assignment_id"
+                        value="{{ assignment.id }}"
+                    >
+                    {% for item in report_fields %}
+
+                        <div class="rp-field">
+
+                            <label for="field_{{ item.field.id }}">
+                                {{ item.field.label }}
+                            </label>
+
+
+                            {% if item.field.help_text %}
+
+                                <span class="rp-field-help">
+                                    {{ item.field.help_text }}
+                                </span>
+
+                            {% endif %}
+
+
+                            {% if item.field.field_type == "LONG_TEXT" %}
+
+                                <textarea
+                                    class="rp-textarea"
+                                    id="field_{{ item.field.id }}"
+                                    name="field_{{ item.field.id }}"
+                                    placeholder="{{ item.field.placeholder }}"
+                                >{{ item.value }}</textarea>
+
+                            {% else %}
+
+                                <input
+                                    class="rp-input"
+                                    id="field_{{ item.field.id }}"
+                                    name="field_{{ item.field.id }}"
+                                    type="text"
+                                    value="{{ item.value }}"
+                                    placeholder="{{ item.field.placeholder }}"
+                                >
+
+                            {% endif %}
+
+                        </div>
+
+                    {% endfor %}
+
+
+                    <div class="rp-actions">
+
+                        <button
+                            class="
+                                rp-button
+                                rp-button-secondary
+                            "
+                            type="submit"
+                            name="report_action"
+                            value="save"
+                        >
+                            Save Draft
+                        </button>
+
+
+                        <button
+                            class="
+                                rp-button
+                                rp-button-primary
+                            "
+                            type="submit"
+                            name="report_action"
+                            value="submit"
+                        >
+                            Submit Report
+                        </button>
+
+                    </div>
+
+                </form>
+
+
+            {% else %}
+
+                <article class="rp-section-card">
+
+                    <div class="rp-icon">
+                        📝
+                    </div>
+
+                    <div>
+
+                        <h2 class="rp-section-title">
+                            No Report Required
+                        </h2>
+
+                        <div class="rp-section-text">
+                            This role does not require a written report.
+                        </div>
+
+                    </div>
+
+                </article>
+
+            {% endif %}
+
+        </section>
+
+        {% if submission.teacher_feedback %}
+
+            <article class="rp-teacher-feedback">
+
+                <div class="rp-teacher-feedback-label">
+                    Teacher Feedback
+                </div>
+
+                <div class="rp-teacher-feedback-text">
+                    {{ submission.teacher_feedback|linebreaksbr }}
+                </div>
+
+                {% if submission.reviewed_at %}
+
+                    <div class="rp-teacher-feedback-status">
+                        ✓ Reviewed by your teacher
+                    </div>
+
+                {% endif %}
+
+            </article>
+
+        {% endif %}
+
+    </main>
+
+
+
+
+    <!-- ======================================================
+         MOBILE NAVIGATION
+    ======================================================= -->
+
+    <nav class="rp-bottom-nav">
+
+        <button
+            type="button"
+            class="rp-tab-button is-active"
+            data-target="role"
+        >
+            <span>♙</span>
+            Role
+        </button>
+
+
+        <button
+            type="button"
+            class="rp-tab-button"
+            data-target="language"
+        >
+            <span>◌</span>
+            Language
+        </button>
+
+
+        <button
+            type="button"
+            class="rp-tab-button"
+            data-target="notes"
+        >
+            <span>▣</span>
+            Notes
+        </button>
+
+    </nav>
+
+</div>
+
+
+<script>
+
+(function () {
+
+    const buttons = document.querySelectorAll(
+        ".rp-tab-button"
+    );
+
+    const panels = document.querySelectorAll(
+        ".rp-panel"
+    );
+
+
+    buttons.forEach(function (button) {
+
+        button.addEventListener(
+            "click",
+            function () {
+
+                const target = button.dataset.target;
+
+
+                buttons.forEach(function (item) {
+                    item.classList.remove(
+                        "is-active"
+                    );
+                });
+
+
+                panels.forEach(function (panel) {
+
+                    panel.classList.toggle(
+                        "is-active",
+                        panel.dataset.panel === target
+                    );
+
+                });
+
+
+                button.classList.add(
+                    "is-active"
+                );
+
+
+                window.scrollTo({
+                    top: 0,
+                    behavior: "smooth",
+                });
+
+            }
+        );
+
+    });
+
+})();
+
+</script>
+
+<script>
+
+(function () {
+
+    const roleStatusUrl =
+        "{% url 'roleplay:student_role_status' session.join_code %}";
+
+    const loadedAssignmentId =
+        {{ assignment.id }};
+
+    const loadedRound =
+        {{ assignment.round_number }};
+
+
+    async function checkForNewRound() {
+
+        try {
+
+            const response = await fetch(
+                roleStatusUrl,
+                {
+                    cache: "no-store"
+                }
+            );
+
+            if (!response.ok) {
+                return;
+            }
+
+            const data = await response.json();
+
+            if (!data.valid) {
+                return;
+            }
+
+            if (
+                data.round !== loadedRound
+                ||
+                data.assignment_id !== loadedAssignmentId
+            ) {
+
+                window.location.reload();
+
+            }
+
+        }
+
+        catch (error) {
+
+            console.debug(
+                "Round check failed",
+                error
+            );
+
+        }
+
+    }
+
+
+    setInterval(
+        checkForNewRound,
+        3000
+    );
+
+})();
+
+</script>
+
+{% endblock %}

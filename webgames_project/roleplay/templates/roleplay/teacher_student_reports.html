@@ -1,0 +1,582 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<style>
+
+.rpr-page {
+    min-height: 100vh;
+
+    background:
+        radial-gradient(
+            circle at 88% 5%,
+            rgba(34, 96, 235, .17),
+            transparent 25rem
+        ),
+        radial-gradient(
+            circle at 7% 35%,
+            rgba(123, 54, 240, .09),
+            transparent 25rem
+        ),
+        #03101f;
+
+    color: #f4f7ff;
+
+    padding: 2.5rem 1rem;
+
+    font-family:
+        Inter,
+        system-ui,
+        sans-serif;
+}
+
+
+.rpr-container {
+    width: min(900px, 100%);
+    margin: auto;
+}
+
+
+.rpr-back {
+    color: #6a9cff;
+    text-decoration: none;
+    font-weight: 700;
+}
+
+
+.rpr-kicker {
+    margin-top: 1.8rem;
+
+    color: #438cff;
+
+    text-transform: uppercase;
+
+    letter-spacing: .17em;
+
+    font-size: .8rem;
+
+    font-weight: 850;
+}
+
+
+.rpr-title {
+    margin: .5rem 0 .4rem;
+
+    font-size: clamp(
+        2.4rem,
+        8vw,
+        4rem
+    );
+
+    letter-spacing: -.04em;
+}
+
+
+.rpr-subtitle {
+    color: #a8b4c8;
+    margin-bottom: 2rem;
+}
+
+
+.rpr-round {
+    overflow: hidden;
+
+    margin-bottom: 1.2rem;
+
+    border-radius: 1.4rem;
+
+    border:
+        1px solid
+        rgba(92, 127, 190, .28);
+
+    background:
+        rgba(8, 27, 52, .88);
+}
+
+
+.rpr-round-header {
+    padding: 1.3rem;
+
+    background:
+        linear-gradient(
+            125deg,
+            rgba(81, 39, 186, .35),
+            rgba(20, 75, 176, .35)
+        );
+
+    border-bottom:
+        1px solid
+        rgba(92, 127, 190, .25);
+}
+
+
+.rpr-round-label {
+    color: #9c73ff;
+
+    text-transform: uppercase;
+
+    letter-spacing: .1em;
+
+    font-size: .75rem;
+
+    font-weight: 800;
+}
+
+
+.rpr-role {
+    margin-top: .3rem;
+
+    font-size: 1.4rem;
+
+    font-weight: 850;
+}
+
+
+.rpr-body {
+    padding: 1.3rem;
+}
+
+
+.rpr-status {
+    display: inline-block;
+
+    margin-bottom: 1rem;
+
+    padding: .4rem .7rem;
+
+    border-radius: 999px;
+
+    font-size: .8rem;
+
+    color: #9cabc0;
+
+    border:
+        1px solid
+        rgba(110, 138, 182, .25);
+}
+
+
+.rpr-status.submitted {
+    color: #b9f5d5;
+
+    border-color:
+        rgba(53, 191, 135, .3);
+
+    background:
+        rgba(24, 111, 76, .18);
+}
+
+
+.rpr-field {
+    margin-top: 1rem;
+
+    padding-top: 1rem;
+
+    border-top:
+        1px solid
+        rgba(118, 142, 179, .16);
+}
+
+
+.rpr-field-label {
+    color: #8193ae;
+
+    font-size: .82rem;
+
+    text-transform: uppercase;
+
+    letter-spacing: .06em;
+
+    font-weight: 800;
+
+    margin-bottom: .35rem;
+}
+
+
+.rpr-field-value {
+    color: #e1e7f1;
+
+    line-height: 1.55;
+}
+
+.rpr-feedback {
+    margin-top: 1.5rem;
+
+    padding: 1.2rem;
+
+    border-radius: 1.1rem;
+
+    background:
+        linear-gradient(
+            135deg,
+            rgba(34, 52, 105, .55),
+            rgba(17, 39, 77, .65)
+        );
+
+    border:
+        1px solid
+        rgba(82, 126, 224, .32);
+}
+
+
+.rpr-feedback-heading {
+    display: flex;
+
+    justify-content: space-between;
+    align-items: center;
+
+    gap: 1rem;
+
+    margin-bottom: .8rem;
+}
+
+
+.rpr-reviewed-badge,
+.rpr-pending-badge {
+    display: inline-block;
+
+    margin-top: .35rem;
+
+    padding:
+        .3rem
+        .6rem;
+
+    border-radius: 999px;
+
+    font-size: .75rem;
+}
+
+
+.rpr-reviewed-badge {
+    color: #baf4d5;
+
+    background:
+        rgba(25, 126, 83, .22);
+
+    border:
+        1px solid
+        rgba(63, 202, 145, .32);
+}
+
+
+.rpr-pending-badge {
+    color: #ffd69a;
+
+    background:
+        rgba(151, 100, 22, .2);
+
+    border:
+        1px solid
+        rgba(221, 156, 55, .3);
+}
+
+
+.rpr-feedback-input {
+    box-sizing: border-box;
+
+    width: 100%;
+    min-height: 120px;
+
+    resize: vertical;
+
+    border-radius: 1rem;
+
+    border:
+        1px solid
+        rgba(76, 122, 213, .42);
+
+    background:
+        rgba(4, 19, 40, .9);
+
+    color: #f2f6ff;
+
+    padding: 1rem;
+
+    font: inherit;
+
+    font-size: 1rem;
+
+    line-height: 1.5;
+
+    outline: none;
+}
+
+
+.rpr-feedback-input:focus {
+    border-color: #578fff;
+
+    box-shadow:
+        0 0 0 3px
+        rgba(72, 129, 255, .13);
+}
+
+
+.rpr-feedback-actions {
+    display: flex;
+
+    flex-wrap: wrap;
+
+    justify-content: flex-end;
+
+    gap: .7rem;
+
+    margin-top: .8rem;
+}
+
+
+.rpr-button {
+    min-height: 44px;
+
+    padding:
+        .7rem
+        1rem;
+
+    border-radius: .8rem;
+
+    border:
+        1px solid
+        rgba(91, 130, 216, .45);
+
+    font: inherit;
+
+    font-weight: 750;
+
+    cursor: pointer;
+}
+
+
+.rpr-button-secondary {
+    color: #e4ecfb;
+
+    background:
+        rgba(28, 53, 91, .75);
+}
+
+
+.rpr-button-primary {
+    color: white;
+
+    background:
+        linear-gradient(
+            135deg,
+            #365cff,
+            #6952ff
+        );
+}
+
+</style>
+
+
+<div class="rpr-page">
+
+    <main class="rpr-container">
+
+
+        <a
+            class="rpr-back"
+            href="{% url 'roleplay:teacher_monitor' session.join_code %}"
+        >
+            ← Back to Monitor
+        </a>
+
+
+        <div class="rpr-kicker">
+            {{ situation.title }}
+        </div>
+
+
+        <h1 class="rpr-title">
+            {{ participant.display_name }}
+        </h1>
+
+
+        <div class="rpr-subtitle">
+            Role Play Report History
+        </div>
+
+
+        {% for assignment in assignments %}
+
+            <article class="rpr-round">
+
+
+                <header class="rpr-round-header">
+
+                    <div class="rpr-round-label">
+                        Round
+                        {{ assignment.round_number|stringformat:"02d" }}
+                    </div>
+
+                    <div class="rpr-role">
+                        {{ assignment.role.name }}
+                    </div>
+
+                </header>
+
+
+                <div class="rpr-body">
+
+
+                    {% for submission in assignment.record_submissions.all %}
+
+                        <div
+                            class="
+                                rpr-status
+                                {% if submission.is_submitted %}
+                                    submitted
+                                {% endif %}
+                            "
+                        >
+
+                            {% if submission.is_submitted %}
+                                ✓ Report submitted
+                            {% else %}
+                                Draft saved
+                            {% endif %}
+
+                        </div>
+
+
+                        {% for response in submission.responses.all %}
+
+                            <div class="rpr-field">
+
+                                <div class="rpr-field-label">
+                                    {{ response.field.label }}
+                                </div>
+
+                                <div class="rpr-field-value">
+
+                                    {% if response.value %}
+
+                                        {{ response.value|linebreaksbr }}
+
+                                    {% else %}
+
+                                        —
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+                        {% endfor %}
+
+                        <div class="rpr-feedback">
+
+                            <div class="rpr-feedback-heading">
+
+                                <div>
+
+                                    <div class="rpr-field-label">
+                                        Teacher Feedback
+                                    </div>
+
+                                    {% if submission.reviewed_at %}
+
+                                        <span class="rpr-reviewed-badge">
+                                            ✓ Reviewed
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="rpr-pending-badge">
+                                            Needs review
+                                        </span>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </div>
+
+
+                            <form method="post">
+
+                                {% csrf_token %}
+
+                                <input
+                                    type="hidden"
+                                    name="submission_id"
+                                    value="{{ submission.id }}"
+                                >
+
+
+                                <textarea
+                                    class="rpr-feedback-input"
+                                    name="teacher_feedback"
+                                    placeholder="Write feedback for this student..."
+                                >{{ submission.teacher_feedback }}</textarea>
+
+
+                                <div class="rpr-feedback-actions">
+
+                                    <button
+                                        class="rpr-button rpr-button-secondary"
+                                        type="submit"
+                                        name="review_action"
+                                        value="save"
+                                    >
+                                        Save Feedback
+                                    </button>
+
+
+                                    {% if submission.reviewed_at %}
+
+                                        <button
+                                            class="rpr-button rpr-button-secondary"
+                                            type="submit"
+                                            name="review_action"
+                                            value="unreview"
+                                        >
+                                            Mark for Review
+                                        </button>
+
+                                    {% else %}
+
+                                        <button
+                                            class="rpr-button rpr-button-primary"
+                                            type="submit"
+                                            name="review_action"
+                                            value="review"
+                                        >
+                                            ✓ Mark Reviewed
+                                        </button>
+
+                                    {% endif %}
+
+                                </div>
+
+                            </form>
+
+                        </div>
+
+
+                    {% empty %}
+
+                        <div class="rpr-status">
+                            No report started
+                        </div>
+
+                    {% endfor %}
+
+
+                </div>
+
+            </article>
+
+        {% empty %}
+
+            <p>
+                This student has no role assignments yet.
+            </p>
+
+        {% endfor %}
+
+
+    </main>
+
+</div>
+
+{% endblock %}

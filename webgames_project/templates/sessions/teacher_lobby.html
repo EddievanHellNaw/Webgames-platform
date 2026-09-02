@@ -15,6 +15,29 @@
       <span class="fr-kicker">Session Lobby</span>
 
       <h1>{{ session.title }}</h1>
+      {% if roleplay_run %}
+
+        <div class="rp-lobby-situation">
+
+            <span class="rp-lobby-label">
+                Selected Situation
+            </span>
+
+            <strong>
+                {{ roleplay_run.situation.title }}
+            </strong>
+
+            {% if roleplay_run.situation.summary %}
+
+                <p>
+                    {{ roleplay_run.situation.summary }}
+                </p>
+
+            {% endif %}
+
+        </div>
+
+    {% endif %}
 
       <p>
         Prepare the session, share the join code, and wait for students to enter
@@ -104,7 +127,19 @@
           Session already started
         </span>
       {% endif %}
+{% if roleplay_run %}
 
+    <div>
+        <strong>Situation:</strong>
+        {{ roleplay_run.situation.title }}
+
+        <br>
+
+        <strong>Available roles:</strong>
+        {{ roleplay_run.situation.total_role_slots }}
+    </div>
+
+{% endif %}
       {% if session.game_template.code == "FANTASY_ROLES" %}
         <a
           class="fr-btn fr-btn-secondary"

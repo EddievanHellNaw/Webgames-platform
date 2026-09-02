@@ -25,8 +25,15 @@ SECRET_KEY = 'django-insecure-!kjm7=#wc)ppr2p3*ph0kqj5z)^jx2y1+3)i@gvzcx^po2k=e3
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = ["192.168.68.64", "localhost", "127.0.0.1", "192.168.100.74", "192.168.100.34"]
+ALLOWED_HOSTS = [
+    "127.0.0.1",
+    "localhost",
+    ".trycloudflare.com",
+]
 
+CSRF_TRUSTED_ORIGINS = [
+    "https://*.trycloudflare.com",
+]
 AUTH_USER_MODEL = "accounts.User"
 LOGIN_REDIRECT_URL = "/games/dashboard/"
 LOGOUT_REDIRECT_URL = "/accounts/login/"
@@ -45,6 +52,7 @@ INSTALLED_APPS = [
     'games',
     'sessions.apps.ClassroomSessionsConfig',
     'fantasy_roles',
+    "roleplay.apps.RoleplayConfig",
 ]
 
 MIDDLEWARE = [
