@@ -58,49 +58,151 @@
 
         <div class="fr-class-card-grid">
           {% for character_class in character_classes %}
-            <label
+            <article
               class="fr-class-select-card"
               data-class-card
               data-class-id="{{ character_class.id }}"
               data-class-name="{{ character_class.name }}"
             >
-              <input
-                type="radio"
-                name="character_class"
-                value="{{ character_class.id }}"
-                required
-                {% if form.data.character_class == character_class.id|stringformat:"s" %}checked{% endif %}
+              <label class="fr-class-card-choice">
+                <input
+                  type="radio"
+                  name="character_class"
+                  value="{{ character_class.id }}"
+                  required
+                  {% if form.data.character_class == character_class.id|stringformat:"s" %}checked{% endif %}
+                >
+
+                <div class="fr-class-card-image fr-class-card-icon-frame">
+                  {% include "fantasy_roles/partials/_class_icon.html" with character_class=character_class extra_class="fr-class-select-icon" %}
+                </div>
+
+                <div class="fr-class-card-body">
+                  <h2>{{ character_class.name }}</h2>
+
+                  {% if character_class.description %}
+                    <p>{{ character_class.description }}</p>
+                  {% endif %}
+
+                  <div class="fr-class-stats">
+                    <span class="fr-stat-with-icon">
+                      {% include "fantasy_roles/partials/_png_icon.html" with name="life" extra_class="fr-png-icon-sm" %}
+                      {{ character_class.max_life }}
+                    </span>
+
+                    <span class="fr-stat-with-icon">
+                      {% include "fantasy_roles/partials/_png_icon.html" with name="attack" extra_class="fr-png-icon-sm" %}
+                      {{ character_class.attack }}
+                    </span>
+
+                    <span class="fr-stat-with-icon">
+                      {% include "fantasy_roles/partials/_png_icon.html" with name="ap" extra_class="fr-png-icon-sm" %}
+                      {{ character_class.action_points }}
+                    </span>
+                  </div>
+                </div>
+              </label>
+
+              <button
+                class="fr-class-info-btn"
+                type="button"
+                data-open-class-info="class-info-{{ character_class.id }}"
+                title="View {{ character_class.name }} skills and weaknesses"
+                aria-label="View {{ character_class.name }} skills and weaknesses"
               >
+                {% include "fantasy_roles/partials/_png_icon.html" with name="skill" extra_class="fr-png-icon-sm" alt="Skills" %}
+              </button>
 
-              <div class="fr-class-card-image fr-class-card-icon-frame">
-  {% include "fantasy_roles/partials/_class_icon.html" with character_class=character_class extra_class="fr-class-select-icon" %}
-</div>
+              <dialog
+                id="class-info-{{ character_class.id }}"
+                class="fr-class-info-dialog"
+              >
+                <article class="fr-class-info-card">
+                  <header class="fr-class-info-head">
+                    <div>
+                      <span class="fr-kicker">Class Details</span>
+                      <strong>{{ character_class.name }}</strong>
+                    </div>
 
-              <div class="fr-class-card-body">
-  <h2>{{ character_class.name }}</h2>
+                    <button
+                      class="fr-class-info-close"
+                      type="button"
+                      data-close-class-info
+                      aria-label="Close class details"
+                    >
+                      ×
+                    </button>
+                  </header>
 
-  {% if character_class.description %}
-    <p>{{ character_class.description }}</p>
-  {% endif %}
+                  <section class="fr-class-info-stats">
+                    <span>
+                      {% include "fantasy_roles/partials/_png_icon.html" with name="life" extra_class="fr-png-icon-sm" %}
+                      Life {{ character_class.max_life }}
+                    </span>
 
-  <div class="fr-class-stats">
-    <span class="fr-stat-with-icon">
-      {% include "fantasy_roles/partials/_png_icon.html" with name="life" extra_class="fr-png-icon-sm" %}
-      {{ character_class.max_life }}
-    </span>
+                    <span>
+                      {% include "fantasy_roles/partials/_png_icon.html" with name="attack" extra_class="fr-png-icon-sm" %}
+                      Attack {{ character_class.attack }}
+                    </span>
 
-    <span class="fr-stat-with-icon">
-      {% include "fantasy_roles/partials/_png_icon.html" with name="attack" extra_class="fr-png-icon-sm" %}
-      {{ character_class.attack }}
-    </span>
+                    <span>
+                      {% include "fantasy_roles/partials/_png_icon.html" with name="ap" extra_class="fr-png-icon-sm" %}
+                      AP {{ character_class.action_points }}
+                    </span>
+                  </section>
 
-    <span class="fr-stat-with-icon">
-      {% include "fantasy_roles/partials/_png_icon.html" with name="ap" extra_class="fr-png-icon-sm" %}
-      {{ character_class.action_points }}
-    </span>
-  </div>
-</div>
-            </label>
+                  <section class="fr-class-info-section">
+                    <span class="fr-kicker">Skills</span>
+
+                    {% if character_class.skills.all %}
+                      <div class="fr-class-info-list">
+                        {% for skill in character_class.skills.all %}
+                          <article class="fr-class-info-entry is-skill">
+                            <div>
+                              <strong>{{ skill.name }}</strong>
+                              <span>{{ skill.get_skill_scope_display }} · {{ skill.ap_cost }} AP</span>
+                            </div>
+
+                            {% if skill.description %}
+                              <p>{{ skill.description }}</p>
+                            {% else %}
+                              <p>{{ skill.get_effect_code_display }}</p>
+                            {% endif %}
+                          </article>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <p class="fr-muted-text">No skills configured yet.</p>
+                    {% endif %}
+                  </section>
+
+                  <section class="fr-class-info-section">
+                    <span class="fr-kicker">Weaknesses</span>
+
+                    {% if character_class.weaknesses.all %}
+                      <div class="fr-class-info-list">
+                        {% for weakness in character_class.weaknesses.all %}
+                          <article class="fr-class-info-entry is-weakness">
+                            <div>
+                              <strong>{{ weakness.name }}</strong>
+                              <span>{{ weakness.get_weakness_scope_display }}</span>
+                            </div>
+
+                            {% if weakness.description %}
+                              <p>{{ weakness.description }}</p>
+                            {% else %}
+                              <p>{{ weakness.get_effect_code_display }}</p>
+                            {% endif %}
+                          </article>
+                        {% endfor %}
+                      </div>
+                    {% else %}
+                      <p class="fr-muted-text">No weaknesses configured yet.</p>
+                    {% endif %}
+                  </section>
+                </article>
+              </dialog>
+            </article>
           {% endfor %}
         </div>
 
@@ -392,6 +494,48 @@
     const confirmation = document.getElementById("character-confirmation");
     const openConfirmation = document.getElementById("open-confirmation");
     const closeConfirmation = document.getElementById("close-confirmation");
+
+    const classInfoButtons = Array.from(
+      document.querySelectorAll("[data-open-class-info]")
+    );
+
+    const classInfoCloseButtons = Array.from(
+      document.querySelectorAll("[data-close-class-info]")
+    );
+
+    classInfoButtons.forEach((button) => {
+      button.addEventListener("click", function (event) {
+        event.preventDefault();
+        event.stopPropagation();
+
+        const dialogId = button.dataset.openClassInfo;
+        const dialog = document.getElementById(dialogId);
+
+        if (dialog && typeof dialog.showModal === "function") {
+          dialog.showModal();
+        }
+      });
+    });
+
+    classInfoCloseButtons.forEach((button) => {
+      button.addEventListener("click", function () {
+        const dialog = button.closest("dialog");
+
+        if (dialog) {
+          dialog.close();
+        }
+      });
+    });
+
+    document.addEventListener("click", function (event) {
+      if (
+        event.target &&
+        event.target.classList &&
+        event.target.classList.contains("fr-class-info-dialog")
+      ) {
+        event.target.close();
+      }
+    });
 
     function showStep(stepNumber) {
       steps.forEach((step) => {

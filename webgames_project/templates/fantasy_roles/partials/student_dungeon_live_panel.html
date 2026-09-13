@@ -232,6 +232,7 @@
         data-action-type="{{ latest_attempt.action_type }}"
         data-character-id="{{ latest_attempt.character_id }}"
         data-character-name="{{ latest_attempt.character.character_name }}"
+        data-production-response="{% if latest_attempt.production_response %}{{ latest_attempt.production_response|escape }}{% else %}{{ latest_attempt.action_text|escape }}{% endif %}"
         data-character-image="{% if character_portrait %}{{ character_portrait.url }}{% endif %}"
         data-character-current-life="{{ latest_attempt.character.current_life }}"
         data-character-max-life="{{ latest_attempt.character.character_class.max_life }}"
@@ -255,7 +256,6 @@
         data-room-image="{% if attempt_room_image %}{{ attempt_room_image.url }}{% endif %}"
         data-run-status="{{ run.status }}"
       ></div>
-      {{ latest_attempt.roll_breakdown|json_script:"latest-attempt-roll-breakdown" }}
       {{ latest_attempt.roll_breakdown|json_script:"latest-attempt-roll-breakdown" }}
       {{ latest_attempt.difficulty_breakdown|json_script:"latest-attempt-difficulty-breakdown" }}
       {{ latest_attempt.damage_breakdown|json_script:"latest-attempt-damage-breakdown" }}
@@ -281,7 +281,27 @@
     {% endwith %}
   {% endif %}
 
-  {% if latest_attempt and not latest_attempt.success and run.status == "ACTIVE" %}
+  {% if latest_mimic_reveal_attempt %}
+    {% with mimic_room=latest_mimic_reveal_attempt.room %}
+      {% with mimic_image=mimic_room.display_image %}
+        <div
+          id="latest-mimic-reveal-payload"
+          hidden
+          data-attempt-id="{{ latest_mimic_reveal_attempt.id }}"
+          data-room-name="{{ mimic_room.name|escape }}"
+          data-room-number="{{ mimic_room.room_number }}"
+          data-room-type="{{ mimic_room.get_room_type_display|escape }}"
+          data-flavor-text="{{ mimic_room.flavor_text|default:latest_mimic_reveal_attempt.result_text|escape }}"
+          data-result-text="{{ latest_mimic_reveal_attempt.result_text|escape }}"
+          data-image-url="{% if mimic_image %}{{ mimic_image.url }}{% endif %}"
+          data-success="{{ latest_mimic_reveal_attempt.success|yesno:'true,false' }}"
+          data-damage="{{ latest_mimic_reveal_attempt.damage_taken|default:'0' }}"
+        ></div>
+      {% endwith %}
+    {% endwith %}
+  {% endif %}
+
+  {% if latest_attempt and not latest_attempt.success and run.status == "ACTIVE" and not latest_mimic_reveal_attempt %}
     {% with failure_room=latest_attempt.room %}
       {% with failure_image=failure_room.display_image %}
         <div
@@ -319,35 +339,5 @@
     data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
   ></div>
 {% endif %}
-{% if boss_logs %}
-  {% with latest_boss_log=boss_logs.0 %}
-    {% if latest_boss_log.actor_type == "PLAYER" %}
-      <div
-        id="latest-boss-player-log-payload"
-        hidden
-        data-log-id="{{ latest_boss_log.id }}"
-        data-action-type="{{ latest_boss_log.action_type }}"
-        data-character-id="{{ latest_boss_log.character_id }}"
-        data-character-name="{{ latest_boss_log.character.character_name|escape }}"
-        data-character-current-life="{{ latest_boss_log.character.current_life }}"
-        data-character-max-life="{{ latest_boss_log.character.character_class.max_life }}"
-        data-character-current-ap="{{ latest_boss_log.character.current_action_points }}"
-        data-character-max-ap="{{ latest_boss_log.character.character_class.action_points }}"
-        data-skill-name="{% if latest_boss_log.player_skill %}{{ latest_boss_log.player_skill.name|escape }}{% endif %}"
-        data-skill-ap-cost="{% if latest_boss_log.player_skill %}{{ latest_boss_log.player_skill.ap_cost }}{% else %}0{% endif %}"
-        data-success="{{ latest_boss_log.success|yesno:'true,false' }}"
-        data-die-roll="{{ latest_boss_log.die_roll|default:'' }}"
-        data-final-total="{{ latest_boss_log.final_roll_total|default:'' }}"
-        data-difficulty="{{ latest_boss_log.difficulty_at_roll|default:'' }}"
-        data-damage-to-boss="{{ latest_boss_log.damage_to_boss|default:'0' }}"
-        data-damage-to-players="{{ latest_boss_log.damage_to_players|default:'0' }}"
-        data-healing="{{ latest_boss_log.healing_done|default:'0' }}"
-        data-result-text="{{ latest_boss_log.result_text|escape }}"
-        data-boss-name="{{ boss_encounter.current_boss_name|escape }}"
-        data-boss-current-life="{{ boss_encounter.current_life }}"
-        data-boss-max-life="{{ boss_encounter.max_life_for_current_phase }}"
-      ></div>
-    {% endif %}
-  {% endwith %}
-{% endif %}
+
 {% endif %}

@@ -1,0 +1,660 @@
+{% extends "base.html" %}
+
+{% block title %}Choose a Role Play Situation{% endblock %}
+
+{% block content %}
+
+<style>
+
+    .rps-page {
+        min-height: 100vh;
+
+        background:
+            radial-gradient(
+                circle at 88% 6%,
+                rgba(31, 98, 245, .17),
+                transparent 27rem
+            ),
+            radial-gradient(
+                circle at 7% 38%,
+                rgba(120, 49, 238, .10),
+                transparent 28rem
+            ),
+            #03101f;
+
+        color: #f5f8ff;
+
+        padding:
+            2.8rem
+            1rem
+            4rem;
+
+        font-family:
+            Inter,
+            system-ui,
+            -apple-system,
+            BlinkMacSystemFont,
+            "Segoe UI",
+            sans-serif;
+    }
+
+
+    .rps-container {
+        width: min(1180px, 100%);
+        margin: 0 auto;
+    }
+
+
+    /* =============================================
+       HEADER
+    ============================================= */
+
+    .rps-kicker {
+        color: #478fff;
+
+        font-size: .8rem;
+
+        font-weight: 850;
+
+        letter-spacing: .17em;
+
+        text-transform: uppercase;
+
+        margin-bottom: .6rem;
+    }
+
+
+    .rps-title {
+        margin: 0;
+
+        font-size: clamp(
+            2.4rem,
+            6vw,
+            4rem
+        );
+
+        line-height: 1;
+
+        letter-spacing: -.045em;
+
+        font-weight: 850;
+    }
+
+
+    .rps-intro {
+        max-width: 720px;
+
+        margin:
+            1rem 0
+            2.2rem;
+
+        color: #aeb9ca;
+
+        font-size: 1rem;
+
+        line-height: 1.6;
+    }
+
+
+    /* =============================================
+       GRID
+    ============================================= */
+
+    .rps-grid {
+        display: grid;
+
+        grid-template-columns:
+            repeat(
+                auto-fit,
+                minmax(300px, 1fr)
+            );
+
+        gap: 1.2rem;
+    }
+
+
+    /* =============================================
+       SITUATION CARD
+    ============================================= */
+
+    .rps-card {
+        position: relative;
+
+        overflow: hidden;
+
+        display: flex;
+        flex-direction: column;
+
+        min-height: 350px;
+
+        border-radius: 1.5rem;
+
+        border:
+            1px solid
+            rgba(88, 128, 205, .30);
+
+        background:
+            linear-gradient(
+                150deg,
+                rgba(11, 32, 61, .95),
+                rgba(6, 21, 42, .96)
+            );
+
+        box-shadow:
+            inset 0 0 45px
+            rgba(29, 76, 158, .07);
+
+        transition:
+            transform .16s ease,
+            border-color .16s ease,
+            box-shadow .16s ease;
+    }
+
+
+    .rps-card::after {
+        content: "";
+
+        position: absolute;
+
+        width: 220px;
+        height: 220px;
+
+        border-radius: 50%;
+
+        right: -100px;
+        top: -100px;
+
+        border:
+            1px solid
+            rgba(72, 137, 255, .15);
+
+        box-shadow:
+            inset 0 0 50px
+            rgba(61, 117, 245, .08);
+
+        pointer-events: none;
+    }
+
+
+    @media (hover: hover) {
+
+        .rps-card:hover {
+            transform: translateY(-3px);
+
+            border-color:
+                rgba(91, 143, 255, .55);
+
+            box-shadow:
+                0 18px 50px
+                rgba(0, 0, 0, .24);
+        }
+
+    }
+
+
+    .rps-card-top {
+        padding:
+            1.4rem
+            1.4rem
+            .8rem;
+    }
+
+
+    .rps-card-index {
+        display: inline-flex;
+
+        align-items: center;
+        justify-content: center;
+
+        min-width: 42px;
+        height: 30px;
+
+        padding: 0 .65rem;
+
+        margin-bottom: 1rem;
+
+        border-radius: 999px;
+
+        color: #92baff;
+
+        font-size: .76rem;
+
+        font-weight: 800;
+
+        letter-spacing: .07em;
+
+        text-transform: uppercase;
+
+        background:
+            rgba(36, 84, 163, .24);
+
+        border:
+            1px solid
+            rgba(71, 126, 225, .28);
+    }
+
+
+    .rps-card-title {
+        margin: 0;
+
+        font-size: 1.55rem;
+
+        line-height: 1.15;
+
+        font-weight: 850;
+
+        letter-spacing: -.025em;
+    }
+
+
+    .rps-summary {
+        margin-top: .9rem;
+
+        color: #c6cfdd;
+
+        line-height: 1.55;
+    }
+
+
+    /* =============================================
+       META
+    ============================================= */
+
+    .rps-card-body {
+        flex: 1;
+
+        padding:
+            .4rem
+            1.4rem
+            1.2rem;
+    }
+
+
+    .rps-meta-block {
+        margin-top: 1rem;
+
+        padding-top: 1rem;
+
+        border-top:
+            1px solid
+            rgba(121, 147, 185, .14);
+    }
+
+
+    .rps-meta-label {
+        display: block;
+
+        margin-bottom: .4rem;
+
+        color: #8d74ff;
+
+        font-size: .74rem;
+
+        font-weight: 850;
+
+        letter-spacing: .10em;
+
+        text-transform: uppercase;
+    }
+
+
+    .rps-meta-text {
+        color: #c5cedd;
+
+        line-height: 1.5;
+
+        font-size: .93rem;
+    }
+
+
+    .rps-card-footer {
+        padding:
+            1.1rem
+            1.4rem
+            1.4rem;
+
+        border-top:
+            1px solid
+            rgba(121, 147, 185, .12);
+    }
+
+
+    .rps-footer-meta {
+        display: flex;
+
+        justify-content: space-between;
+        align-items: center;
+
+        gap: .8rem;
+
+        flex-wrap: wrap;
+
+        margin-bottom: .9rem;
+    }
+
+
+    .rps-slots {
+        display: inline-flex;
+
+        align-items: center;
+
+        gap: .45rem;
+
+        color: #83abeb;
+
+        font-size: .88rem;
+
+        font-weight: 700;
+    }
+
+
+    .rps-slots-number {
+        display: inline-grid;
+
+        place-items: center;
+
+        min-width: 29px;
+        height: 29px;
+
+        border-radius: 50%;
+
+        color: white;
+
+        background:
+            rgba(47, 97, 188, .42);
+
+        border:
+            1px solid
+            rgba(79, 139, 244, .37);
+    }
+
+
+    /* =============================================
+       BUTTON
+    ============================================= */
+
+    .rps-form {
+        margin: 0;
+    }
+
+
+    .rps-button {
+        width: 100%;
+
+        min-height: 50px;
+
+        display: flex;
+
+        align-items: center;
+        justify-content: space-between;
+
+        gap: .8rem;
+
+        padding:
+            .8rem
+            1.05rem;
+
+        border: 0;
+
+        border-radius: 1rem;
+
+        color: white;
+
+        font: inherit;
+
+        font-weight: 800;
+
+        cursor: pointer;
+
+        background:
+            linear-gradient(
+                135deg,
+                #315dff,
+                #654eff
+            );
+
+        box-shadow:
+            0 8px 25px
+            rgba(52, 85, 222, .18);
+    }
+
+
+    .rps-button:hover {
+        filter: brightness(1.08);
+    }
+
+
+    .rps-arrow {
+        font-size: 1.2rem;
+    }
+
+
+    /* =============================================
+       EMPTY STATE
+    ============================================= */
+
+    .rps-empty {
+        max-width: 620px;
+
+        padding: 1.5rem;
+
+        border-radius: 1.3rem;
+
+        color: #c0cada;
+
+        background:
+            rgba(10, 30, 57, .82);
+
+        border:
+            1px solid
+            rgba(100, 130, 185, .24);
+    }
+
+
+    @media (max-width: 500px) {
+
+        .rps-page {
+            padding-top: 2rem;
+        }
+
+        .rps-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .rps-card {
+            min-height: 0;
+        }
+
+    }
+
+</style>
+
+
+<div class="rps-page">
+
+    <main class="rps-container">
+
+
+        <!-- =========================================
+             HEADER
+        ========================================== -->
+
+        <header>
+
+            <div class="rps-kicker">
+                Role Play
+            </div>
+
+
+            <h1 class="rps-title">
+                Choose a Situation
+            </h1>
+
+
+            <p class="rps-intro">
+                Select the scenario your students will play.
+                A session, join code, and QR code will be created
+                after you choose a situation.
+            </p>
+
+        </header>
+
+
+        <!-- =========================================
+             SITUATIONS
+        ========================================== -->
+
+        {% if situations %}
+
+            <section class="rps-grid">
+
+
+                {% for situation in situations %}
+
+                    <article class="rps-card">
+
+
+                        <div class="rps-card-top">
+
+                            <span class="rps-card-index">
+                                Situation {{ forloop.counter|stringformat:"02d" }}
+                            </span>
+
+
+                            <h2 class="rps-card-title">
+                                {{ situation.title }}
+                            </h2>
+
+
+                            {% if situation.summary %}
+
+                                <div class="rps-summary">
+                                    {{ situation.summary }}
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <div class="rps-card-body">
+
+
+                            {% if situation.language_target %}
+
+                                <div class="rps-meta-block">
+
+                                    <span class="rps-meta-label">
+                                        Language Target
+                                    </span>
+
+                                    <div class="rps-meta-text">
+                                        {{ situation.language_target }}
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+
+                            {% if situation.student_briefing %}
+
+                                <div class="rps-meta-block">
+
+                                    <span class="rps-meta-label">
+                                        Student Briefing
+                                    </span>
+
+                                    <div class="rps-meta-text">
+                                        {{ situation.student_briefing|truncatewords:32 }}
+                                    </div>
+
+                                </div>
+
+                            {% endif %}
+
+                        </div>
+
+
+                        <footer class="rps-card-footer">
+
+
+                            <div class="rps-footer-meta">
+
+                                <div class="rps-slots">
+
+                                    <span class="rps-slots-number">
+                                        {{ situation.total_role_slots }}
+                                    </span>
+
+                                    <span>
+                                        available role slots
+                                    </span>
+
+                                </div>
+
+                            </div>
+
+
+                            <form
+                                class="rps-form"
+                                method="post"
+                            >
+
+                                {% csrf_token %}
+
+
+                                <input
+                                    type="hidden"
+                                    name="situation_id"
+                                    value="{{ situation.id }}"
+                                >
+
+
+                                <button
+                                    class="rps-button"
+                                    type="submit"
+                                >
+
+                                    <span>
+                                        Choose Situation
+                                    </span>
+
+                                    <span class="rps-arrow">
+                                        →
+                                    </span>
+
+                                </button>
+
+                            </form>
+
+                        </footer>
+
+
+                    </article>
+
+                {% endfor %}
+
+
+            </section>
+
+
+        {% else %}
+
+            <div class="rps-empty">
+
+                There are currently no active role play situations.
+
+                Create or activate a situation from the Django
+                administration panel before starting a session.
+
+            </div>
+
+        {% endif %}
+
+
+    </main>
+
+</div>
+
+{% endblock %}

@@ -24,12 +24,37 @@
   <section
     id="teacher-dungeon-monitor-panel"
     hx-get="{% url 'fantasy_roles:teacher_dungeon_monitor_panel' session.join_code %}"
-    hx-trigger="load, every 3s"
+    hx-trigger="load, fr-teacher-monitor-refresh"
     hx-swap="innerHTML"
+    data-refresh-ms="6000"
   >
     {% include "fantasy_roles/partials/_teacher_dungeon_monitor_panel.html" %}
   </section>
+<script>
+  (function () {
+    const panel = document.getElementById("teacher-dungeon-monitor-panel");
 
+    if (!panel) return;
+
+    const refreshMs = Number(panel.dataset.refreshMs || 10000);
+
+    function teacherHasOpenLog() {
+      return !!panel.querySelector("details[open]");
+    }
+
+    window.setInterval(function () {
+      if (teacherHasOpenLog()) {
+        return;
+      }
+
+      panel.dispatchEvent(
+        new Event("fr-teacher-monitor-refresh", {
+          bubbles: true
+        })
+      );
+    }, refreshMs);
+  })();
+</script>
   <section class="fr-panel fr-teacher-dungeon-actions">
     <div class="fr-panel-heading">
       <span class="fr-kicker">Session Tools</span>
