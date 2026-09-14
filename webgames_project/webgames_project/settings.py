@@ -53,6 +53,7 @@ INSTALLED_APPS = [
     'sessions.apps.ClassroomSessionsConfig',
     'fantasy_roles',
     "roleplay.apps.RoleplayConfig",
+    "choose_adventure.apps.ChooseAdventureConfig"
 ]
 
 MIDDLEWARE = [

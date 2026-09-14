@@ -1,0 +1,114 @@
+{% extends "base.html" %}
+
+{% block title %}
+Choose Your Character · {{ story.title }}
+{% endblock %}
+
+{% block content %}
+
+<section class="cya-character-page">
+
+  <header class="cya-character-header">
+
+    <span class="app-kicker">
+      {{ story.title }}
+    </span>
+
+    <h1>
+      {{ team.name }}
+    </h1>
+
+    <p>
+      Discuss the characters with your teammates.
+      Your team must choose one character to guide
+      through the adventure.
+    </p>
+
+  </header>
+
+
+  <section class="cya-team-members">
+
+    <span class="app-kicker">
+      Your Team
+    </span>
+
+    <div class="cya-team-member-list">
+
+      {% for membership in team_members %}
+
+        <span class="cya-member-pill">
+          {{ membership.participant.display_name }}
+
+          {% if membership.participant.id == participant.id %}
+            · You
+          {% endif %}
+        </span>
+
+      {% endfor %}
+
+    </div>
+
+  </section>
+
+
+  <section
+    id="character-selection-panel"
+
+    hx-get="{% url 'choose_adventure:student_character_selection_panel' session.join_code %}"
+
+    hx-trigger="every 2s"
+
+    hx-swap="innerHTML"
+  >
+
+    {% include "choose_adventure/partials/_character_selection_panel.html" %}
+
+  </section>
+
+</section>
+
+
+<style>
+
+.cya-character-page {
+  width: min(900px, 100%);
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+.cya-character-header {
+  margin-bottom: 1.5rem;
+}
+
+.cya-character-header h1 {
+  margin: .3rem 0 .6rem;
+}
+
+.cya-team-members {
+  margin-bottom: 1.5rem;
+}
+
+.cya-team-member-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: .5rem;
+  margin-top: .7rem;
+}
+
+.cya-member-pill {
+  padding: .4rem .7rem;
+  border-radius: 999px;
+
+  background:
+    rgba(255,255,255,.07);
+
+  border:
+    1px solid rgba(255,255,255,.1);
+
+  font-size: .85rem;
+}
+
+</style>
+
+{% endblock %}

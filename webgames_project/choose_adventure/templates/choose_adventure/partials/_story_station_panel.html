@@ -1,0 +1,766 @@
+{% if team.is_finished and team.ending_station %}
+
+  {# ========================================================= #}
+  {# COMPLETED ADVENTURE                                       #}
+  {# ========================================================= #}
+
+  <section class="cya-path-rail">
+
+    {% for decision in path_decisions %}
+
+      <div class="cya-path-step is-complete">
+
+        <span class="cya-path-node">
+          ✓
+        </span>
+
+        <span class="cya-path-title">
+          {{ decision.station.title }}
+        </span>
+
+      </div>
+
+    {% endfor %}
+
+
+    <div class="cya-path-step is-current">
+
+      <span class="cya-path-node">
+        ✓
+      </span>
+
+      <span class="cya-path-title">
+        {{ team.ending_station.title }}
+      </span>
+
+    </div>
+
+  </section>
+
+
+  <div class="cya-station-stage">
+
+    <section class="cya-ending-panel">
+
+      <header class="cya-ending-header">
+
+        <span class="cya-section-kicker">
+          Adventure Complete
+        </span>
+
+        <h2>
+          {{ team.ending_station.title }}
+        </h2>
+
+        <p>
+          {{ team.name }}
+          ·
+          {{ team.selected_character.name }}
+        </p>
+
+      </header>
+
+
+      {% if team.ending_station.scene_image %}
+
+        <section class="cya-scene-frame">
+
+          <img
+            src="{{ team.ending_station.scene_image.url }}"
+            alt="{{ team.ending_station.title }}"
+          >
+
+        </section>
+
+      {% elif story.cover_image %}
+
+        <section class="cya-scene-frame">
+
+          <img
+            src="{{ story.cover_image.url }}"
+            alt="{{ story.title }}"
+          >
+
+        </section>
+
+      {% endif %}
+
+
+      <div class="cya-ending-story">
+
+        {{ team.ending_station.story_text|linebreaks }}
+
+      </div>
+
+      <section class="cya-learning-response cya-final-response">
+
+        <span class="cya-section-kicker">
+            Final Reflection
+        </span>
+
+        <p class="cya-learning-help">
+            Answer the final reflection question above in your own words.
+        </p>
+
+
+        <form
+            class="cya-learning-response-form"
+
+            hx-post="{% url 'choose_adventure:student_save_written_response' session.join_code team.ending_station.id %}"
+
+            hx-target="#cya-response-status-{{ team.ending_station.id }}"
+
+            hx-swap="innerHTML"
+        >
+
+            {% csrf_token %}
+
+
+            <textarea
+            class="cya-learning-textarea"
+            name="response_text"
+            data-station-id="{{ team.ending_station.id }}"
+            rows="5"
+            maxlength="2000"
+            placeholder="Write your final reflection..."
+            required
+            >{% if written_response %}{{ written_response.text }}{% endif %}</textarea>
+
+
+            <div class="cya-learning-response-actions">
+
+            <button
+                class="cya-save-response"
+                type="submit"
+            >
+                Submit Final Reflection
+            </button>
+
+
+            <span
+                id="cya-response-status-{{ team.ending_station.id }}"
+                class="cya-response-status"
+            >
+
+                {% if written_response %}
+                Saved ✓
+                {% endif %}
+
+            </span>
+
+            </div>
+
+        </form>
+
+        </section>
+
+
+      <section class="cya-ending-result">
+
+        <span class="cya-section-kicker">
+          Final Outcome
+        </span>
+
+
+        <div class="cya-ending-scores">
+
+          <div>
+
+            <span>
+              Containment
+            </span>
+
+            <strong>
+              {{ team.containment_score }}
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <span>
+              Humanity
+            </span>
+
+            <strong>
+              {{ team.humanity_score }}
+            </strong>
+
+          </div>
+
+
+          <div>
+
+            <span>
+              Knowledge
+            </span>
+
+            <strong>
+              {{ team.knowledge_score }}
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <p class="cya-ending-decisions">
+
+          {{ team.decisions.count }}
+          decision{{ team.decisions.count|pluralize }}
+          made during this adventure.
+
+        </p>
+
+      </section>
+
+    </section>
+
+  </div>
+
+
+{% elif current_station %}
+
+  {# ========================================================= #}
+  {# ACTIVE STORY STATION                                      #}
+  {# ========================================================= #}
+
+  <section class="cya-path-rail">
+
+    {% for decision in path_decisions %}
+
+      <div class="cya-path-step is-complete">
+
+        <span class="cya-path-node">
+          ✓
+        </span>
+
+        <span class="cya-path-title">
+          {{ decision.station.title }}
+        </span>
+
+      </div>
+
+    {% endfor %}
+
+
+    <div class="cya-path-step is-current">
+
+      <span class="cya-path-node">
+        {{ decision_number }}
+      </span>
+
+      <span class="cya-path-title">
+        {{ current_station.title }}
+      </span>
+
+    </div>
+
+  </section>
+
+
+  <div class="cya-station-stage">
+
+    {# ======================================================= #}
+    {# STATION ART                                             #}
+    {# ======================================================= #}
+
+    <section class="cya-scene-frame">
+
+      {% if current_station.scene_image %}
+
+        <img
+          src="{{ current_station.scene_image.url }}"
+          alt="{{ current_station.title }}"
+        >
+
+      {% elif story.cover_image %}
+
+        <img
+          src="{{ story.cover_image.url }}"
+          alt="{{ story.title }}"
+        >
+
+      {% else %}
+
+        <div class="cya-scene-placeholder">
+          Story scene
+        </div>
+
+      {% endif %}
+
+    </section>
+
+
+    {# ======================================================= #}
+    {# STATION + CHARACTER                                     #}
+    {# ======================================================= #}
+
+    <section class="cya-station-layout">
+
+
+      <article class="cya-station-card">
+
+        <span class="cya-section-kicker">
+          Story Station
+        </span>
+
+        <h2>
+          {{ current_station.title }}
+        </h2>
+
+        <div class="cya-station-text">
+
+          {{ current_station.story_text|linebreaks }}
+
+        </div>
+
+      </article>
+
+
+      <aside class="cya-character-mini">
+
+        {% if team.selected_character.portrait_image %}
+
+          <div class="cya-character-mini-image">
+
+            <img
+              src="{{ team.selected_character.portrait_image.url }}"
+              alt="{{ team.selected_character.name }}"
+            >
+
+          </div>
+
+        {% endif %}
+
+
+        <div class="cya-character-mini-info">
+
+          <span class="cya-section-kicker">
+            Your Character
+          </span>
+
+          <h3>
+            {{ team.selected_character.name }}
+          </h3>
+
+
+          {% if team.selected_character.role %}
+
+            <strong>
+              {{ team.selected_character.role }}
+            </strong>
+
+          {% endif %}
+
+
+          {% if team.selected_character.perspective %}
+
+            <p>
+              {{ team.selected_character.perspective }}
+            </p>
+
+          {% endif %}
+
+        </div>
+
+      </aside>
+
+    </section>
+
+
+    {# ======================================================= #}
+    {# DECISION AREA                                           #}
+    {# ======================================================= #}
+
+    {% if current_station.advance_mode == "CHOICE" %}
+
+      <section class="cya-decision-panel">
+
+        <header class="cya-decision-heading">
+
+          <span class="cya-section-kicker">
+            Discuss & Decide
+          </span>
+
+          <h2>
+            What should your team do?
+          </h2>
+
+          <p>
+            Talk with your teammates before confirming your decision.
+          </p>
+
+        </header>
+        <section class="cya-learning-response">
+
+            <span class="cya-section-kicker">
+                Your Written Response
+            </span>
+
+            <p class="cya-learning-help">
+                Write your own answer to the discussion question above.
+                Your answer will not change the story.
+            </p>
+
+
+            <form
+                class="cya-learning-response-form"
+
+                hx-post="{% url 'choose_adventure:student_save_written_response' session.join_code current_station.id %}"
+
+                hx-target="#cya-response-status-{{ current_station.id }}"
+
+                hx-swap="innerHTML"
+            >
+
+                {% csrf_token %}
+
+
+                <textarea
+                class="cya-learning-textarea"
+                name="response_text"
+                data-station-id="{{ current_station.id }}"
+                rows="4"
+                maxlength="1500"
+                placeholder="Write your answer here..."
+                required
+                >{% if written_response %}{{ written_response.text }}{% endif %}</textarea>
+
+
+                <div class="cya-learning-response-actions">
+
+                <button
+                    class="cya-save-response"
+                    type="submit"
+                >
+                    Save My Answer
+                </button>
+
+
+                <span
+                    id="cya-response-status-{{ current_station.id }}"
+                    class="cya-response-status"
+                >
+
+                    {% if written_response %}
+                    Saved ✓
+                    {% endif %}
+
+                </span>
+
+                </div>
+
+            </form>
+
+            </section>
+
+
+            <div class="cya-decision-divider">
+
+            <span>
+                Team Decision
+            </span>
+
+            </div>
+
+
+        {% if choices %}
+
+          <form
+            method="post"
+            action="{% url 'choose_adventure:student_submit_choice' session.join_code %}"
+          >
+
+            {% csrf_token %}
+
+
+            <div class="cya-choice-list">
+
+              {% for choice in choices %}
+
+                <label class="cya-choice-card">
+
+                  <input
+                    type="radio"
+                    name="choice_id"
+                    value="{{ choice.id }}"
+                    required
+                  >
+
+
+                  <span class="cya-choice-content">
+
+                    <strong>
+                      {{ choice.text }}
+                    </strong>
+
+                    <span class="cya-choice-arrow">
+                      →
+                    </span>
+
+                  </span>
+
+                </label>
+
+              {% endfor %}
+
+            </div>
+
+
+            <button
+              class="cya-confirm-choice"
+              type="submit"
+            >
+              Confirm Choice →
+            </button>
+
+          </form>
+
+
+        {% else %}
+
+          <div class="cya-system-message">
+
+            <strong>
+              No available choices.
+            </strong>
+
+          </div>
+
+        {% endif %}
+
+      </section>
+
+
+    {% else %}
+
+      {# ===================================================== #}
+      {# AUTOMATIC / SYSTEM STATION                            #}
+      {# ===================================================== #}
+
+      <section class="cya-system-message">
+
+        <span class="cya-section-kicker">
+          Story Processing
+        </span>
+
+        <strong>
+          The consequences of your decisions are being resolved.
+        </strong>
+
+      </section>
+
+    {% endif %}
+
+  </div>
+
+
+{% else %}
+
+  {# ========================================================= #}
+  {# NO CURRENT STATION                                        #}
+  {# ========================================================= #}
+
+  <div class="cya-station-stage">
+
+    <section class="cya-system-message">
+
+      <strong>
+        Your team does not currently have a story station.
+      </strong>
+
+    </section>
+
+  </div>
+
+{% endif %}
+
+
+
+{# =========================================================== #}
+{# MAP / LOG / JOURNAL DATA SOURCE                             #}
+{#                                                             #}
+{# Hidden here. student_story_station.html copies the content  #}
+{# into the visible drawers after every HTMX refresh.          #}
+{# =========================================================== #}
+
+<div
+  id="cya-drawer-source"
+  hidden
+>
+
+
+  {# ========================================================= #}
+  {# MAP / ROUTE                                               #}
+  {# ========================================================= #}
+
+  <div data-drawer-source="map">
+
+    <h2>
+      Your Route
+    </h2>
+
+
+    <ol class="cya-log-list">
+
+      {% for decision in path_decisions %}
+
+        <li>
+
+          <small>
+            Visited
+          </small>
+
+          <strong>
+            {{ decision.station.title }}
+          </strong>
+
+        </li>
+
+      {% endfor %}
+
+
+      {% if team.is_finished and team.ending_station %}
+
+        <li>
+
+          <small>
+            Final Destination
+          </small>
+
+          <strong>
+            {{ team.ending_station.title }}
+          </strong>
+
+        </li>
+
+
+      {% elif current_station %}
+
+        <li>
+
+          <small>
+            Current Location
+          </small>
+
+          <strong>
+            {{ current_station.title }}
+          </strong>
+
+        </li>
+
+      {% endif %}
+
+    </ol>
+
+  </div>
+
+
+
+  {# ========================================================= #}
+  {# ADVENTURE LOG                                             #}
+  {# ========================================================= #}
+
+  <div data-drawer-source="log">
+
+    <h2>
+      Adventure Log
+    </h2>
+
+
+    {% if path_decisions %}
+
+      <ol class="cya-log-list">
+
+        {% for decision in path_decisions %}
+
+          <li>
+
+            <small>
+              {{ decision.station.title }}
+            </small>
+
+
+            {% if decision.selected_choice %}
+
+              <strong>
+                {{ decision.selected_choice.text }}
+              </strong>
+
+            {% endif %}
+
+          </li>
+
+        {% endfor %}
+
+      </ol>
+
+
+    {% else %}
+
+      <p>
+        Your team has not made a decision yet.
+      </p>
+
+    {% endif %}
+
+  </div>
+
+
+
+  {# ========================================================= #}
+  {# CHARACTER JOURNAL                                         #}
+  {# ========================================================= #}
+
+  <div data-drawer-source="journal">
+
+    <h2>
+      Character Journal
+    </h2>
+
+
+    <div class="cya-journal-character">
+
+      {% if team.selected_character.portrait_image %}
+
+        <img
+          src="{{ team.selected_character.portrait_image.url }}"
+          alt="{{ team.selected_character.name }}"
+        >
+
+      {% endif %}
+
+
+      <div>
+
+        <strong>
+          {{ team.selected_character.name }}
+        </strong>
+
+
+        {% if team.selected_character.role %}
+
+          <p>
+            {{ team.selected_character.role }}
+          </p>
+
+        {% endif %}
+
+
+        {% if team.selected_character.perspective %}
+
+          <p>
+            {{ team.selected_character.perspective }}
+          </p>
+
+        {% endif %}
+
+      </div>
+
+    </div>
+
+  </div>
+
+</div>

@@ -33,6 +33,11 @@ urlpatterns = [
     
     path("fantasy-roles/", include("fantasy_roles.urls")),
     path("roleplay/", include("roleplay.urls"),),
+
+    path(
+        "choose-adventure/",
+        include("choose_adventure.urls"),
+    ),
 ]
 
 if settings.DEBUG:

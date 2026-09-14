@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block title %}
+Adventure Log · {{ adventure_run.story.title }}
+{% endblock %}
+
+{% block content %}
+
+<section class="cya-monitor-page">
+
+  <header class="cya-monitor-header">
+
+    <div>
+
+      <span class="app-kicker">
+        Teacher Adventure Log
+      </span>
+
+      <h1>
+        {{ adventure_run.story.title }}
+      </h1>
+
+      <p>
+        Follow each team's path through the adventure.
+      </p>
+
+    </div>
+
+
+    <div class="cya-monitor-actions">
+
+      <a
+        class="app-btn"
+        href="{% url 'choose_adventure:teacher_team_setup' session.join_code %}"
+      >
+        View Teams
+      </a>
+
+    </div>
+
+  </header>
+
+
+  <section
+    id="teacher-adventure-monitor-panel"
+
+    hx-get="{% url 'choose_adventure:teacher_adventure_monitor_panel' session.join_code %}"
+
+    hx-trigger="load, every 2s"
+
+    hx-swap="innerHTML"
+  >
+    <div class="cya-monitor-loading">
+      Loading adventure status...
+    </div>
+  </section>
+
+</section>
+
+
+<style>
+
+.cya-monitor-page {
+  width: min(1400px, 100%);
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+.cya-monitor-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+
+  gap: 1rem;
+
+  flex-wrap: wrap;
+
+  margin-bottom: 1.5rem;
+}
+
+.cya-monitor-header h1 {
+  margin: .25rem 0 .3rem;
+}
+
+.cya-monitor-header p {
+  margin: 0;
+  opacity: .72;
+}
+
+.cya-monitor-loading {
+  padding: 3rem;
+
+  border-radius: 1rem;
+
+  text-align: center;
+
+  background:
+    rgba(255,255,255,.04);
+
+  border:
+    1px solid rgba(255,255,255,.08);
+}
+
+</style>
+
+{% endblock %}

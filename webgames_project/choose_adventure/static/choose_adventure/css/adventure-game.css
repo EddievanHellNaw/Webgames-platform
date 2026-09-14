@@ -1,0 +1,1471 @@
+/* ============================================================
+   CYOA — STUDENT GAME UI
+   Retro lunar / printed sci-fi interface
+   ============================================================ */
+
+
+:root {
+  --cya-ink: #101724;
+  --cya-panel: #172333;
+  --cya-panel-soft: #213144;
+
+  --cya-paper: #e8e0cb;
+  --cya-paper-muted: #bfb8a6;
+
+  --cya-red: #d95b4f;
+  --cya-cyan: #62b8c7;
+  --cya-green: #83a87d;
+  --cya-yellow: #d1af61;
+
+  --cya-border:
+    rgba(232, 224, 203, .18);
+
+  --cya-shadow:
+    0 16px 40px rgba(0, 0, 0, .32);
+}
+
+
+/* ============================================================
+   PAGE
+   ============================================================ */
+
+
+.cya-game-screen {
+  position: relative;
+
+  width: min(960px, 100%);
+
+  margin: 0 auto;
+
+  padding:
+    1rem
+    0
+    6rem;
+
+  color:
+    var(--cya-paper);
+}
+
+
+.cya-game-shell {
+  position: relative;
+
+  overflow: hidden;
+
+  border:
+    1px solid var(--cya-border);
+
+  border-radius:
+    1.25rem;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(24, 36, 51, .98),
+      rgba(12, 20, 31, .98)
+    );
+
+  box-shadow:
+    var(--cya-shadow);
+}
+
+
+.cya-game-shell::before {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  opacity: .06;
+
+  background-image:
+    repeating-linear-gradient(
+      0deg,
+      rgba(255,255,255,.15) 0,
+      rgba(255,255,255,.15) 1px,
+      transparent 1px,
+      transparent 4px
+    );
+
+  mix-blend-mode:
+    overlay;
+}
+
+
+/* ============================================================
+   BRAND BAR
+   ============================================================ */
+
+
+.cya-game-brand {
+  position: relative;
+  z-index: 2;
+
+  display: flex;
+
+  justify-content:
+    space-between;
+
+  align-items:
+    center;
+
+  gap: 1rem;
+
+  padding:
+    1rem
+    1.15rem;
+
+  border-bottom:
+    1px solid var(--cya-border);
+
+  background:
+    rgba(9, 16, 27, .82);
+}
+
+
+.cya-brand-copy {
+  min-width: 0;
+}
+
+
+.cya-game-eyebrow {
+  display: block;
+
+  margin-bottom:
+    .1rem;
+
+  color:
+    var(--cya-cyan);
+
+  font-size:
+    .68rem;
+
+  font-weight:
+    800;
+
+  letter-spacing:
+    .12em;
+
+  text-transform:
+    uppercase;
+}
+
+
+.cya-game-brand h1 {
+  margin: 0;
+
+  color:
+    var(--cya-paper);
+
+  font-size:
+    clamp(1.1rem, 4vw, 1.55rem);
+
+  line-height:
+    1.05;
+}
+
+
+.cya-game-team {
+  flex-shrink: 0;
+
+  padding:
+    .45rem
+    .7rem;
+
+  border:
+    1px solid var(--cya-border);
+
+  border-radius:
+    999px;
+
+  color:
+    var(--cya-paper-muted);
+
+  font-size:
+    .72rem;
+}
+
+
+/* ============================================================
+   PATH / PROGRESS RAIL
+   ============================================================ */
+
+
+.cya-path-rail {
+  display: flex;
+
+  align-items:
+    center;
+
+  gap:
+    .45rem;
+
+  overflow-x:
+    auto;
+
+  padding:
+    .8rem
+    1rem;
+
+  scrollbar-width:
+    thin;
+
+  border-bottom:
+    1px solid var(--cya-border);
+
+  background:
+    rgba(8, 16, 25, .7);
+}
+
+
+.cya-path-step {
+  flex:
+    0 0 auto;
+
+  display: flex;
+
+  align-items:
+    center;
+
+  gap:
+    .35rem;
+}
+
+
+.cya-path-step::after {
+  content: "";
+
+  display: block;
+
+  width:
+    1rem;
+
+  height:
+    1px;
+
+  background:
+    rgba(232, 224, 203, .24);
+}
+
+
+.cya-path-step:last-child::after {
+  display: none;
+}
+
+
+.cya-path-node {
+  display: grid;
+
+  place-items:
+    center;
+
+  width:
+    2rem;
+
+  height:
+    2rem;
+
+  border:
+    1px solid var(--cya-border);
+
+  border-radius:
+    50%;
+
+  background:
+    rgba(255,255,255,.035);
+
+  color:
+    var(--cya-paper-muted);
+
+  font-size:
+    .68rem;
+
+  font-weight:
+    800;
+}
+
+
+.cya-path-step.is-complete
+.cya-path-node {
+  border-color:
+    var(--cya-green);
+
+  color:
+    var(--cya-green);
+}
+
+
+.cya-path-step.is-current
+.cya-path-node {
+  border:
+    2px solid var(--cya-red);
+
+  background:
+    var(--cya-red);
+
+  color:
+    #fff;
+}
+
+
+.cya-path-title {
+  display: none;
+}
+
+
+/* ============================================================
+   MAIN CONTENT
+   ============================================================ */
+
+
+.cya-station-stage {
+  padding:
+    1rem;
+}
+
+
+/* ============================================================
+   SCENE ART
+   ============================================================ */
+
+
+.cya-scene-frame {
+  position: relative;
+
+  width: 100%;
+
+  aspect-ratio:
+    16 / 9;
+
+  overflow: hidden;
+
+  margin-bottom:
+    1rem;
+
+  border:
+    2px solid rgba(232,224,203,.3);
+
+  border-radius:
+    .8rem;
+
+  background:
+    #09111c;
+}
+
+
+.cya-scene-frame::after {
+  content: "";
+
+  position: absolute;
+  inset: 0;
+
+  pointer-events: none;
+
+  box-shadow:
+    inset 0 0 40px rgba(0,0,0,.38);
+}
+
+
+.cya-scene-frame img {
+  width: 100%;
+  height: 100%;
+
+  object-fit:
+    cover;
+
+  display:
+    block;
+}
+
+
+.cya-scene-placeholder {
+  height:
+    100%;
+
+  display:
+    grid;
+
+  place-items:
+    center;
+
+  color:
+    var(--cya-paper-muted);
+}
+
+
+/* ============================================================
+   STATION CONTENT
+   ============================================================ */
+
+
+.cya-station-layout {
+  display:
+    grid;
+
+  grid-template-columns:
+    minmax(0, 2fr)
+    minmax(210px, .8fr);
+
+  gap:
+    .9rem;
+
+  margin-bottom:
+    1rem;
+}
+
+
+.cya-station-card,
+.cya-character-mini,
+.cya-decision-panel,
+.cya-system-message,
+.cya-ending-panel {
+  position:
+    relative;
+
+  border:
+    1px solid var(--cya-border);
+
+  border-radius:
+    .85rem;
+
+  background:
+    rgba(232, 224, 203, .04);
+}
+
+
+.cya-station-card {
+  padding:
+    1.15rem;
+}
+
+
+.cya-section-kicker {
+  display:
+    inline-block;
+
+  margin-bottom:
+    .35rem;
+
+  color:
+    var(--cya-red);
+
+  font-size:
+    .67rem;
+
+  font-weight:
+    900;
+
+  letter-spacing:
+    .12em;
+
+  text-transform:
+    uppercase;
+}
+
+
+.cya-station-card h2 {
+  margin:
+    0
+    0
+    .8rem;
+
+  color:
+    var(--cya-paper);
+
+  font-size:
+    clamp(1.55rem, 5vw, 2.4rem);
+
+  line-height:
+    .98;
+
+  text-transform:
+    uppercase;
+}
+
+
+.cya-station-text {
+  color:
+    var(--cya-paper-muted);
+
+  line-height:
+    1.6;
+}
+
+
+.cya-station-text p:last-child {
+  margin-bottom:
+    0;
+}
+
+
+/* ============================================================
+   CHARACTER CARD
+   ============================================================ */
+
+
+.cya-character-mini {
+  padding:
+    .65rem;
+
+  background:
+    rgba(8, 15, 25, .68);
+}
+
+
+.cya-character-mini-image {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  width:
+    100%;
+
+  aspect-ratio:
+    3 / 4;
+
+  overflow:
+    hidden;
+
+  margin-bottom:
+    .7rem;
+
+  border-radius:
+    .65rem;
+
+  background:
+    #09111b;
+}
+
+
+.cya-character-mini-image img {
+  width:
+    100%;
+
+  height:
+    100%;
+
+  object-fit:
+    contain;
+
+  object-position:
+    center;
+
+  display:
+    block;
+}
+
+
+.cya-character-mini-info {
+  padding:
+    .25rem;
+}
+
+
+.cya-character-mini h3 {
+  margin:
+    .15rem
+    0;
+
+  color:
+    var(--cya-paper);
+
+  font-size:
+    1rem;
+}
+
+
+.cya-character-mini strong {
+  display:
+    block;
+
+  color:
+    var(--cya-cyan);
+
+  font-size:
+    .75rem;
+}
+
+
+.cya-character-mini p {
+  margin:
+    .55rem
+    0
+    0;
+
+  color:
+    var(--cya-paper-muted);
+
+  font-size:
+    .78rem;
+
+  line-height:
+    1.4;
+}
+
+
+/* ============================================================
+   DECISION AREA
+   ============================================================ */
+
+
+.cya-decision-panel {
+  padding:
+    1rem;
+
+  border-top:
+    3px solid var(--cya-red);
+}
+
+
+.cya-decision-heading h2 {
+  margin:
+    .15rem
+    0;
+
+  color:
+    var(--cya-paper);
+
+  font-size:
+    1.2rem;
+
+  text-transform:
+    uppercase;
+}
+
+
+.cya-decision-heading p {
+  margin:
+    .35rem
+    0
+    0;
+
+  color:
+    var(--cya-paper-muted);
+
+  font-size:
+    .82rem;
+}
+
+
+.cya-choice-list {
+  display:
+    grid;
+
+  gap:
+    .7rem;
+
+  margin-top:
+    1rem;
+}
+
+
+.cya-choice-card {
+  display:
+    block;
+
+  cursor:
+    pointer;
+}
+
+
+.cya-choice-card input {
+  position:
+    absolute;
+
+  opacity:
+    0;
+
+  pointer-events:
+    none;
+}
+
+
+.cya-choice-content {
+  position:
+    relative;
+
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  justify-content:
+    space-between;
+
+  gap:
+    .8rem;
+
+  min-height:
+    4.1rem;
+
+  padding:
+    .9rem
+    1rem;
+
+  overflow:
+    hidden;
+
+  border:
+    2px solid rgba(232,224,203,.17);
+
+  border-radius:
+    .7rem;
+
+  background:
+    rgba(255,255,255,.035);
+
+  transition:
+    transform .14s ease,
+    border-color .14s ease,
+    background .14s ease;
+}
+
+
+.cya-choice-content::before {
+  content: "";
+
+  position:
+    absolute;
+
+  top: 0;
+  bottom: 0;
+  left: 0;
+
+  width:
+    .32rem;
+
+  background:
+    var(--cya-cyan);
+}
+
+
+.cya-choice-card:nth-child(2n)
+.cya-choice-content::before {
+  background:
+    var(--cya-yellow);
+}
+
+
+.cya-choice-card:nth-child(3n)
+.cya-choice-content::before {
+  background:
+    var(--cya-green);
+}
+
+
+.cya-choice-content strong {
+  position:
+    relative;
+
+  color:
+    var(--cya-paper);
+
+  font-size:
+    .9rem;
+
+  line-height:
+    1.35;
+}
+
+
+.cya-choice-arrow {
+  position:
+    relative;
+
+  flex-shrink:
+    0;
+
+  color:
+    var(--cya-paper-muted);
+
+  font-size:
+    1.4rem;
+}
+
+
+.cya-choice-card:hover
+.cya-choice-content {
+  transform:
+    translateY(-1px);
+
+  border-color:
+    rgba(232,224,203,.4);
+}
+
+
+.cya-choice-card input:checked
++ .cya-choice-content {
+  border-color:
+    var(--cya-red);
+
+  background:
+    rgba(217,91,79,.14);
+}
+
+
+.cya-choice-card input:checked
++ .cya-choice-content::before {
+  background:
+    var(--cya-red);
+}
+
+
+.cya-confirm-choice {
+  width:
+    100%;
+
+  margin-top:
+    .85rem;
+
+  padding:
+    .95rem;
+
+  border:
+    0;
+
+  border-radius:
+    .65rem;
+
+  background:
+    var(--cya-red);
+
+  color:
+    white;
+
+  font:
+    inherit;
+
+  font-weight:
+    900;
+
+  letter-spacing:
+    .04em;
+
+  text-transform:
+    uppercase;
+
+  cursor:
+    pointer;
+}
+
+
+/* ============================================================
+   ENDINGS
+   ============================================================ */
+
+
+.cya-ending-panel {
+  padding:
+    1rem;
+}
+
+
+.cya-ending-header h2 {
+  margin:
+    .2rem
+    0;
+
+  color:
+    var(--cya-paper);
+
+  font-size:
+    clamp(2rem, 8vw, 4rem);
+
+  line-height:
+    .92;
+
+  text-transform:
+    uppercase;
+}
+
+
+.cya-ending-story {
+  color:
+    var(--cya-paper-muted);
+
+  font-size:
+    1rem;
+
+  line-height:
+    1.65;
+}
+
+
+.cya-ending-scores {
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap:
+    .5rem;
+
+  margin-top:
+    1rem;
+}
+
+
+.cya-ending-scores div {
+  padding:
+    .7rem
+    .4rem;
+
+  text-align:
+    center;
+
+  border:
+    1px solid var(--cya-border);
+
+  border-radius:
+    .65rem;
+
+  background:
+    rgba(255,255,255,.035);
+}
+
+
+/* ============================================================
+   SYSTEM MESSAGE
+   ============================================================ */
+
+
+.cya-system-message {
+  padding:
+    2rem
+    1rem;
+
+  text-align:
+    center;
+
+  color:
+    var(--cya-paper-muted);
+}
+
+
+/* ============================================================
+   BOTTOM NAV
+   ============================================================ */
+
+
+.cya-bottom-nav {
+  position:
+    sticky;
+
+  z-index:
+    20;
+
+  bottom:
+    .65rem;
+
+  display:
+    grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap:
+    .35rem;
+
+  width:
+    min(520px, calc(100% - 1rem));
+
+  margin:
+    1rem
+    auto
+    0;
+
+  padding:
+    .35rem;
+
+  border:
+    1px solid var(--cya-border);
+
+  border-radius:
+    .9rem;
+
+  background:
+    rgba(8, 14, 24, .96);
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.35);
+}
+
+
+.cya-nav-button {
+  display:
+    flex;
+
+  flex-direction:
+    column;
+
+  align-items:
+    center;
+
+  justify-content:
+    center;
+
+  gap:
+    .18rem;
+
+  min-height:
+    3.2rem;
+
+  padding:
+    .4rem;
+
+  border:
+    0;
+
+  border-radius:
+    .65rem;
+
+  background:
+    transparent;
+
+  color:
+    var(--cya-paper-muted);
+
+  font:
+    inherit;
+
+  font-size:
+    .68rem;
+
+  font-weight:
+    800;
+
+  cursor:
+    pointer;
+}
+
+
+.cya-nav-button.is-active {
+  background:
+    rgba(217,91,79,.17);
+
+  color:
+    var(--cya-paper);
+}
+
+
+.cya-nav-icon {
+  font-size:
+    1rem;
+}
+
+
+/* ============================================================
+   AUXILIARY PANELS — MAP / LOG / JOURNAL
+   ============================================================ */
+
+
+.cya-drawer {
+  display:
+    none;
+
+  margin:
+    0
+    1rem
+    1rem;
+
+  padding:
+    1rem;
+
+  border:
+    1px solid var(--cya-border);
+
+  border-radius:
+    .85rem;
+
+  background:
+    rgba(8, 15, 25, .9);
+}
+
+
+.cya-drawer.is-open {
+  display:
+    block;
+}
+
+
+.cya-drawer h2 {
+  margin:
+    0
+    0
+    .8rem;
+
+  color:
+    var(--cya-paper);
+
+  font-size:
+    1rem;
+
+  text-transform:
+    uppercase;
+}
+
+
+.cya-log-list {
+  margin:
+    0;
+
+  padding-left:
+    1.2rem;
+}
+
+
+.cya-log-list li + li {
+  margin-top:
+    .8rem;
+}
+
+
+.cya-log-list small,
+.cya-log-list strong {
+  display:
+    block;
+}
+
+
+.cya-log-list small {
+  color:
+    var(--cya-cyan);
+}
+
+
+.cya-log-list strong {
+  margin-top:
+    .15rem;
+
+  color:
+    var(--cya-paper);
+}
+
+
+.cya-journal-character {
+  display:
+    grid;
+
+  grid-template-columns:
+    90px
+    1fr;
+
+  gap:
+    .8rem;
+
+  align-items:
+    start;
+}
+
+
+.cya-journal-character img {
+  width:
+    90px;
+
+  height:
+    110px;
+
+  object-fit:
+    contain;
+
+  border-radius:
+    .55rem;
+
+  background:
+    #08101b;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+
+@media (max-width: 700px) {
+
+  .cya-game-screen {
+    padding-top:
+      .35rem;
+  }
+
+
+  .cya-game-shell {
+    border-radius:
+      .9rem;
+  }
+
+
+  .cya-game-brand {
+    padding:
+      .8rem;
+  }
+
+
+  .cya-game-team {
+    max-width:
+      42%;
+
+    overflow:
+      hidden;
+
+    white-space:
+      nowrap;
+
+    text-overflow:
+      ellipsis;
+  }
+
+
+  .cya-station-stage {
+    padding:
+      .75rem;
+  }
+
+
+  .cya-station-layout {
+    grid-template-columns:
+      1fr;
+  }
+
+
+  .cya-character-mini {
+    display:
+      grid;
+
+    grid-template-columns:
+      95px
+      minmax(0, 1fr);
+
+    gap:
+      .7rem;
+  }
+
+
+  .cya-character-mini-image {
+    aspect-ratio:
+      3 / 4;
+
+    margin:
+      0;
+  }
+
+
+  .cya-station-card h2 {
+    font-size:
+      clamp(1.65rem, 8vw, 2.4rem);
+  }
+
+
+  .cya-path-rail {
+    padding:
+      .65rem
+      .75rem;
+  }
+
+
+  .cya-scene-frame {
+    border-radius:
+      .65rem;
+  }
+
+}
+/* ============================================================
+   LEARNING RESPONSE
+   ============================================================ */
+
+.cya-learning-response {
+  margin-top: 1rem;
+  padding: 1rem;
+
+  border:
+    1px solid var(--cya-border);
+
+  border-radius: .75rem;
+
+  background:
+    rgba(98, 184, 199, .06);
+}
+
+
+.cya-final-response {
+  margin:
+    1.25rem
+    0;
+
+  border-left:
+    4px solid var(--cya-cyan);
+}
+
+
+.cya-learning-help {
+  margin:
+    .2rem
+    0
+    .75rem;
+
+  color:
+    var(--cya-paper-muted);
+
+  font-size:
+    .8rem;
+
+  line-height:
+    1.45;
+}
+
+
+.cya-learning-textarea {
+  width: 100%;
+
+  box-sizing:
+    border-box;
+
+  padding:
+    .85rem;
+
+  resize:
+    vertical;
+
+  border:
+    1px solid rgba(232,224,203,.25);
+
+  border-radius:
+    .65rem;
+
+  outline:
+    none;
+
+  background:
+    rgba(8, 15, 25, .72);
+
+  color:
+    var(--cya-paper);
+
+  font:
+    inherit;
+
+  line-height:
+    1.5;
+}
+
+
+.cya-learning-textarea:focus {
+  border-color:
+    var(--cya-cyan);
+
+  box-shadow:
+    0 0 0 2px
+    rgba(98,184,199,.12);
+}
+
+
+.cya-learning-response-actions {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    .75rem;
+
+  margin-top:
+    .65rem;
+}
+
+
+.cya-save-response {
+  padding:
+    .65rem
+    .9rem;
+
+  border:
+    1px solid var(--cya-cyan);
+
+  border-radius:
+    .55rem;
+
+  background:
+    transparent;
+
+  color:
+    var(--cya-paper);
+
+  font:
+    inherit;
+
+  font-size:
+    .75rem;
+
+  font-weight:
+    800;
+
+  cursor:
+    pointer;
+}
+
+
+.cya-response-status {
+  color:
+    var(--cya-green);
+
+  font-size:
+    .75rem;
+
+  font-weight:
+    800;
+}
+
+
+.cya-decision-divider {
+  display:
+    flex;
+
+  align-items:
+    center;
+
+  gap:
+    .6rem;
+
+  margin:
+    1.15rem
+    0
+    .3rem;
+
+  color:
+    var(--cya-paper-muted);
+
+  font-size:
+    .65rem;
+
+  font-weight:
+    900;
+
+  letter-spacing:
+    .1em;
+
+  text-transform:
+    uppercase;
+}
+
+
+.cya-decision-divider::before,
+.cya-decision-divider::after {
+  content: "";
+
+  flex: 1;
+
+  height: 1px;
+
+  background:
+    var(--cya-border);
+}

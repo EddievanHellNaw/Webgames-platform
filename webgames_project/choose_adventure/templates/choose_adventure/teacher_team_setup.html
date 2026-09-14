@@ -1,0 +1,354 @@
+{% extends "base.html" %}
+
+{% block title %}
+Team Setup · {{ adventure_run.story.title }}
+{% endblock %}
+
+{% block content %}
+<section class="cya-team-setup">
+
+  <header class="cya-team-setup-hero">
+    <div>
+      <span class="app-kicker">Choose Your Own Adventure</span>
+      <h1>Configure Teams</h1>
+      <p>
+        Organize students into teams before character selection begins.
+      </p>
+    </div>
+
+    <div class="cya-team-session-summary">
+      <strong>{{ adventure_run.story.title }}</strong>
+      <p>Join code: {{ session.join_code }}</p>
+      <p>{{ participant_count }} participant{{ participant_count|pluralize }}</p>
+    </div>
+  </header>
+
+  <section class="cya-team-controls">
+    <form method="post" class="cya-team-form">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="auto_generate">
+
+      <label for="team_size">Suggested team size</label>
+      <select name="team_size" id="team_size">
+        <option value="3">3</option>
+        <option value="4" selected>4</option>
+        <option value="5">5</option>
+        <option value="6">6</option>
+      </select>
+
+      <button class="app-btn app-btn-primary" type="submit">
+        Auto-generate Teams
+      </button>
+    </form>
+
+    <form method="post">
+      {% csrf_token %}
+      <input type="hidden" name="action" value="clear_teams">
+
+      <button class="app-btn" type="submit">
+        Clear Teams
+      </button>
+    </form>
+
+    <a
+      class="app-btn"
+      href="{% url 'sessions:teacher_lobby' session.join_code %}"
+    >
+      Back to Lobby
+    </a>
+  </section>
+
+<section class="cya-phase-controls">
+
+  {# ======================================================= #}
+  {# LOBBY — teams exist, but character selection not begun #}
+  {# ======================================================= #}
+
+  {% if session.status == "LOBBY" %}
+
+    {% if can_begin_character_selection %}
+
+      <form
+        method="post"
+        action="{% url 'choose_adventure:teacher_begin_character_selection' session.join_code %}"
+      >
+        {% csrf_token %}
+
+        <button
+          class="app-btn app-btn-primary"
+          type="submit"
+        >
+          Begin Character Selection
+        </button>
+      </form>
+
+    {% else %}
+
+      <button
+        class="app-btn app-btn-primary"
+        type="button"
+        disabled
+      >
+        Begin Character Selection
+      </button>
+
+      <p class="app-muted-text">
+        Every participant must belong to a team first.
+      </p>
+
+    {% endif %}
+
+
+  {# ======================================================= #}
+  {# ACTIVE — character selection                            #}
+  {# ======================================================= #}
+
+  {% elif session.current_step == "character_selection" %}
+
+    <div class="cya-selection-progress">
+
+      <span class="app-kicker">
+        Character Selection Active
+      </span>
+
+      <strong>
+        {{ selected_character_count }}
+        /
+        {{ team_count }}
+        teams ready
+      </strong>
+
+    </div>
+
+
+    {% if can_start_adventure %}
+
+      <form
+        method="post"
+        action="{% url 'choose_adventure:teacher_begin_adventure' session.join_code %}"
+      >
+        {% csrf_token %}
+
+        <button
+          class="app-btn app-btn-primary"
+          type="submit"
+        >
+          Start Adventure
+        </button>
+
+      </form>
+
+    {% else %}
+
+      <button
+        class="app-btn app-btn-primary"
+        type="button"
+        disabled
+      >
+        Start Adventure
+      </button>
+
+      <p class="app-muted-text">
+        Every team must choose a character first.
+      </p>
+
+    {% endif %}
+
+
+  {# ======================================================= #}
+  {# ACTIVE — adventure underway                             #}
+  {# ======================================================= #}
+
+  {% elif session.current_step == "story_station" %}
+
+    <div class="cya-selection-progress">
+
+      <span class="app-kicker">
+        Adventure in Progress
+      </span>
+
+      <strong>
+        All teams are now in the story.
+      </strong>
+
+    </div>
+
+  {% endif %}
+
+</section>
+
+  {% if unassigned_participants %}
+    <section class="cya-team-panel">
+      <h2>Unassigned Participants</h2>
+      <ul class="cya-name-list">
+        {% for participant in unassigned_participants %}
+          <li>{{ participant.display_name }}</li>
+        {% endfor %}
+      </ul>
+    </section>
+  {% endif %}
+
+  {% if teams %}
+    <section class="cya-team-grid">
+      {% for team in teams %}
+        <article class="cya-team-card">
+          <h3>{{ team.name }}</h3>
+          <p>
+            {{ team.memberships.count }} member{{ team.memberships.count|pluralize }}
+          </p>
+
+          {% if team.memberships.all %}
+            <ul class="cya-name-list">
+              {% for membership in team.memberships.all %}
+                <li>{{ membership.participant.display_name }}</li>
+              {% endfor %}
+            </ul>
+          {% else %}
+            <p class="app-muted-text">No members yet.</p>
+          {% endif %}
+          <div class="cya-team-character-status">
+
+  {% if team.selected_character %}
+
+    <span class="app-kicker">
+      Selected Character
+    </span>
+
+    <strong>
+      {{ team.selected_character.name }}
+    </strong>
+
+    {% if team.selected_character.role %}
+      <small>
+        {{ team.selected_character.role }}
+      </small>
+    {% endif %}
+
+
+    <form
+      method="post"
+      action="{% url 'choose_adventure:teacher_reset_character' session.join_code team.id %}"
+    >
+
+      {% csrf_token %}
+
+      <button
+        class="app-btn"
+        type="submit"
+      >
+        Reset Character
+      </button>
+
+    </form>
+
+
+  {% else %}
+
+    <span class="app-kicker">
+      Character
+    </span>
+
+    <strong>
+      Waiting for selection
+    </strong>
+
+  {% endif %}
+
+</div>
+        </article>
+      {% endfor %}
+    </section>
+  {% else %}
+    <section class="cya-team-panel">
+      <h2>No teams yet</h2>
+      <p class="app-muted-text">
+        Students can join first, then you can auto-generate teams here.
+      </p>
+    </section>
+  {% endif %}
+
+</section>
+
+<style>
+  .cya-team-setup {
+    width: min(1150px, 100%);
+    margin: 0 auto;
+    padding-bottom: 3rem;
+  }
+
+  .cya-team-setup-hero {
+    display: flex;
+    justify-content: space-between;
+    gap: 1.5rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+
+  .cya-team-session-summary {
+    padding: 1rem 1.2rem;
+    border-radius: 1rem;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+    min-width: 240px;
+  }
+
+  .cya-team-controls {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+    margin-bottom: 2rem;
+  }
+
+  .cya-team-form {
+    display: flex;
+    align-items: end;
+    gap: .75rem;
+    flex-wrap: wrap;
+  }
+
+  .cya-team-form select {
+    padding: .55rem .8rem;
+    border-radius: .7rem;
+  }
+
+  .cya-team-panel,
+  .cya-team-card {
+    padding: 1.2rem;
+    border-radius: 1rem;
+    background: rgba(255,255,255,.05);
+    border: 1px solid rgba(255,255,255,.08);
+  }
+
+  .cya-team-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+  }
+
+  .cya-name-list {
+    margin: .8rem 0 0;
+    padding-left: 1.2rem;
+  }
+
+  .cya-name-list li + li {
+    margin-top: .35rem;
+  }
+
+  .cya-team-character-status {
+  margin-top: 1rem;
+  padding-top: 1rem;
+
+  border-top:
+    1px solid rgba(255,255,255,.08);
+}
+
+.cya-team-character-status strong,
+.cya-team-character-status small {
+  display: block;
+}
+
+.cya-team-character-status form {
+  margin-top: .8rem;
+}
+</style>
+{% endblock %}

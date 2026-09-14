@@ -102,6 +102,10 @@ def teacher_lobby(request, join_code):
         teacher=request.user,
     )
 
+    # ============================================================
+    # Active-game redirects
+    # ============================================================
+
     if (
         session.game_template.code
         == GameTemplate.GameCode.ROLE_PLAY
@@ -113,6 +117,29 @@ def teacher_lobby(request, join_code):
             join_code=session.join_code,
         )
 
+    if (
+            session.game_template.code
+            == GameTemplate.GameCode.CHOOSE_ADVENTURE
+            and session.status
+            == GameSession.Status.ACTIVE
+        ):
+            if session.current_step == "character_selection":
+                return redirect(
+                    "choose_adventure:teacher_team_setup",
+                    join_code=session.join_code,
+                )
+
+            if session.current_step == "story_station":
+                return redirect(
+                    "choose_adventure:teacher_adventure_monitor",
+                    join_code=session.join_code,
+                )
+
+
+    # ============================================================
+    # Shared join information
+    # ============================================================
+
     join_url = request.build_absolute_uri(
         reverse(
             "sessions:join_session",
@@ -122,15 +149,48 @@ def teacher_lobby(request, join_code):
 
     qr_image = generate_qr_code(join_url)
 
-    roleplay_run = None
 
-    if session.game_template.code == GameTemplate.GameCode.ROLE_PLAY:
+    # ============================================================
+    # Game-specific lobby data
+    # ============================================================
+
+    roleplay_run = None
+    adventure_run = None
+
+
+    # ------------------------------------------------------------
+    # Role Play
+    # ------------------------------------------------------------
+
+    if (
+        session.game_template.code
+        == GameTemplate.GameCode.ROLE_PLAY
+    ):
         roleplay_run = (
             RolePlayRun.objects
             .select_related("situation")
             .filter(game_session=session)
             .first()
         )
+
+
+    # ------------------------------------------------------------
+    # Choose Your Own Adventure
+    # ------------------------------------------------------------
+
+    elif (
+        session.game_template.code
+        == GameTemplate.GameCode.CHOOSE_ADVENTURE
+    ):
+        adventure_run = getattr(
+            session,
+            "adventure_run",
+            None,
+        )
+
+    # ============================================================
+    # Render shared lobby
+    # ============================================================
 
     return render(
         request,
@@ -139,7 +199,10 @@ def teacher_lobby(request, join_code):
             "session": session,
             "join_url": join_url,
             "qr_image": qr_image,
+
+            # Game-specific context
             "roleplay_run": roleplay_run,
+            "adventure_run": adventure_run,
         },
     )
 
@@ -250,6 +313,22 @@ def start_session(request, join_code):
                 "sessions:teacher_lobby",
                 join_code=session.join_code,
             )
+
+    # ------------------------------------------------
+    # CHOOSE YOUR OWN ADVENTURE
+    # ------------------------------------------------
+
+    elif (
+        session.game_template.code
+        == GameTemplate.GameCode.CHOOSE_ADVENTURE
+    ):
+        # CYOA does not use the generic Start Session flow.
+        # Teams must be configured before character selection begins.
+        return redirect(
+            "choose_adventure:teacher_team_setup",
+            join_code=session.join_code,
+        )
+
 
     # ------------------------------------------------
     # OTHER GAMES
@@ -457,6 +536,25 @@ def get_game_step_url(session):
         if session.current_step == "role_card":
             return reverse(
                 "roleplay:student_role",
+                args=[session.join_code],
+            )
+    # -----------------------------------------------
+    # CYOA
+    # -----------------------------------------------
+
+    if (
+        session.game_template.code
+        == GameTemplate.GameCode.CHOOSE_ADVENTURE
+    ):
+        if session.current_step == "character_selection":
+            return reverse(
+                "choose_adventure:student_character_selection",
+                args=[session.join_code],
+            )
+
+        if session.current_step == "story_station":
+            return reverse(
+                "choose_adventure:student_story_station",
                 args=[session.join_code],
             )
 

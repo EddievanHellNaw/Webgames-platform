@@ -92,18 +92,41 @@
                 {% endif %}
 
                 <div class="app-game-card-actions">
+
                   {% if game.is_active %}
-                    <a
-                      class="app-btn app-btn-primary"
-                      href="{% url 'sessions:create_session' game.id %}"
-                    >
-                      Create Session
-                    </a>
+
+                    {% if game.code == "CHOOSE_ADVENTURE" %}
+
+                      <a
+                        class="app-btn app-btn-primary"
+                        href="{% url 'choose_adventure:story_setup' %}"
+                      >
+                        Choose Story
+                      </a>
+
+                    {% else %}
+
+                      <a
+                        class="app-btn app-btn-primary"
+                        href="{% url 'sessions:create_session' game.id %}"
+                      >
+                        Create Session
+                      </a>
+
+                    {% endif %}
+
                   {% else %}
-                    <button class="app-btn" type="button" disabled>
+
+                    <button
+                      class="app-btn"
+                      type="button"
+                      disabled
+                    >
                       Not Available Yet
                     </button>
+
                   {% endif %}
+
                 </div>
               </div>
             </article>

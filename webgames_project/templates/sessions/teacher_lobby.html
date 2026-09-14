@@ -140,6 +140,37 @@
     </div>
 
 {% endif %}
+
+{% if adventure_run %}
+
+  <div class="cya-lobby-story">
+
+    {% if adventure_run.story.cover_image %}
+      <div class="cya-lobby-story-cover">
+        <img
+          src="{{ adventure_run.story.cover_image.url }}"
+          alt="{{ adventure_run.story.title }} cover"
+        >
+      </div>
+    {% endif %}
+
+    <span class="fr-kicker">
+      Selected Adventure
+    </span>
+
+    <strong>
+      {{ adventure_run.story.title }}
+    </strong>
+
+    {% if adventure_run.story.grammar_focus %}
+      <p>
+        {{ adventure_run.story.grammar_focus }}
+      </p>
+    {% endif %}
+
+  </div>
+
+{% endif %}
       {% if session.game_template.code == "FANTASY_ROLES" %}
         <a
           class="fr-btn fr-btn-secondary"
@@ -162,6 +193,15 @@
           Monitor Dungeons
         </a>
       {% endif %}
+
+      {% if session.game_template.code == "CHOOSE_ADVENTURE" %}
+  <a
+    class="fr-btn fr-btn-secondary"
+    href="{% url 'choose_adventure:teacher_team_setup' session.join_code %}"
+  >
+    Configure Teams
+  </a>
+{% endif %}
     </div>
   </section>
 </section>

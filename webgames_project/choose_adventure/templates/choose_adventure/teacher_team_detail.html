@@ -1,0 +1,553 @@
+{% extends "base.html" %}
+
+{% block title %}
+{{ team.name }} · Adventure Control
+{% endblock %}
+
+{% block content %}
+
+<section class="cya-team-detail">
+
+  <header class="cya-team-detail-header">
+
+    <div>
+
+      <span class="app-kicker">
+        Teacher Intervention
+      </span>
+
+      <h1>
+        {{ team.name }}
+      </h1>
+
+      <p>
+        {{ team.selected_character.name }}
+        {% if team.selected_character.role %}
+          · {{ team.selected_character.role }}
+        {% endif %}
+      </p>
+
+    </div>
+
+
+    <a
+      class="app-btn"
+      href="{% url 'choose_adventure:teacher_adventure_monitor' session.join_code %}"
+    >
+      Back to Adventure Log
+    </a>
+
+  </header>
+
+
+  <section class="cya-detail-status-grid">
+
+    <article>
+
+      <span class="app-kicker">
+        Current Station
+      </span>
+
+      <strong>
+        {% if team.current_station %}
+          {{ team.current_station.title }}
+        {% else %}
+          None
+        {% endif %}
+      </strong>
+
+    </article>
+
+
+    <article>
+
+      <span class="app-kicker">
+        Status
+      </span>
+
+      <strong>
+        {% if team.is_finished %}
+          Adventure Complete
+        {% else %}
+          Active
+        {% endif %}
+      </strong>
+
+    </article>
+
+
+    <article>
+
+      <span class="app-kicker">
+        Dominant Route
+      </span>
+
+      <strong>
+        {{ dominant_genre_label }}
+      </strong>
+
+    </article>
+
+  </section>
+
+
+  <section class="cya-detail-scores">
+
+    <div>
+      <span>Containment</span>
+      <strong>
+        {{ team.containment_score }}
+      </strong>
+    </div>
+
+    <div>
+      <span>Humanity</span>
+      <strong>
+        {{ team.humanity_score }}
+      </strong>
+    </div>
+
+    <div>
+      <span>Knowledge</span>
+      <strong>
+        {{ team.knowledge_score }}
+      </strong>
+    </div>
+
+  </section>
+
+
+  <section class="cya-detail-panel">
+
+    <span class="app-kicker">
+      Genre Weights
+    </span>
+
+    <div class="cya-detail-genre-grid">
+
+      <div>
+        <span>Sci-Fi</span>
+        <strong>
+          {{ team.sci_fi_score }}
+        </strong>
+      </div>
+
+      <div>
+        <span>Cyberpunk</span>
+        <strong>
+          {{ team.cyberpunk_score }}
+        </strong>
+      </div>
+
+      <div>
+        <span>Bio-Horror</span>
+        <strong>
+          {{ team.bio_horror_score }}
+        </strong>
+      </div>
+
+    </div>
+
+  </section>
+
+
+  <section class="cya-detail-panel">
+
+    <span class="app-kicker">
+      Story Flags
+    </span>
+
+    <div class="cya-flag-list">
+
+      {% for flag in team.story_flags %}
+
+        <span>
+          {{ flag }}
+        </span>
+
+      {% empty %}
+
+        <p class="app-muted-text">
+          No story flags yet.
+        </p>
+
+      {% endfor %}
+
+    </div>
+
+  </section>
+
+
+  <section class="cya-detail-panel">
+
+    <span class="app-kicker">
+      Team Members
+    </span>
+
+    <div class="cya-member-list">
+
+      {% for membership in team.memberships.all %}
+
+        <span>
+          {{ membership.participant.display_name }}
+        </span>
+
+      {% endfor %}
+
+    </div>
+
+  </section>
+
+
+  <section class="cya-detail-panel">
+
+    <span class="app-kicker">
+      Adventure History
+    </span>
+
+    {% if decisions %}
+
+      <ol class="cya-history-list">
+
+        {% for decision in decisions %}
+
+          <li>
+
+            <small>
+              {{ decision.station.title }}
+            </small>
+
+            {% if decision.selected_choice %}
+
+              <strong>
+                {{ decision.selected_choice.text }}
+              </strong>
+
+            {% endif %}
+
+            {% if decision.selected_by %}
+
+              <span>
+                Confirmed by
+                {{ decision.selected_by.display_name }}
+              </span>
+
+            {% endif %}
+
+          </li>
+
+        {% endfor %}
+
+      </ol>
+
+    {% else %}
+
+      <p class="app-muted-text">
+        This team has not made any decisions yet.
+      </p>
+
+    {% endif %}
+
+  </section>
+
+
+  <section class="cya-intervention-panel">
+
+    <span class="app-kicker">
+      Teacher Controls
+    </span>
+
+    <h2>
+      Correct Team Progress
+    </h2>
+
+    <p>
+      These controls rebuild the team's state from its
+      remaining decision history.
+    </p>
+
+
+    <div class="cya-intervention-actions">
+
+      <form
+        method="post"
+        action="{% url 'choose_adventure:teacher_undo_team_decision' session.join_code team.id %}"
+      >
+        {% csrf_token %}
+
+        <button
+          class="app-btn app-btn-primary"
+          type="submit"
+          {% if not decisions %}disabled{% endif %}
+        >
+          Undo Last Decision
+        </button>
+      </form>
+
+
+      {% if rewind_stations %}
+
+        <form
+          method="post"
+          action="{% url 'choose_adventure:teacher_rewind_team' session.join_code team.id %}"
+          class="cya-rewind-form"
+        >
+
+          {% csrf_token %}
+
+          <label for="station_id">
+            Rewind to earlier station
+          </label>
+
+          <select
+            name="station_id"
+            id="station_id"
+            required
+          >
+
+            {% for station in rewind_stations %}
+
+              <option value="{{ station.id }}">
+                {{ station.title }}
+              </option>
+
+            {% endfor %}
+
+          </select>
+
+          <button
+            class="app-btn"
+            type="submit"
+          >
+            Rewind Team
+          </button>
+
+        </form>
+
+      {% endif %}
+
+
+      <form
+        method="post"
+        action="{% url 'choose_adventure:teacher_restart_team' session.join_code team.id %}"
+        onsubmit="return confirm('Restart this team from the beginning? Their decision history will be deleted.');"
+      >
+        {% csrf_token %}
+
+        <button
+          class="app-btn"
+          type="submit"
+        >
+          Restart Adventure
+        </button>
+
+      </form>
+
+    </div>
+
+  </section>
+
+</section>
+
+
+<style>
+
+.cya-team-detail {
+  width: min(1000px, 100%);
+  margin: 0 auto;
+  padding-bottom: 3rem;
+}
+
+
+.cya-team-detail-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: end;
+
+  gap: 1rem;
+
+  flex-wrap: wrap;
+
+  margin-bottom: 1.5rem;
+}
+
+.cya-team-detail-header h1 {
+  margin: .25rem 0;
+}
+
+.cya-team-detail-header p {
+  margin: 0;
+  opacity: .7;
+}
+
+
+.cya-detail-status-grid,
+.cya-detail-scores,
+.cya-detail-genre-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(3, 1fr);
+
+  gap: .7rem;
+}
+
+.cya-detail-status-grid article,
+.cya-detail-scores > div,
+.cya-detail-panel,
+.cya-intervention-panel {
+  padding: 1rem;
+
+  border-radius: 1rem;
+
+  background:
+    rgba(255,255,255,.045);
+
+  border:
+    1px solid rgba(255,255,255,.09);
+}
+
+.cya-detail-status-grid strong {
+  display: block;
+  margin-top: .3rem;
+}
+
+
+.cya-detail-scores {
+  margin-top: .7rem;
+}
+
+.cya-detail-scores > div,
+.cya-detail-genre-grid > div {
+  text-align: center;
+}
+
+.cya-detail-scores span,
+.cya-detail-genre-grid span {
+  display: block;
+
+  font-size: .75rem;
+  opacity: .65;
+}
+
+.cya-detail-scores strong,
+.cya-detail-genre-grid strong {
+  display: block;
+
+  margin-top: .25rem;
+
+  font-size: 1.35rem;
+}
+
+
+.cya-detail-panel,
+.cya-intervention-panel {
+  margin-top: .8rem;
+}
+
+
+.cya-flag-list,
+.cya-member-list {
+  display: flex;
+  flex-wrap: wrap;
+
+  gap: .45rem;
+
+  margin-top: .7rem;
+}
+
+.cya-flag-list span,
+.cya-member-list span {
+  padding: .35rem .6rem;
+
+  border-radius: 999px;
+
+  font-size: .75rem;
+
+  background:
+    rgba(255,255,255,.06);
+}
+
+
+.cya-history-list {
+  margin:
+    .8rem
+    0
+    0;
+
+  padding-left: 1.4rem;
+}
+
+.cya-history-list li {
+  padding:
+    .6rem
+    0;
+
+  border-bottom:
+    1px solid rgba(255,255,255,.06);
+}
+
+.cya-history-list small,
+.cya-history-list strong,
+.cya-history-list span {
+  display: block;
+}
+
+.cya-history-list small {
+  opacity: .55;
+}
+
+.cya-history-list span {
+  margin-top: .15rem;
+
+  font-size: .75rem;
+  opacity: .55;
+}
+
+
+.cya-intervention-actions {
+  display: grid;
+
+  gap: 1rem;
+
+  margin-top: 1rem;
+}
+
+.cya-rewind-form {
+  display: grid;
+
+  grid-template-columns:
+    minmax(180px, 1fr)
+    auto;
+
+  gap: .6rem;
+}
+
+.cya-rewind-form label {
+  grid-column: 1 / -1;
+}
+
+.cya-rewind-form select {
+  padding: .7rem;
+
+  border-radius: .7rem;
+}
+
+
+@media (max-width: 650px) {
+
+  .cya-detail-status-grid,
+  .cya-detail-scores,
+  .cya-detail-genre-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .cya-rewind-form {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+</style>
+
+{% endblock %}

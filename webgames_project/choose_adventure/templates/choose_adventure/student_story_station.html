@@ -1,0 +1,497 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+{{ story.title }} · Adventure
+{% endblock %}
+
+{% block content %}
+
+<link
+  rel="stylesheet"
+  href="{% static 'choose_adventure/css/adventure-game.css' %}"
+>
+
+
+<section class="cya-game-screen">
+
+  <div class="cya-game-shell">
+
+    <header class="cya-game-brand">
+
+      <div class="cya-brand-copy">
+
+        <span class="cya-game-eyebrow">
+          Storyspark
+        </span>
+
+        <h1>
+          {{ story.title }}
+        </h1>
+
+      </div>
+
+
+      <div class="cya-game-team">
+        {{ team.name }}
+        ·
+        {{ team.selected_character.name }}
+      </div>
+
+    </header>
+
+
+    <section
+      id="story-station-panel"
+
+      hx-get="{% url 'choose_adventure:student_story_station_panel' session.join_code %}"
+
+      hx-trigger="load, every 2s [!document.querySelector('.cya-learning-textarea:focus')]"
+
+      hx-swap="innerHTML"
+    >
+
+      <div class="cya-system-message">
+        Loading current station...
+      </div>
+
+    </section>
+
+
+    <section
+      id="cya-map-drawer"
+      class="cya-drawer"
+    >
+    </section>
+
+
+    <section
+      id="cya-log-drawer"
+      class="cya-drawer"
+    >
+    </section>
+
+
+    <section
+      id="cya-journal-drawer"
+      class="cya-drawer"
+    >
+    </section>
+
+  </div>
+
+
+  <nav class="cya-bottom-nav">
+
+    <button
+      class="cya-nav-button"
+      type="button"
+      data-cya-panel="map"
+    >
+      <span class="cya-nav-icon">
+        ◉
+      </span>
+
+      Map
+    </button>
+
+
+    <button
+      class="cya-nav-button"
+      type="button"
+      data-cya-panel="log"
+    >
+      <span class="cya-nav-icon">
+        ☰
+      </span>
+
+      Log
+    </button>
+
+
+    <button
+      class="cya-nav-button"
+      type="button"
+      data-cya-panel="journal"
+    >
+      <span class="cya-nav-icon">
+        ✦
+      </span>
+
+      Journal
+    </button>
+
+  </nav>
+
+</section>
+
+
+<script>
+
+/* ============================================================
+   Preserve unsaved written response
+   ============================================================ */
+
+document.addEventListener(
+  "input",
+  function (event) {
+
+    if (
+      !event.target.matches(
+        ".cya-learning-textarea"
+      )
+    ) {
+      return;
+    }
+
+    const panel =
+      document.getElementById(
+        "story-station-panel"
+      );
+
+    if (!panel) {
+      return;
+    }
+
+    panel.dataset.pendingResponseText =
+      event.target.value;
+
+    panel.dataset.pendingResponseStation =
+      event.target.dataset.stationId;
+  }
+);
+
+
+/* ============================================================
+   Preserve unconfirmed team choice
+   ============================================================ */
+
+document.addEventListener(
+  "change",
+  function (event) {
+
+    if (
+      !event.target.matches(
+        "#story-station-panel input[name='choice_id']"
+      )
+    ) {
+      return;
+    }
+
+    const panel =
+      document.getElementById(
+        "story-station-panel"
+      );
+
+    if (!panel) {
+      return;
+    }
+
+    panel.dataset.pendingChoiceId =
+      event.target.value;
+  }
+);
+
+
+/* ============================================================
+   Restore local state after the story panel refreshes
+   ============================================================ */
+
+document.body.addEventListener(
+  "htmx:afterSwap",
+  function (event) {
+
+    const panel =
+      document.getElementById(
+        "story-station-panel"
+      );
+
+    if (!panel) {
+      return;
+    }
+
+    if (
+      event.detail.target
+      !== panel
+    ) {
+      return;
+    }
+
+
+    /* --------------------------------------------------------
+       Restore tentative radio choice
+       -------------------------------------------------------- */
+
+    const pendingChoiceId =
+      panel.dataset.pendingChoiceId;
+
+    if (pendingChoiceId) {
+
+      const radio =
+        panel.querySelector(
+          `input[name="choice_id"][value="${pendingChoiceId}"]`
+        );
+
+      if (radio) {
+
+        radio.checked = true;
+
+      } else {
+
+        /*
+         * The team has moved to another station,
+         * so the old local selection is no longer relevant.
+         */
+
+        delete panel.dataset.pendingChoiceId;
+      }
+    }
+
+
+    /* --------------------------------------------------------
+       Restore unsaved written response
+       -------------------------------------------------------- */
+
+    const textarea =
+      panel.querySelector(
+        ".cya-learning-textarea"
+      );
+
+    if (textarea) {
+
+      const pendingStation =
+        panel.dataset.pendingResponseStation;
+
+      const currentStation =
+        textarea.dataset.stationId;
+
+      if (
+        pendingStation
+        && pendingStation === currentStation
+      ) {
+
+        textarea.value =
+          panel.dataset.pendingResponseText
+          || textarea.value;
+
+      } else if (
+        pendingStation
+        && pendingStation !== currentStation
+      ) {
+
+        /*
+         * The team moved to a different station.
+         * Do not copy the old answer into the new question.
+         */
+
+        delete panel.dataset.pendingResponseText;
+        delete panel.dataset.pendingResponseStation;
+      }
+    }
+
+
+    /* --------------------------------------------------------
+       Rebuild Map / Log / Journal
+       -------------------------------------------------------- */
+
+    hydrateCyaDrawers();
+  }
+);
+
+
+/* ============================================================
+   Clear the temporary draft after successful save
+   ============================================================ */
+
+document.body.addEventListener(
+  "htmx:afterRequest",
+  function (event) {
+
+    if (!event.detail.successful) {
+      return;
+    }
+
+    const element =
+      event.detail.elt;
+
+    if (
+      !element
+      || !element.matches(
+        ".cya-learning-response-form"
+      )
+    ) {
+      return;
+    }
+
+    const panel =
+      document.getElementById(
+        "story-station-panel"
+      );
+
+    if (!panel) {
+      return;
+    }
+
+    delete panel.dataset.pendingResponseText;
+    delete panel.dataset.pendingResponseStation;
+  }
+);
+
+
+/* ============================================================
+   Bottom navigation
+   ============================================================ */
+
+function closeCyaDrawers() {
+
+  document
+    .querySelectorAll(
+      ".cya-drawer"
+    )
+    .forEach(
+      drawer => {
+        drawer.classList.remove(
+          "is-open"
+        );
+      }
+    );
+
+  document
+    .querySelectorAll(
+      ".cya-nav-button"
+    )
+    .forEach(
+      button => {
+        button.classList.remove(
+          "is-active"
+        );
+      }
+    );
+}
+
+
+document.addEventListener(
+  "click",
+  function (event) {
+
+    const button =
+      event.target.closest(
+        "[data-cya-panel]"
+      );
+
+    if (!button) {
+      return;
+    }
+
+    const panelName =
+      button.dataset.cyaPanel;
+
+    const drawer =
+      document.getElementById(
+        `cya-${panelName}-drawer`
+      );
+
+    if (!drawer) {
+      return;
+    }
+
+    const wasOpen =
+      drawer.classList.contains(
+        "is-open"
+      );
+
+    closeCyaDrawers();
+
+    if (!wasOpen) {
+
+      drawer.classList.add(
+        "is-open"
+      );
+
+      button.classList.add(
+        "is-active"
+      );
+    }
+  }
+);
+
+
+/* ============================================================
+   Populate Map / Log / Journal
+   ============================================================ */
+
+function hydrateCyaDrawers() {
+
+  const source =
+    document.getElementById(
+      "cya-drawer-source"
+    );
+
+  if (!source) {
+    return;
+  }
+
+
+  const map =
+    document.getElementById(
+      "cya-map-drawer"
+    );
+
+  const log =
+    document.getElementById(
+      "cya-log-drawer"
+    );
+
+  const journal =
+    document.getElementById(
+      "cya-journal-drawer"
+    );
+
+
+  const mapSource =
+    source.querySelector(
+      "[data-drawer-source='map']"
+    );
+
+  const logSource =
+    source.querySelector(
+      "[data-drawer-source='log']"
+    );
+
+  const journalSource =
+    source.querySelector(
+      "[data-drawer-source='journal']"
+    );
+
+
+  if (
+    map
+    && mapSource
+  ) {
+    map.innerHTML =
+      mapSource.innerHTML;
+  }
+
+
+  if (
+    log
+    && logSource
+  ) {
+    log.innerHTML =
+      logSource.innerHTML;
+  }
+
+
+  if (
+    journal
+    && journalSource
+  ) {
+    journal.innerHTML =
+      journalSource.innerHTML;
+  }
+}
+
+</script>
+</script>
+
+{% endblock %}
