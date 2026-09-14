@@ -1,76 +1,125 @@
 {% if team.selected_character %}
 
-  <section class="cya-character-selected">
+<section class="cya-intro-waiting">
 
-    <span class="app-kicker">
-      Your Team Chose
+  <div class="cya-intro-heading">
+
+    <span class="cya-section-kicker">
+      Character Confirmed
     </span>
 
-    <h2>
-      {{ team.selected_character.name }}
-    </h2>
-    {% if team.selected_character.portrait_image %}
-    <div class="cya-character-portrait">
-        <img
-        src="{{ team.selected_character.portrait_image.url }}"
-        alt="{{ team.selected_character.name }} portrait"
-        >
-    </div>
-    {% endif %}
+    <p>
+      You are playing as
+      <strong>
+        {{ team.selected_character.name }}
+      </strong>.
+    </p>
 
-    {% if team.selected_character.role %}
-      <strong class="cya-character-role">
-        {{ team.selected_character.role }}
-      </strong>
-    {% endif %}
-
-    {% if team.selected_character.description %}
-      <p>
-        {{ team.selected_character.description }}
-      </p>
-    {% endif %}
+  </div>
 
 
-    {% if team.selected_character.perspective %}
+  <div
+    class="cya-intro-flip"
+    data-intro-card
+  >
 
-      <div class="cya-character-perspective">
+    <div class="cya-intro-flip-inner">
 
-        <span class="app-kicker">
-          Your Perspective
+      {# ===================================================== #}
+      {# FRONT — STORY COVER                                   #}
+      {# ===================================================== #}
+
+      <section class="cya-intro-face cya-intro-front">
+
+        {% if story.cover_image %}
+
+          <img
+            src="{{ story.cover_image.url }}"
+            alt="{{ story.title }} cover"
+          >
+
+        {% else %}
+
+          <div class="cya-intro-cover-fallback">
+
+            <span>
+              Storyspark
+            </span>
+
+            <h2>
+              {{ story.title }}
+            </h2>
+
+          </div>
+
+        {% endif %}
+
+
+        <div class="cya-intro-cover-overlay">
+
+          <span>
+            Your adventure is about to begin.
+          </span>
+
+          <button
+            type="button"
+            class="cya-intro-flip-button"
+            data-intro-flip
+          >
+            Read Story Introduction →
+          </button>
+
+        </div>
+
+      </section>
+
+
+      {# ===================================================== #}
+      {# BACK — STORY INTRODUCTION                             #}
+      {# ===================================================== #}
+
+      <section class="cya-intro-face cya-intro-back">
+
+        <span class="cya-section-kicker">
+          Mission Briefing
         </span>
 
-        <p>
-          {{ team.selected_character.perspective }}
-        </p>
-
-      </div>
-
-    {% endif %}
+        <h2>
+          {{ story.title }}
+        </h2>
 
 
-    {% if team.character_selected_by %}
+        <div class="cya-intro-story-text">
 
-      <p class="app-muted-text">
-        Confirmed by
-        {{ team.character_selected_by.display_name }}
-      </p>
+          {{ story.introduction|linebreaks }}
 
-    {% endif %}
+        </div>
 
 
-    <div class="cya-character-waiting">
+        <div class="cya-intro-wait-status">
 
-      <strong>
-        Character confirmed
-      </strong>
+          <span class="cya-intro-pulse"></span>
 
-      <p>
-        Wait for the teacher to begin the adventure.
-      </p>
+          Waiting for the teacher to start the adventure...
+
+        </div>
+
+
+        <button
+          type="button"
+          class="cya-intro-back-button"
+          data-intro-flip
+        >
+          ← View Cover
+        </button>
+
+      </section>
 
     </div>
 
-  </section>
+  </div>
+
+</section>
 
 
 {% else %}

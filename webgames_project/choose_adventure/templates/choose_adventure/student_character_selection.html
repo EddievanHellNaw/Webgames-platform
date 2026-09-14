@@ -1,12 +1,19 @@
 {% extends "base.html" %}
+{% load static %}
 
 {% block title %}
 Choose Your Character · {{ story.title }}
 {% endblock %}
 
 {% block content %}
+<link
+  rel="stylesheet"
+  href="{% static 'choose_adventure/css/adventure-game.css' %}"
+>
 
 <section class="cya-character-page">
+
+  {% if not team.selected_character %}
 
   <header class="cya-character-header">
 
@@ -38,11 +45,13 @@ Choose Your Character · {{ story.title }}
       {% for membership in team_members %}
 
         <span class="cya-member-pill">
+
           {{ membership.participant.display_name }}
 
           {% if membership.participant.id == participant.id %}
             · You
           {% endif %}
+
         </span>
 
       {% endfor %}
@@ -50,6 +59,8 @@ Choose Your Character · {{ story.title }}
     </div>
 
   </section>
+
+{% endif %}
 
 
   <section
@@ -110,5 +121,122 @@ Choose Your Character · {{ story.title }}
 }
 
 </style>
+
+<script>
+
+/* ============================================================
+   STORY INTRO FLIP
+   ============================================================ */
+
+document.addEventListener(
+  "click",
+  function (event) {
+
+    const button =
+      event.target.closest(
+        "[data-intro-flip]"
+      );
+
+    if (!button) {
+      return;
+    }
+
+
+    const card =
+      button.closest(
+        "[data-intro-card]"
+      );
+
+    if (!card) {
+      return;
+    }
+
+
+    const panel =
+      document.getElementById(
+        "character-selection-panel"
+      );
+
+
+    const willBeFlipped =
+      !card.classList.contains(
+        "is-flipped"
+      );
+
+
+    card.classList.toggle(
+      "is-flipped"
+    );
+
+
+    /*
+     * Save the state outside the HTMX replacement.
+     */
+    if (panel) {
+
+      panel.dataset.introFlipped =
+        willBeFlipped
+          ? "true"
+          : "false";
+
+    }
+
+  }
+);
+
+
+/* ============================================================
+   RESTORE FLIP AFTER HTMX POLLING
+   ============================================================ */
+
+document.body.addEventListener(
+  "htmx:afterSwap",
+  function (event) {
+
+    const panel =
+      document.getElementById(
+        "character-selection-panel"
+      );
+
+
+    if (!panel) {
+      return;
+    }
+
+
+    if (
+      event.detail.target
+      !== panel
+    ) {
+      return;
+    }
+
+
+    const card =
+      panel.querySelector(
+        "[data-intro-card]"
+      );
+
+
+    if (!card) {
+      return;
+    }
+
+
+    if (
+      panel.dataset.introFlipped
+      === "true"
+    ) {
+
+      card.classList.add(
+        "is-flipped"
+      );
+
+    }
+
+  }
+);
+
+</script>
 
 {% endblock %}
