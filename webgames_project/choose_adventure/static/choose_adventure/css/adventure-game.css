@@ -1783,6 +1783,11 @@
     );
 }
 
+.cya-intro-back {
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
+}
+
 
 .cya-intro-back h2 {
   margin:
