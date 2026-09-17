@@ -668,6 +668,30 @@
     margin-bottom: 0.45rem;
 }
 
+.role-information {
+    line-height: 1.7;
+}
+
+.role-information br {
+    display: block;
+    content: "";
+    margin-bottom: 0.3rem;
+}
+
+.rp-required {
+    display: inline-block;
+    margin-left: 0.4rem;
+    color: #ffb4b4;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.rp-mission-text br {
+    display: block;
+    content: "";
+    margin-bottom: 0.35rem;
+}
+
 </style>
 
 
@@ -723,7 +747,7 @@
                 </div>
 
                 <div class="rp-mission-text">
-                    {{ role.objective }}
+                    {{ role.objective|linebreaksbr }}
                 </div>
 
             </article>
@@ -784,7 +808,7 @@
                     </h2>
 
                     <div class="rp-section-text">
-                        {{ role.private_briefing }}
+                        {{ role.private_briefing|linebreaksbr }}
                     </div>
 
                 </div>
@@ -907,13 +931,12 @@
                 <div class="rp-report-intro">
 
                     <strong>
-                        Your Mission
+                        Report Instructions
                     </strong>
 
-                    {{ role.objective }}
+                    {{ report_template.instructions|linebreaksbr }}
 
                 </div>
-
 
                 {% if submission.is_submitted %}
 
@@ -949,8 +972,13 @@
 
                             <label for="field_{{ item.field.id }}">
                                 {{ item.field.label }}
-                            </label>
 
+                                {% if item.field.required %}
+                                    <span class="rp-required">
+                                        Required
+                                    </span>
+                                {% endif %}
+                            </label>
 
                             {% if item.field.help_text %}
 

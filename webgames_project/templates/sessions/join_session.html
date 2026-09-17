@@ -1,103 +1,134 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block game_theme_css %}
-  {% if session.game_template.code == "FANTASY_ROLES" %}
-    <link rel="stylesheet" href="{% static 'fantasy_roles/css/fantasy-theme.css' %}">
-  {% endif %}
-{% endblock %}
 {% block title %}Join Session · {{ session.title }}{% endblock %}
 
 {% block content %}
-<section class="fr-join-page">
-  <section class="fr-join-hero">
-    <span class="fr-kicker">Enter the Portal</span>
+<section class="session-shell session-join-page">
+  <header class="session-hero session-hero-compact">
+    <div class="session-hero-copy">
+      {% if rejoin_only %}
+        <span class="session-kicker">Return to Activity</span>
+        <h1>Rejoin the Game</h1>
+        <p class="session-lead">
+          This session is already active. Enter the same Student ID you used before.
+        </p>
+      {% else %}
+        <span class="session-kicker">Student Access</span>
+        <h1>Join the Game</h1>
+        <p class="session-lead">
+          You are joining <strong>{{ session.title }}</strong>.
+        </p>
+      {% endif %}
 
-    <h1>Join the Game</h1>
-
-    <p>
-      You are about to join
-      <strong>{{ session.title }}</strong>.
-      Write your name carefully. This is how your teacher and party members
-      will see you during the session.
-    </p>
-
-    <div class="fr-status-row">
-      <span class="fr-status-pill">
-        {{ session.game_template.title }}
-      </span>
-
-      <span class="fr-status-pill">
-        Code: {{ session.join_code }}
-      </span>
-
-      <span class="fr-status-pill">
-        {{ session.get_status_display }}
-      </span>
+      <div class="session-chip-row">
+        <span class="session-chip">{{ session.game_template.title }}</span>
+        <span class="session-chip">Code: {{ session.join_code }}</span>
+        <span class="session-chip session-chip-status session-chip-status-{{ session.status|lower }}">
+          {{ session.get_status_display }}
+        </span>
+      </div>
     </div>
-  </section>
+  </header>
 
-  <section class="fr-join-grid">
-    <article class="fr-form-card fr-join-form-card">
-      <div class="fr-panel-heading">
-        <span class="fr-kicker">Student Access</span>
-        <strong>Your Information</strong>
+  <div class="session-join-grid">
+    <article class="session-panel session-form-card">
+      <div class="session-panel-heading">
+        <div>
+          <span class="session-kicker">
+            {% if rejoin_only %}Return to Activity{% else %}Your Information{% endif %}
+          </span>
+          <h2>
+            {% if rejoin_only %}Rejoin Session{% else %}Ready to Play?{% endif %}
+          </h2>
+        </div>
       </div>
 
-      {% if session.status == "LOBBY" %}
-        <form method="post">
+      {% if join_error %}
+        <div class="session-alert" role="alert">
+          {{ join_error }}
+        </div>
+      {% endif %}
+
+      {% if not join_closed %}
+        <form method="post" class="session-form">
           {% csrf_token %}
 
-          <div>
-            <label for="display_name">Adventurer name</label>
-            <input
-              type="text"
-              id="display_name"
-              name="display_name"
-              placeholder="Example: Eddie"
-              autocomplete="name"
-              required
-            >
-          </div>
+          {% if rejoin_only %}
+            <p class="session-muted">
+              Use the same Student ID you entered when you first joined.
+            </p>
 
-          <div>
-            <label for="student_id">Student ID</label>
-            <input
-              type="text"
-              id="student_id"
-              name="student_id"
-              placeholder="Optional"
-              inputmode="numeric"
-            >
-          </div>
+            <div class="session-field">
+              <label for="student_id">Student ID</label>
+              <input
+                type="text"
+                id="student_id"
+                name="student_id"
+                placeholder="Enter your Student ID"
+                inputmode="numeric"
+                autocomplete="off"
+                required
+              >
+            </div>
 
-          <button class="fr-btn fr-btn-primary" type="submit">
-            Join Session
-          </button>
+            <button class="session-btn session-btn-primary session-btn-wide" type="submit">
+              Rejoin Activity
+            </button>
+          {% else %}
+            <div class="session-field">
+              <label for="display_name">Your name</label>
+              <input
+                type="text"
+                id="display_name"
+                name="display_name"
+                placeholder="Example: Eddie"
+                autocomplete="name"
+                required
+              >
+            </div>
+
+            <div class="session-field">
+              <label for="student_id">Student ID</label>
+              <input
+                type="text"
+                id="student_id"
+                name="student_id"
+                placeholder="Recommended"
+                inputmode="numeric"
+              >
+              <small>
+                Your Student ID lets you return to the same activity if you disconnect.
+              </small>
+            </div>
+
+            <button class="session-btn session-btn-primary session-btn-wide" type="submit">
+              Join Session
+            </button>
+          {% endif %}
         </form>
       {% else %}
-        <p class="fr-muted-text">
-          This session is no longer accepting new students from the lobby.
+        <p class="session-muted">
+          This session is no longer available.
         </p>
-
-        <a class="fr-btn fr-btn-secondary" href="{% url 'games:teacher_dashboard' %}">
-          Return
-        </a>
       {% endif %}
     </article>
 
-    <article class="fr-panel fr-join-info-card">
-      <div class="fr-join-emblem">◆</div>
+    <aside class="session-panel session-join-info-card">
+      <div class="session-join-emblem" aria-hidden="true">◆</div>
+      <span class="session-kicker">Session Code</span>
+      <strong class="session-big-code">{{ session.join_code }}</strong>
 
-      <span class="fr-kicker">Session Code</span>
-
-      <strong>{{ session.join_code }}</strong>
-
-      <p>
-        Stay on the waiting screen after joining. Your teacher will start the
-        activity when everyone is ready.
-      </p>
-    </article>
-  </section>
+      {% if rejoin_only %}
+        <p class="session-muted">
+          You will return to the same role, team, character, or activity state assigned earlier.
+        </p>
+      {% else %}
+        <p class="session-muted">
+          After joining, stay on the waiting screen. The activity will open automatically when your teacher starts it.
+        </p>
+      {% endif %}
+    </aside>
+  </div>
 </section>
 {% endblock %}

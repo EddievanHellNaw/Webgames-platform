@@ -7,7 +7,7 @@ import qrcode
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.db import transaction
-from django.http import JsonResponse
+from django.http import HttpResponse, JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
@@ -92,6 +92,44 @@ def create_session(request, game_id):
     return redirect(
         "sessions:teacher_lobby",
         join_code=session.join_code,
+    )
+
+@login_required
+def session_qr_code(request, join_code):
+    session = get_object_or_404(
+        GameSession,
+        join_code=join_code,
+        teacher=request.user,
+    )
+
+    join_url = request.build_absolute_uri(
+        reverse(
+            "sessions:join_session",
+            args=[session.join_code],
+        )
+    )
+
+    qr = qrcode.QRCode(
+        version=None,
+        error_correction=qrcode.constants.ERROR_CORRECT_M,
+        box_size=10,
+        border=4,
+    )
+
+    qr.add_data(join_url)
+    qr.make(fit=True)
+
+    image = qr.make_image(
+        fill_color="black",
+        back_color="white",
+    )
+
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+
+    return HttpResponse(
+        buffer.getvalue(),
+        content_type="image/png",
     )
 
 @login_required
@@ -386,44 +424,61 @@ def join_session(request, join_code):
 
     join_error = None
 
-    # Once the game starts, the roster is locked.
-    if session.status != GameSession.Status.LOBBY:
-        join_error = "This game has already started."
+    # ============================================================
+    # 1. ENDED SESSION
+    # ============================================================
+    # Once a session has explicitly ended, nobody should be able
+    # to join or rejoin it.
+    # ============================================================
 
+    if session.status == GameSession.Status.ENDED:
         return render(
             request,
             "sessions/join_session.html",
             {
                 "session": session,
-                "join_error": join_error,
+                "join_error": "This session has ended.",
                 "join_closed": True,
+                "rejoin_only": False,
             },
         )
 
-    # -----------------------------------------------
-    # ROLE PLAY CAPACITY
-    # -----------------------------------------------
+    # ============================================================
+    # 2. CHECK BROWSER SESSION
+    # ============================================================
+    # If this browser already belongs to a participant in this
+    # GameSession, send them straight back into the session.
+    #
+    # This handles the normal case where a student:
+    # - closes the tab
+    # - closes the browser
+    # - loses connection
+    # - scans the QR code again
+    # ============================================================
 
-    if session.game_template.code == GameTemplate.GameCode.ROLE_PLAY:
+    participant_id = request.session.get("participant_id")
 
-        try:
-            run = session.roleplay_run
+    if participant_id:
+        existing_browser_participant = (
+            Participant.objects
+            .filter(
+                id=participant_id,
+                session=session,
+            )
+            .first()
+        )
 
-            role_capacity = run.situation.total_role_slots
-            participant_count = session.participants.count()
-
-            if participant_count >= role_capacity:
-                join_error = (
-                    "All available roles for this situation "
-                    "have already been claimed."
-                )
-
-        except RolePlayRun.DoesNotExist:
-            join_error = (
-                "This Role Play session is not configured correctly."
+        if existing_browser_participant:
+            return redirect(
+                "sessions:student_waiting_room",
+                join_code=session.join_code,
             )
 
-    if request.method == "POST" and not join_error:
+    # ============================================================
+    # 3. PROCESS STUDENT ENTRY / RE-ENTRY
+    # ============================================================
+
+    if request.method == "POST":
 
         display_name = request.POST.get(
             "display_name",
@@ -435,22 +490,121 @@ def join_session(request, join_code):
             "",
         ).strip()
 
-        if display_name:
+        # --------------------------------------------------------
+        # Try to recover an existing participant by Student ID.
+        # --------------------------------------------------------
+        #
+        # This is the fallback when the browser no longer has the
+        # participant_id cookie/session information.
+        # --------------------------------------------------------
 
-            participant = Participant.objects.create(
-                session=session,
-                display_name=display_name,
-                student_id=student_id,
+        existing_participant = None
+
+        if student_id:
+            existing_participant = (
+                Participant.objects
+                .filter(
+                    session=session,
+                    student_id=student_id,
+                )
+                .first()
             )
 
-            request.session["participant_id"] = participant.id
+        if existing_participant:
+
+            request.session["participant_id"] = existing_participant.id
+            request.session.modified = True
 
             return redirect(
                 "sessions:student_waiting_room",
                 join_code=session.join_code,
             )
 
-        join_error = "Please enter your name."
+        # ========================================================
+        # ACTIVE SESSION
+        # ========================================================
+        # The roster is locked after Start.
+        #
+        # Existing students may rejoin.
+        # Brand-new participants may NOT be created.
+        # ========================================================
+
+        if session.status == GameSession.Status.ACTIVE:
+
+            if not student_id:
+                join_error = (
+                    "This activity has already started. "
+                    "Enter the same Student ID you used when you joined "
+                    "to return to your activity."
+                )
+            else:
+                join_error = (
+                    "We could not find a participant with that Student ID "
+                    "in this session. Check the ID and try again."
+                )
+
+        # ========================================================
+        # LOBBY SESSION
+        # ========================================================
+
+        elif session.status == GameSession.Status.LOBBY:
+
+            if not display_name:
+                join_error = "Please enter your name."
+
+            # ----------------------------------------------------
+            # ROLE PLAY CAPACITY
+            # ----------------------------------------------------
+
+            elif (
+                session.game_template.code
+                == GameTemplate.GameCode.ROLE_PLAY
+            ):
+
+                try:
+                    run = session.roleplay_run
+
+                    role_capacity = run.situation.total_role_slots
+                    participant_count = session.participants.count()
+
+                    if participant_count >= role_capacity:
+                        join_error = (
+                            "All available roles for this situation "
+                            "have already been claimed."
+                        )
+
+                except RolePlayRun.DoesNotExist:
+                    join_error = (
+                        "This Role Play session is not configured correctly."
+                    )
+
+            # ----------------------------------------------------
+            # CREATE NEW PARTICIPANT
+            # ----------------------------------------------------
+
+            if not join_error:
+
+                participant = Participant.objects.create(
+                    session=session,
+                    display_name=display_name,
+                    student_id=student_id,
+                )
+
+                request.session["participant_id"] = participant.id
+                request.session.modified = True
+
+                return redirect(
+                    "sessions:student_waiting_room",
+                    join_code=session.join_code,
+                )
+
+    # ============================================================
+    # 4. DISPLAY JOIN / REJOIN SCREEN
+    # ============================================================
+
+    rejoin_only = (
+        session.status == GameSession.Status.ACTIVE
+    )
 
     return render(
         request,
@@ -458,10 +612,10 @@ def join_session(request, join_code):
         {
             "session": session,
             "join_error": join_error,
-            "join_closed": bool(join_error),
+            "join_closed": False,
+            "rejoin_only": rejoin_only,
         },
     )
-
 
 def student_waiting_room(request, join_code):
     session = get_object_or_404(GameSession, join_code=join_code)

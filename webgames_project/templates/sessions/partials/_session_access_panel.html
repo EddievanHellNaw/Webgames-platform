@@ -1,0 +1,146 @@
+<div class="session-access-widget" data-session-access-widget>
+  <button
+    type="button"
+    class="session-access-fab"
+    data-session-access-open
+    aria-haspopup="dialog"
+    aria-controls="session-access-dialog-{{ session.join_code }}"
+    title="Show student QR code"
+  >
+    <span class="session-access-fab-icon" aria-hidden="true">▦</span>
+    <span class="session-access-fab-label">Student access</span>
+  </button>
+
+  <dialog
+    class="session-access-dialog"
+    id="session-access-dialog-{{ session.join_code }}"
+    aria-labelledby="session-access-title-{{ session.join_code }}"
+  >
+    <div class="session-access-dialog-card">
+      <header class="session-access-dialog-header">
+        <div>
+          <span class="session-kicker">Student Access</span>
+          <h2 id="session-access-title-{{ session.join_code }}">
+            Join or Rejoin
+          </h2>
+        </div>
+
+        <button
+          type="button"
+          class="session-icon-btn"
+          data-session-access-close
+          aria-label="Close student access panel"
+        >
+          ×
+        </button>
+      </header>
+
+      <div class="session-access-dialog-grid">
+        <div class="session-qr-frame session-qr-frame-large">
+          <img
+            src="{% url 'sessions:session_qr_code' session.join_code %}"
+            alt="QR code to join {{ session.title }}"
+          >
+        </div>
+
+        <div class="session-access-details">
+          <div class="session-access-code-block">
+            <span class="session-kicker">Join Code</span>
+            <strong>{{ session.join_code }}</strong>
+          </div>
+
+          <div class="session-chip-row">
+            <span class="session-chip">
+              {{ session.game_template.title }}
+            </span>
+
+            <span class="session-chip session-chip-status session-chip-status-{{ session.status|lower }}">
+              {{ session.get_status_display }}
+            </span>
+          </div>
+
+          {% if session.status == "ACTIVE" %}
+            <p class="session-muted">
+              The activity is already running. Students who joined earlier can
+              scan this QR code and return to their activity.
+            </p>
+          {% else %}
+            <p class="session-muted">
+              Students can scan this QR code to join the session.
+            </p>
+          {% endif %}
+
+          <button
+            type="button"
+            class="session-btn session-btn-primary"
+            data-session-copy-link
+            data-join-path="{% url 'sessions:join_session' session.join_code %}"
+          >
+            Copy join link
+          </button>
+
+          <span
+            class="session-copy-feedback"
+            data-session-copy-feedback
+            role="status"
+            aria-live="polite"
+          ></span>
+        </div>
+      </div>
+    </div>
+  </dialog>
+</div>
+
+<script>
+(() => {
+  const widget = document.currentScript.previousElementSibling;
+
+  if (!widget || !widget.matches("[data-session-access-widget]")) {
+    return;
+  }
+
+  const openButton = widget.querySelector("[data-session-access-open]");
+  const dialog = widget.querySelector(".session-access-dialog");
+  const closeButton = widget.querySelector("[data-session-access-close]");
+  const copyButton = widget.querySelector("[data-session-copy-link]");
+  const copyFeedback = widget.querySelector("[data-session-copy-feedback]");
+
+  if (openButton && dialog) {
+    openButton.addEventListener("click", () => {
+      if (typeof dialog.showModal === "function") {
+        dialog.showModal();
+      } else {
+        dialog.setAttribute("open", "");
+      }
+    });
+  }
+
+  if (closeButton && dialog) {
+    closeButton.addEventListener("click", () => {
+      dialog.close();
+    });
+  }
+
+  if (dialog) {
+    dialog.addEventListener("click", (event) => {
+      if (event.target === dialog) {
+        dialog.close();
+      }
+    });
+  }
+
+  if (copyButton) {
+    copyButton.addEventListener("click", async () => {
+      const joinPath = copyButton.dataset.joinPath;
+      const joinUrl = new URL(joinPath, window.location.origin).href;
+
+      try {
+        await navigator.clipboard.writeText(joinUrl);
+        copyFeedback.textContent = "Join link copied.";
+      } catch (error) {
+        copyFeedback.textContent = joinUrl;
+      }
+    });
+  }
+})();
+</script>
