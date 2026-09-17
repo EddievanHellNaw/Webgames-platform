@@ -103,4 +103,92 @@ Adventure Log · {{ adventure_run.story.title }}
 
 </style>
 
+<script>
+
+/* ============================================================
+   Keep teacher monitor sections open during HTMX refreshes
+   ============================================================ */
+
+window.cyaMonitorOpenSections =
+  window.cyaMonitorOpenSections || new Set();
+
+
+/*
+ * <details> fires a toggle event when the teacher
+ * opens or closes it.
+ *
+ * We save only the small key, not the content.
+ */
+document.addEventListener(
+  "toggle",
+  function (event) {
+
+    const details =
+      event.target.closest?.(
+        "details[data-monitor-key]"
+      );
+
+    if (!details) {
+      return;
+    }
+
+    const key =
+      details.dataset.monitorKey;
+
+    if (details.open) {
+
+      window.cyaMonitorOpenSections.add(
+        key
+      );
+
+    } else {
+
+      window.cyaMonitorOpenSections.delete(
+        key
+      );
+
+    }
+
+  },
+  true
+);
+
+
+/*
+ * The monitor is replaced every few seconds.
+ * After HTMX renders the fresh HTML, reopen
+ * anything the teacher already had open.
+ */
+document.body.addEventListener(
+  "htmx:afterSwap",
+  function (event) {
+
+    if (
+      event.detail.target.id
+      !== "teacher-adventure-monitor-panel"
+    ) {
+      return;
+    }
+
+
+    document
+      .querySelectorAll(
+        "details[data-monitor-key]"
+      )
+      .forEach(
+        details => {
+
+          details.open =
+            window.cyaMonitorOpenSections.has(
+              details.dataset.monitorKey
+            );
+
+        }
+      );
+
+  }
+);
+
+</script>
+
 {% endblock %}

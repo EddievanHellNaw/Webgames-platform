@@ -35,7 +35,7 @@ class Command(BaseCommand):
                     "the station remembers starting Protocol Black.\n\n"
                     "If the crew cannot control the problem, people on "
                     "Orpheus and outside the station could be in danger.\n\n"
-                    "DISCUSS & DECIDE:\n"
+                    "TALK & ANSWER:\n"
                     "If you were on Orpheus, what would you do first?"
                 ),
                 "is_active": True,
@@ -156,7 +156,7 @@ class Command(BaseCommand):
                     "learn more, but the problem could get worse. If they "
                     "shut everything down, the station will be safer, but "
                     "they may lose important research.\n\n"
-                    "DISCUSS & DECIDE:\n"
+                    "TALK & CHOOSE:\n"
                     "What will happen if we shut down the laboratory? "
                     "What might happen if we keep it running?"
                 ),
@@ -168,17 +168,20 @@ class Command(BaseCommand):
             (
                 "emergency-power",
                 "Emergency Power",
-                (
-                    "Orpheus has lost most of its power. The crew can keep "
-                    "only two systems on: Containment, Life Support, "
-                    "Communications, or the Research Archive.\n\n"
-                    "If the crew gives power to two systems, the other two "
-                    "will turn off.\n\n"
-                    "DISCUSS & DECIDE:\n"
-                    "If we can save only two systems, which ones should we "
-                    "choose? What will happen if the others turn off?\n\n"
-                    "Try: \"If we power ___ and ___, we'll be able to ___, "
-                    "but we won't be able to ___.\""
+               (
+                    "A few minutes after the laboratory alarm, Orpheus loses most "
+                    "of its power.\n\n"
+
+                    "The crew can keep only two systems on: Containment, Life "
+                    "Support, Communications, or the Research Archive. The other "
+                    "two systems will use only emergency power.\n\n"
+
+                    "If the crew gives power to two systems, the other two will "
+                    "be harder to use.\n\n"
+
+                    "TALK & CHOOSE:\n"
+                    "If we can save only two systems, which ones should we choose? "
+                    "What will happen if the others lose power?"
                 ),
                 20,
                 False,
@@ -189,14 +192,18 @@ class Command(BaseCommand):
                 "missing-researcher",
                 "Missing Researcher",
                 (
-                    "Dr. Elias Voss may be trapped inside the closed area. "
-                    "His radio suddenly turns on:\n\n"
+                    "While the crew works with limited power, an emergency radio "
+                    "inside the closed area turns on. It has its own battery.\n\n"
+
+                    "Dr. Elias Voss says:\n\n"
                     "\"I'm alive. Open the door.\"\n\n"
-                    "Nobody knows if he is hurt, infected, or telling the "
-                    "truth.\n\n"
-                    "If the crew opens the door, they might save Voss, but "
-                    "the danger could spread.\n\n"
-                    "DISCUSS & DECIDE:\n"
+
+                    "Nobody knows if he is hurt, infected, or telling the truth.\n\n"
+
+                    "If the crew opens the door, they might save Voss, but the "
+                    "danger could spread.\n\n"
+
+                    "TALK & CHOOSE:\n"
                     "What will happen if we open the door?\n"
                     "If you were Dr. Voss, what would you want the crew to do?"
                 ),
@@ -209,15 +216,16 @@ class Command(BaseCommand):
                 "investigation-route",
                 "Investigation Route",
                 (
-                    "The crew does not have much time. They can check only "
-                    "one area first. Each place may give them a different "
-                    "answer.\n\n"
-                    "If the crew chooses the wrong place, they may lose time. "
-                    "If they choose well, they may learn what Protocol Black "
-                    "really is.\n\n"
-                    "DISCUSS & DECIDE:\n"
-                    "If we can check only one area, which place should we "
-                    "choose? What might happen if we choose the wrong one?"
+                    "After dealing with Voss, the crew still does not know what "
+                    "caused the emergency.\n\n"
+
+                    "They have time to check one area before they must make another "
+                    "important decision. Each area can show a different part of "
+                    "what happened on Orpheus.\n\n"
+
+                    "TALK & CHOOSE:\n"
+                    "If we can check only one area, which place should we choose? "
+                    "What do you think we will find there?"
                 ),
                 40,
                 False,
@@ -230,13 +238,15 @@ class Command(BaseCommand):
                 "research-archive",
                 "Research Archive",
                 (
+                    "The crew opens the Research Archive. Their choice gives them an "
+                    "important clue.\n\n"
                     "The archive shows that Orpheus has been studying a "
                     "strange signal from deep space. The signal repeats the "
                     "same patterns. Some scientists think it may be a message "
                     "from intelligent life.\n\n"
                     "If the signal is really a message, shutting it down may "
                     "end our chance to make contact.\n\n"
-                    "DISCUSS & DECIDE:\n"
+                    "TALK & ANSWER:\n"
                     "What would you do if the signal were a message from "
                     "another life-form?\n"
                     "What might happen if we keep studying it?"
@@ -250,6 +260,8 @@ class Command(BaseCommand):
                 "security-records",
                 "Security Records",
                 (
+                    "The crew checks the Security Records. Their choice reveals "
+                    "something the company tried to hide.\n\n"
                     "The security records show that Axiom Meridian secretly "
                     "controls Orpheus. The crew did not know that some of "
                     "their work was secret.\n\n"
@@ -257,7 +269,7 @@ class Command(BaseCommand):
                     "crew.\n\n"
                     "If Axiom is lying, following its orders could be "
                     "dangerous.\n\n"
-                    "DISCUSS & DECIDE:\n"
+                    "TALK & CHOOSE:\n"
                     "If your company lied to you, would you still follow its "
                     "orders? Why or why not?"
                 ),
@@ -270,11 +282,13 @@ class Command(BaseCommand):
                 "medical-laboratory",
                 "Medical Laboratory",
                 (
+                    "The crew checks the Medical Laboratory. Their choice reveals "
+                    "something dangerous about the experiments.\n\n"
                     "The medical records show tests on living samples and "
                     "human tissue. Some files are only a few hours old.\n\n"
                     "If these tests caused the problem, someone on the "
                     "station may already be infected.\n\n"
-                    "DISCUSS & DECIDE:\n"
+                    "TALK & CHOOSE:\n"
                     "What would you do if someone on the crew were infected?\n"
                     "What might happen if we tell everybody now?"
                 ),
@@ -288,18 +302,26 @@ class Command(BaseCommand):
                 "headquarters-responds",
                 "Headquarters Responds",
                 (
-                    "Contact with Axiom Meridian suddenly returns. The company "
-                    "sends an order:\n\n"
+                    "Before the crew can investigate another area, the station AI "
+                    "receives an emergency message from Axiom Meridian.\n\n"
+
+                    "Axiom can send this message through the station's emergency "
+                    "system even if normal Communications have no power.\n\n"
+
+                    "The company orders:\n\n"
                     "\"Destroy all samples. Delete all research. "
                     "Do not leave the station.\"\n\n"
+
                     "Axiom says the crew must follow the order.\n\n"
-                    "If the crew obeys, the station may be safer, but they "
-                    "will lose important information. If they refuse, they "
-                    "can keep the information, but Axiom may stop helping.\n\n"
-                    "DISCUSS & DECIDE:\n"
+
+                    "If the crew obeys, they may reduce the danger, but they will "
+                    "lose important information. If they refuse, they can keep what "
+                    "they learned, but Axiom may stop helping them.\n\n"
+
+                    "TALK & CHOOSE:\n"
                     "What will happen if we obey Axiom?\n"
-                    "If you were responsible for the crew, would you trust "
-                    "the company? Why or why not?"
+                    "If you were responsible for the crew, would you trust the "
+                    "company? Why or why not?"
                 ),
                 50,
                 False,
@@ -325,15 +347,16 @@ class Command(BaseCommand):
                 "the-signal",
                 "The Signal",
                 (
+                    "The clues from the crew's investigation finally connect.\n"
                     "The crew learns the truth. Nothing physical escaped. The "
                     "signal itself is intelligent, and it is trying to "
                     "communicate through Orpheus's computers.\n\n"
                     "If the crew shuts it down, they may protect people, but "
                     "they may also end contact with a new intelligent "
                     "life-form.\n\n"
-                    "DISCUSS & DECIDE:\n"
-                    "If you were the first person to talk to an alien "
-                    "intelligence, what would you do?\n"
+                    "TALK & ANSWER:\n"
+                    "If you were the first person to talk to an alien, "
+                    "what would you do?\n"
                     "What will happen if we let the signal continue?"
                 ),
                 61,
@@ -345,20 +368,22 @@ class Command(BaseCommand):
                 "the-ghost-system",
                 "The Ghost System",
                 (
-                    "The crew learns that Protocol Black is not really an "
-                    "emergency system. It is a computer system made by Axiom "
-                    "Meridian to hide secret research.\n\n"
-                    "It can destroy the research, delete information, and "
-                    "stop people who know the truth from leaving Orpheus.\n\n"
-                    "If Protocol Black finishes its job, it will remove the "
-                    "research and stop the crew from telling anyone.\n\n"
-                    "DISCUSS & DECIDE:\n"
-                    "If the station computer were trying to stop you, what "
-                    "would you do first?\n"
-                    "What will happen if Protocol Black controls the whole "
-                    "station?"
+                    "The clues from the crew's investigation finally connect.\n\n"
+
+                    "Protocol Black is not only an emergency system. Axiom Meridian "
+                    "created it to hide dangerous secret research.\n\n"
+
+                    "It can delete information, stop witnesses from leaving, and, "
+                    "if Axiom loses control of the situation, destroy Orpheus.\n\n"
+
+                    "The crew now understands that Protocol Black may be protecting "
+                    "Axiom as much as it is protecting people.\n\n"
+
+                    "TALK & ANSWER:\n"
+                    "If a company used a system like this, would you trust it?\n"
+                    "What will happen if Protocol Black controls the whole station?"
                 ),
-                62,
+                                62,
                 False,
                 "STORY",
                 "CHOICE",
@@ -367,13 +392,14 @@ class Command(BaseCommand):
                 "mimic-protocol",
                 "Mimic Protocol",
                 (
+                    "The clues from the crew's investigation finally connect."
                     "The life-form can copy human cells and voices. Now the "
                     "crew learns that it may be able to copy memories too.\n\n"
                     "A copy may really believe that it is the original "
                     "person. Elias Voss may or may not be the real Voss.\n\n"
                     "If the life-form can copy memories, the crew cannot know "
                     "who is human just by looking.\n\n"
-                    "DISCUSS & DECIDE:\n"
+                    "TALK & CHOOSE:\n"
                     "If someone looked and acted exactly like your friend, "
                     "but might be a copy, would you trust them?\n"
                     "What might happen if a copy left Orpheus?"
@@ -388,15 +414,21 @@ class Command(BaseCommand):
                 "someone-compromised",
                 "Someone Is Compromised",
                 (
-                    "The crew thinks one person may not be safe to trust. The "
-                    "person may be talking to the signal, working for Axiom, "
-                    "or infected by the life-form.\n\n"
-                    "If the crew keeps an innocent person alone, they will "
-                    "lose useful help. If they trust the wrong person, "
-                    "everyone could be in danger.\n\n"
-                    "DISCUSS & DECIDE:\n"
-                    "If you were infected or controlled, would you know it?\n"
-                    "What would you do if your best friend were the suspect?"
+                    "The new evidence creates another problem.\n\n"
+
+                    "The station AI finds unusual activity connected to one crew "
+                    "member. Because of what the crew has just learned, they cannot "
+                    "be sure this person is safe to trust.\n\n"
+
+                    "The person says they are innocent and wants to keep helping.\n\n"
+
+                    "If the crew isolates an innocent person, they will lose useful "
+                    "help. If they trust the wrong person, everyone could be in "
+                    "danger.\n\n"
+
+                    "TALK & CHOOSE:\n"
+                    "What would you do if someone on your team might be dangerous?\n"
+                    "Would you trust them? Why or why not?"
                 ),
                 70,
                 False,
@@ -407,14 +439,22 @@ class Command(BaseCommand):
                 "evacuation-window",
                 "Evacuation Window",
                 (
-                    "A rescue ship can come to Orpheus only once.\n\n"
-                    "Opening the station could let the danger out. If people "
-                    "leave, the danger might leave with them. If nobody "
-                    "leaves, the crew may lose its only chance to escape.\n\n"
-                    "DISCUSS & DECIDE:\n"
+                    "The station's automatic emergency signal has reached a rescue "
+                    "ship. The ship can reach Orpheus once, but it is still several "
+                    "minutes away.\n\n"
+
+                    "The crew must decide who will leave when it arrives.\n\n"
+
+                    "Opening Orpheus could let the danger escape. If people leave, "
+                    "the danger might leave with them. If nobody leaves, the crew "
+                    "may lose its only chance to escape.\n\n"
+
+                    "No one has left the station yet.\n\n"
+
+                    "TALK & CHOOSE:\n"
                     "What will happen if we send people to the rescue ship?\n"
-                    "If you could save the crew or the research, which would "
-                    "you choose? Why?"
+                    "If you could save the crew or the research, which would you "
+                    "choose? Why?"
                 ),
                 80,
                 False,
@@ -425,19 +465,25 @@ class Command(BaseCommand):
                 "protocol-black",
                 "Protocol Black",
                 (
-                    "The crew finally finds the original rule for Protocol "
-                    "Black:\n\n"
-                    "\"If we cannot control the danger, Orpheus must be "
-                    "destroyed.\"\n\n"
-                    "The station can destroy itself. It is waiting for a "
-                    "final command.\n\n"
-                    "If Orpheus is destroyed, the danger will probably end "
-                    "here. If Protocol Black is stopped, the crew may live, "
-                    "but the danger may continue too.\n\n"
-                    "DISCUSS & DECIDE:\n"
+                    "While the rescue ship approaches, the station AI unlocks the "
+                    "last part of Protocol Black.\n\n"
+
+                    "The original rule says:\n\n"
+
+                    "\"If we cannot control the danger, Orpheus must be destroyed.\"\n\n"
+
+                    "The station can destroy itself. The crew must give the final "
+                    "command before the rescue ship arrives.\n\n"
+
+                    "Everything they chose before this moment now matters.\n\n"
+
+                    "If Orpheus is destroyed, the danger will probably end here. "
+                    "If Protocol Black is stopped, the crew may survive, but the "
+                    "danger may continue too.\n\n"
+
+                    "TALK & CHOOSE:\n"
                     "What will happen if we start Protocol Black?\n"
-                    "If you were responsible for Orpheus and Earth, what "
-                    "would you do?"
+                    "If you were responsible for Orpheus and Earth, what would you do?"
                 ),
                 90,
                 False,
@@ -477,6 +523,7 @@ class Command(BaseCommand):
                 "ending-no-one-left-behind",
                 "No One Left Behind",
                 (
+                    "The evacuation plan works.\n"
                     "Everyone leaves Orpheus safely. Much of the research, "
                     "and maybe the station itself, is lost. The crew chose "
                     "people over research.\n\n"
@@ -493,6 +540,7 @@ class Command(BaseCommand):
                 "ending-first-contact",
                 "First Contact",
                 (
+                    "Because the crew kept studying the signal instead of destroying it, they finally understand it.\n"
                     "The crew learns that the signal is intelligent and chooses "
                     "to communicate with it. People on Earth receive the "
                     "first clear message from another intelligent life-form.\n\n"
@@ -509,6 +557,7 @@ class Command(BaseCommand):
                 "ending-whistleblowers",
                 "The Whistleblowers",
                 (
+                    "The information the crew sent outside Orpheus reaches the public.\n"
                     "The crew survives and sends proof of Axiom Meridian's "
                     "secret work to the public. Axiom cannot hide the truth "
                     "anymore.\n\n"
@@ -523,7 +572,7 @@ class Command(BaseCommand):
             (
                 "ending-we-brought-it-back",
                 "We Brought It Back",
-                (
+                (   "The evacuation plan works...\nbut the danger leaves Orpheus too.\n"
                     "The rescue works, and everyone seems safe. Later, at the "
                     "rescue base, someone says a sentence that only Elias "
                     "Voss should know.\n\n"
@@ -540,7 +589,9 @@ class Command(BaseCommand):
                 "ending-necessary-sacrifice",
                 "Necessary Sacrifice",
                 (
-                    "Orpheus is destroyed, and the danger is stopped. Axiom's "
+                    "The crew starts Protocol Black.\n Orpheus is destroyed "
+                    "with the crew still inside the station.\n"
+                    "The danger is stopped. Axiom's "
                     "final report says the crew was a necessary loss.\n\n"
                     "FINAL REFLECTION:\n"
                     "If you knew the final cost before choosing, would you "
@@ -555,6 +606,7 @@ class Command(BaseCommand):
                 "ending-protocol-zero",
                 "Protocol Zero",
                 (
+                    "The crew runs out of time and loses control of Orpheus.\n"
                     "The crew loses control of the problem. The station begins "
                     "to fail, and the danger is not stopped.\n\n"
                     "The final message says:\n"

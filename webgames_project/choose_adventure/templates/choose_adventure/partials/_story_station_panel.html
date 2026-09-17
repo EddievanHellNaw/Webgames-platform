@@ -95,7 +95,7 @@
       <section class="cya-learning-response cya-final-response">
 
         <span class="cya-section-kicker">
-            Final Reflection
+            Final Answer
         </span>
 
         <p class="cya-learning-help">
@@ -133,7 +133,7 @@
                 class="cya-save-response"
                 type="submit"
             >
-                Submit Final Reflection
+                Submit Final Answer
             </button>
 
 
@@ -303,7 +303,7 @@
       <article class="cya-station-card">
 
         <span class="cya-section-kicker">
-          Story Station
+          Story
         </span>
 
         <h2>
@@ -318,58 +318,6 @@
 
       </article>
 
-
-      <aside class="cya-character-mini">
-
-        {% if team.selected_character.portrait_image %}
-
-          <div class="cya-character-mini-image">
-
-            <img
-              src="{{ team.selected_character.portrait_image.url }}"
-              alt="{{ team.selected_character.name }}"
-            >
-
-          </div>
-
-        {% endif %}
-
-
-        <div class="cya-character-mini-info">
-
-          <span class="cya-section-kicker">
-            Your Character
-          </span>
-
-          <h3>
-            {{ team.selected_character.name }}
-          </h3>
-
-
-          {% if team.selected_character.role %}
-
-            <strong>
-              {{ team.selected_character.role }}
-            </strong>
-
-          {% endif %}
-
-
-          {% if team.selected_character.perspective %}
-
-            <p>
-              {{ team.selected_character.perspective }}
-            </p>
-
-          {% endif %}
-
-        </div>
-
-      </aside>
-
-    </section>
-
-
     {# ======================================================= #}
     {# DECISION AREA                                           #}
     {# ======================================================= #}
@@ -381,28 +329,20 @@
         <header class="cya-decision-heading">
 
           <span class="cya-section-kicker">
-            Discuss & Decide
+            Talk & Choose
           </span>
 
           <h2>
             What should your team do?
           </h2>
 
-          <p>
-            Talk with your teammates before confirming your decision.
-          </p>
 
         </header>
         <section class="cya-learning-response">
 
             <span class="cya-section-kicker">
-                Your Written Response
+                Your answer.
             </span>
-
-            <p class="cya-learning-help">
-                Write your own answer to the discussion question above.
-                Your answer will not change the story.
-            </p>
 
 
             <form
@@ -435,7 +375,7 @@
                     class="cya-save-response"
                     type="submit"
                 >
-                    Save My Answer
+                    Save Answer
                 </button>
 
 
@@ -460,7 +400,7 @@
             <div class="cya-decision-divider">
 
             <span>
-                Team Decision
+                Team Choice
             </span>
 
             </div>
@@ -513,7 +453,7 @@
               class="cya-confirm-choice"
               type="submit"
             >
-              Confirm Choice →
+              Choose →
             </button>
 
           </form>
@@ -666,7 +606,7 @@
   <div data-drawer-source="log">
 
     <h2>
-      Adventure Log
+      Your adventure
     </h2>
 
 

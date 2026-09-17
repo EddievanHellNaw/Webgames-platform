@@ -1499,13 +1499,14 @@ def teacher_adventure_monitor_panel(
             "station",
         )
         .order_by(
+            "station__sort_order",
             "participant__display_name",
             "updated_at",
         )
     )
 
 
-    teams_queryset = (
+    teams = list(
         AdventureTeam.objects
         .filter(
             adventure_run=adventure_run
@@ -1536,27 +1537,32 @@ def teacher_adventure_monitor_panel(
     )
 
 
-    teams = list(
-        teams_queryset
-    )
-
+    # --------------------------------------------------------
+    # Separate normal story answers from final answers.
+    # --------------------------------------------------------
 
     for team in teams:
 
+        team.story_written_responses = []
         team.final_written_responses = []
 
-        if (
-            team.is_finished
-            and team.ending_station_id
+        for response in (
+            team.loaded_written_responses
         ):
 
-            team.final_written_responses = [
-                response
-                for response
-                in team.loaded_written_responses
-                if response.station_id
+            if (
+                team.ending_station_id
+                and response.station_id
                 == team.ending_station_id
-            ]
+            ):
+                team.final_written_responses.append(
+                    response
+                )
+
+            else:
+                team.story_written_responses.append(
+                    response
+                )
 
 
     team_count = len(teams)
