@@ -33,25 +33,33 @@ from .services import (
 
 def _useful_language_items(text):
     """
-    Turn:
-        Have you ever...? Where did you go? Who...?
+    Convert useful-language text into individual chips.
 
-    into a list of question chips.
+    New situations use | separators.
+    Older situations may use question marks.
     """
 
     if not text:
         return []
 
-    parts = []
+    # Preferred format for new role-play situations.
+    if "|" in text:
+        return [
+            item.strip()
+            for item in text.split("|")
+            if item.strip()
+        ]
+
+    # Backwards compatibility with older situations.
+    items = []
 
     for item in text.split("?"):
         item = item.strip()
 
         if item:
-            parts.append(f"{item}?")
+            items.append(f"{item}?")
 
-    return parts
-
+    return items
 
 def _get_assignment_report_template(assignment):
     """

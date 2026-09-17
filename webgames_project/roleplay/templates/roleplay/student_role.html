@@ -658,6 +658,16 @@
     margin-top: .8rem;
 }
 
+.secret-information {
+    line-height: 1.6;
+}
+
+.secret-information br {
+    display: block;
+    content: "";
+    margin-bottom: 0.45rem;
+}
+
 </style>
 
 
@@ -797,7 +807,7 @@
                         </h2>
 
                         <div class="rp-section-text">
-                            {{ role.secret_information }}
+                            {{ role.secret_information|linebreaksbr }}
                         </div>
 
                     </div>

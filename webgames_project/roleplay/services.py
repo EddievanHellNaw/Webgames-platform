@@ -11,6 +11,150 @@ from .models import (
 class RoleAssignmentError(Exception):
     pass
 
+MARKET_MATCH_SLUG = "market-match-inspector"
+
+
+def _build_market_match_pairs(roles):
+    """
+    Build pairs using the seeded sort order:
+
+    1 + 2 = first pair
+    3 + 4 = second pair
+    5 + 6 = third pair
+    etc.
+    """
+
+    grouped_roles = {}
+
+    for role in roles:
+        pair_number = (role.sort_order + 1) // 2
+
+        grouped_roles.setdefault(
+            pair_number,
+            [],
+        ).append(role)
+
+    pairs = []
+
+    for pair_number in sorted(grouped_roles):
+        members = grouped_roles[pair_number]
+
+        product_roles = [
+            role
+            for role in members
+            if role.name.startswith("Product:")
+        ]
+
+        match_roles = [
+            role
+            for role in members
+            if role.name.startswith("Match:")
+        ]
+
+        if (
+            len(members) != 2
+            or len(product_roles) != 1
+            or len(match_roles) != 1
+        ):
+            raise RoleAssignmentError(
+                (
+                    f"Market Match pair {pair_number} is incomplete. "
+                    "Every pair must contain one Product role and "
+                    "one Match role."
+                )
+            )
+
+        pairs.append(
+            (
+                product_roles[0],
+                match_roles[0],
+            )
+        )
+
+    return pairs
+
+
+def _select_market_match_roles(
+    roles,
+    participants,
+    previous_roles,
+    rng,
+):
+    """
+    Select complete Market Match pairs.
+
+    For an odd number of students, duplicate one role from a
+    selected pair. This creates one trio while preserving all
+    natural matches.
+    """
+
+    participant_count = len(participants)
+
+    if participant_count < 2:
+        raise RoleAssignmentError(
+            "At least two students are required for Market Match."
+        )
+
+    pairs = _build_market_match_pairs(roles)
+
+    required_pair_count = participant_count // 2
+
+    if required_pair_count > len(pairs):
+        raise RoleAssignmentError(
+            (
+                f"{participant_count} students need "
+                f"{required_pair_count} pairs, but only "
+                f"{len(pairs)} complete pairs are available."
+            )
+        )
+
+    def create_candidate():
+        selected_pairs = rng.sample(
+            pairs,
+            required_pair_count,
+        )
+
+        candidate_roles = []
+
+        for product_role, match_role in selected_pairs:
+            candidate_roles.extend(
+                [
+                    product_role,
+                    match_role,
+                ]
+            )
+
+        # When attendance is odd, one selected pair becomes a trio.
+        if participant_count % 2 == 1:
+            trio_pair = rng.choice(selected_pairs)
+            repeated_role = rng.choice(trio_pair)
+
+            candidate_roles.append(
+                repeated_role
+            )
+
+        rng.shuffle(candidate_roles)
+
+        return candidate_roles
+
+    # Try to avoid giving students their previous role.
+    for _ in range(200):
+        candidate_roles = create_candidate()
+
+        valid = all(
+            previous_roles.get(participant.id)
+            != role.id
+            for participant, role in zip(
+                participants,
+                candidate_roles,
+            )
+        )
+
+        if valid:
+            return candidate_roles
+
+    # Repetition is allowed only when it is unavoidable.
+    return create_candidate()
 
 def build_role_snapshot(role):
     return {
@@ -136,45 +280,58 @@ def assign_roles_to_run(
 
     selected_roles = None
 
-    # -----------------------------------------------
-    # Try several randomized arrangements until we
-    # find one in which nobody repeats their last role.
-    # -----------------------------------------------
+    # =======================================================
+    # SPECIAL ASSIGNMENT: MARKET MATCH
+    # =======================================================
 
-    for _ in range(200):
+    if run.situation.slug == MARKET_MATCH_SLUG:
 
-        candidate_pool = list(role_pool)
-        rng.shuffle(candidate_pool)
-
-        candidate_roles = candidate_pool[
-            :len(participants)
-        ]
-
-        valid = all(
-            previous_roles.get(participant.id)
-            != role.id
-            for participant, role
-            in zip(
-                participants,
-                candidate_roles,
-            )
+        selected_roles = _select_market_match_roles(
+            roles=roles,
+            participants=participants,
+            previous_roles=previous_roles,
+            rng=rng,
         )
 
-        if valid:
-            selected_roles = candidate_roles
-            break
+    # =======================================================
+    # STANDARD ASSIGNMENT: ALL OTHER ROLE PLAYS
+    # =======================================================
 
-    # If a non-repeating arrangement is impossible,
-    # still create a valid randomized round.
-    if selected_roles is None:
+    else:
 
-        candidate_pool = list(role_pool)
-        rng.shuffle(candidate_pool)
+        for _ in range(200):
 
-        selected_roles = candidate_pool[
-            :len(participants)
-        ]
+            candidate_pool = list(role_pool)
+            rng.shuffle(candidate_pool)
 
+            candidate_roles = candidate_pool[
+                :len(participants)
+            ]
+
+            valid = all(
+                previous_roles.get(participant.id)
+                != role.id
+                for participant, role
+                in zip(
+                    participants,
+                    candidate_roles,
+                )
+            )
+
+            if valid:
+                selected_roles = candidate_roles
+                break
+
+        # If avoiding repetition is impossible,
+        # create a valid randomized round.
+        if selected_roles is None:
+
+            candidate_pool = list(role_pool)
+            rng.shuffle(candidate_pool)
+
+            selected_roles = candidate_pool[
+                :len(participants)
+            ]
     assignments = []
 
     for participant, role in zip(
