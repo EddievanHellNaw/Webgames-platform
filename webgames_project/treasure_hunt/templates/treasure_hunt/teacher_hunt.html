@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}
+Cluebound · {{ session.title }}
+{% endblock %}
+
+{% block content %}
+
+<section class="app-panel">
+
+  <div style="text-align: center;">
+
+    <img
+      src="{% static 'treasure_hunt/img/cluebound-logo.png' %}"
+      alt="Cluebound - Follow the Trail"
+      style="
+        width: min(100%, 620px);
+        max-height: 220px;
+        object-fit: contain;
+      "
+    >
+
+    <p class="app-kicker">
+      The Hunt Begins Soon
+    </p>
+
+    <h1>Welcome to Cluebound</h1>
+
+    {% if participant %}
+      <p>
+        Welcome,
+        <strong>
+          {{ participant.display_name }}
+        </strong>.
+      </p>
+    {% endif %}
+
+    <p class="app-muted-text">
+      Your first clue will appear here.
+    </p>
+
+  </div>
+
+</section>
+
+{% endblock %}

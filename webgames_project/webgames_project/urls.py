@@ -38,6 +38,13 @@ urlpatterns = [
         "choose-adventure/",
         include("choose_adventure.urls"),
     ),
+
+    path(
+        "adventure/",
+        include("choose_adventure.urls"),
+    ),
+
+    path("creator/", include("creator.urls")),
 ]
 
 if settings.DEBUG:

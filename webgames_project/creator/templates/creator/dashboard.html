@@ -1,0 +1,205 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block game_theme_css %}
+<link rel="stylesheet" href="{% static 'creator/css/creator.css' %}">
+{% endblock %} 
+
+{% block title %}Creator Studio{% endblock %}
+ 
+
+{% block content %}
+
+<section class="creator-dashboard">
+
+    <!-- ====================================================== -->
+    <!-- HERO                                                   -->
+    <!-- ====================================================== -->
+
+    <section class="creator-hero">
+
+        <span class="app-kicker">
+            Teacher Tools
+        </span>
+
+        <h1>
+            Creator Studio
+        </h1>
+
+        <p>
+            Create learning activities for the games on the platform.
+            Choose a game engine to begin.
+        </p>
+
+    </section>
+
+
+    <!-- ====================================================== -->
+    <!-- GAME BUILDERS                                          -->
+    <!-- ====================================================== -->
+
+    <section class="app-panel">
+
+        <div class="app-panel-heading">
+            <div>
+                <span class="app-kicker">
+                    Game Builders
+                </span>
+
+                <h2>
+                    Create New Content
+                </h2>
+            </div>
+        </div>
+
+
+        <div class="creator-game-grid">
+
+
+            <!-- ================================================== -->
+            <!-- ROLE PLAY                                          -->
+            <!-- ================================================== -->
+
+            <article class="creator-game-card creator-game-card-active">
+
+                <div class="creator-game-card-icon" aria-hidden="true">
+                    🎭
+                </div>
+
+                <div class="creator-game-card-body">
+
+                    <span class="creator-status creator-status-ready">
+                        Available
+                    </span>
+
+                    <h2>
+                        Role Play
+                    </h2>
+
+                    <p>
+                        Create situations, student roles,
+                        objectives, and speaking missions.
+                    </p>
+
+                    <div class="creator-game-card-actions">
+
+                        <a
+                            class="app-btn app-btn-primary"
+                            href="#"
+                        >
+                            Open Builder
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </article>
+
+
+            <!-- ================================================== -->
+            <!-- CHOOSE YOUR OWN ADVENTURE                          -->
+            <!-- ================================================== -->
+
+            <article class="creator-game-card creator-game-card-disabled">
+
+                <div class="creator-game-card-icon" aria-hidden="true">
+                    🧭
+                </div>
+
+                <div class="creator-game-card-body">
+
+                    <span class="creator-status">
+                        Coming Soon
+                    </span>
+
+                    <h2>
+                        Choose Your Own Adventure
+                    </h2>
+
+                    <p>
+                        Build branching stories with characters,
+                        stations, choices, and endings.
+                    </p>
+
+                </div>
+
+            </article>
+
+
+            <!-- ================================================== -->
+            <!-- GUILDBOUND                                         -->
+            <!-- ================================================== -->
+
+            <article class="creator-game-card creator-game-card-disabled">
+
+                <div class="creator-game-card-icon" aria-hidden="true">
+                    ⚔
+                </div>
+
+                <div class="creator-game-card-body">
+
+                    <span class="creator-status">
+                        Coming Soon
+                    </span>
+
+                    <h2>
+                        Guildbound
+                    </h2>
+
+                    <p>
+                        Build custom dungeons, encounters,
+                        rooms, bosses, and language challenges.
+                    </p>
+
+                </div>
+
+            </article>
+
+        </div>
+
+    </section>
+
+
+    <!-- ====================================================== -->
+    <!-- MY CONTENT                                             -->
+    <!-- ====================================================== -->
+
+    <section class="app-panel creator-my-content">
+
+        <div class="app-panel-heading">
+
+            <div>
+                <span class="app-kicker">
+                    Library
+                </span>
+
+                <h2>
+                    My Content
+                </h2>
+            </div>
+
+        </div>
+
+        <div class="creator-empty-state">
+
+            <div class="creator-empty-icon" aria-hidden="true">
+                ✦
+            </div>
+
+            <h3>
+                Your creations will appear here
+            </h3>
+
+            <p class="app-muted-text">
+                Create your first Role Play activity to start building
+                your teaching library.
+            </p>
+
+        </div>
+
+    </section>
+
+</section>
+
+{% endblock %}

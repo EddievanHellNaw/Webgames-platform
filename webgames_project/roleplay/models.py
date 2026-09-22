@@ -12,7 +12,8 @@ class RolePlaySituation(models.Model):
     - Job Interview
     - Airport Problem
     """
-
+    
+    
     title = models.CharField(max_length=150)
 
     slug = models.SlugField(

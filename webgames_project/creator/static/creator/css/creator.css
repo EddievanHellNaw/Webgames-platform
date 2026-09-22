@@ -1,0 +1,351 @@
+/* ============================================================
+   CREATOR STUDIO
+   ============================================================ */
+
+.creator-dashboard {
+    display: grid;
+    gap: 1rem;
+}
+
+
+/* ============================================================
+   HERO
+   ============================================================ */
+
+.creator-hero {
+    position: relative;
+    overflow: hidden;
+
+    border: 1px solid var(--app-border);
+    border-radius: 26px;
+
+    padding: clamp(1.25rem, 4vw, 2.25rem);
+
+    background:
+        radial-gradient(
+            circle at top right,
+            rgba(47, 128, 237, 0.18),
+            transparent 28rem
+        ),
+        linear-gradient(
+            180deg,
+            rgba(15, 25, 43, 0.96),
+            rgba(6, 11, 20, 0.98)
+        );
+
+    box-shadow:
+        0 18px 44px rgba(0, 0, 0, 0.24);
+}
+
+
+.creator-hero::after {
+    content: "✦";
+
+    position: absolute;
+    right: clamp(1rem, 5vw, 3rem);
+    top: 50%;
+
+    transform: translateY(-50%);
+
+    font-size: clamp(5rem, 14vw, 9rem);
+
+    color: rgba(243, 196, 91, 0.08);
+
+    pointer-events: none;
+}
+
+
+.creator-hero h1 {
+    position: relative;
+    z-index: 1;
+
+    margin:
+        0.25rem
+        0
+        0.65rem;
+
+    font-size:
+        clamp(2.2rem, 7vw, 4.3rem);
+
+    line-height: 0.95;
+
+    letter-spacing: 0.04em;
+    text-transform: uppercase;
+}
+
+
+.creator-hero p {
+    position: relative;
+    z-index: 1;
+
+    max-width: 65ch;
+
+    margin-bottom: 0;
+
+    color: var(--app-muted);
+}
+
+
+/* ============================================================
+   BUILDER GRID
+   ============================================================ */
+
+.creator-game-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+
+    gap: 1rem;
+}
+
+
+/* ============================================================
+   BUILDER CARD
+   ============================================================ */
+
+.creator-game-card {
+    position: relative;
+
+    display: grid;
+    grid-template-columns: 72px 1fr;
+
+    gap: 1rem;
+
+    min-height: 190px;
+
+    padding: 1rem;
+
+    border:
+        1px solid
+        var(--app-border);
+
+    border-radius: 20px;
+
+    background:
+        rgba(255, 255, 255, 0.035);
+}
+
+
+.creator-game-card-active {
+    background:
+        radial-gradient(
+            circle at top left,
+            rgba(47, 128, 237, 0.14),
+            transparent 70%
+        ),
+        rgba(255, 255, 255, 0.035);
+}
+
+
+.creator-game-card-disabled {
+    opacity: 0.68;
+}
+
+
+.creator-game-card-icon {
+    display: grid;
+    place-items: center;
+
+    width: 72px;
+    height: 72px;
+
+    border:
+        1px solid
+        var(--app-border);
+
+    border-radius: 18px;
+
+    background:
+        rgba(0, 0, 0, 0.25);
+
+    color: var(--app-gold);
+
+    font-size: 1.9rem;
+}
+
+
+.creator-game-card-body {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
+
+.creator-game-card-body h2 {
+    margin:
+        0.4rem
+        0
+        0.45rem;
+}
+
+
+.creator-game-card-body p {
+    margin: 0;
+
+    color: var(--app-muted);
+
+    line-height: 1.5;
+}
+
+
+.creator-game-card-actions {
+    margin-top: auto;
+
+    padding-top: 1rem;
+}
+
+
+/* ============================================================
+   STATUS
+   ============================================================ */
+
+.creator-status {
+    display: inline-flex;
+    align-items: center;
+
+    padding:
+        0.28rem
+        0.55rem;
+
+    border:
+        1px solid
+        var(--app-border);
+
+    border-radius: 999px;
+
+    color: var(--app-muted);
+
+    background:
+        rgba(255, 255, 255, 0.045);
+
+    font-size: 0.72rem;
+    font-weight: 800;
+
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+
+.creator-status-ready {
+    color: #dcecff;
+
+    border-color:
+        rgba(47, 128, 237, 0.5);
+
+    background:
+        rgba(47, 128, 237, 0.12);
+}
+
+
+/* ============================================================
+   MY CONTENT
+   ============================================================ */
+
+.creator-empty-state {
+    display: grid;
+    place-items: center;
+
+    min-height: 220px;
+
+    padding: 2rem 1rem;
+
+    text-align: center;
+
+    border:
+        1px dashed
+        var(--app-border);
+
+    border-radius: 18px;
+
+    background:
+        rgba(255, 255, 255, 0.02);
+}
+
+
+.creator-empty-state h3 {
+    margin:
+        0.65rem
+        0
+        0.2rem;
+}
+
+
+.creator-empty-state p {
+    max-width: 48ch;
+
+    margin:
+        0.25rem
+        auto;
+}
+
+
+.creator-empty-icon {
+    display: grid;
+    place-items: center;
+
+    width: 58px;
+    height: 58px;
+
+    border:
+        1px solid
+        rgba(243, 196, 91, 0.3);
+
+    border-radius: 18px;
+
+    color: var(--app-gold);
+
+    background:
+        rgba(243, 196, 91, 0.06);
+
+    font-size: 1.5rem;
+}
+
+
+/* ============================================================
+   RESPONSIVE
+   ============================================================ */
+
+@media (min-width: 850px) {
+
+    .creator-game-grid {
+        grid-template-columns:
+            repeat(
+                3,
+                minmax(0, 1fr)
+            );
+    }
+
+
+    .creator-game-card {
+        grid-template-columns: 1fr;
+    }
+
+}
+
+
+@media (max-width: 560px) {
+
+    .creator-game-card {
+        grid-template-columns: 56px 1fr;
+
+        min-height: 0;
+
+        padding: 0.8rem;
+    }
+
+
+    .creator-game-card-icon {
+        width: 56px;
+        height: 56px;
+
+        border-radius: 15px;
+
+        font-size: 1.4rem;
+    }
+
+
+    .creator-game-card-actions,
+    .creator-game-card-actions .app-btn {
+        width: 100%;
+    }
+
+}

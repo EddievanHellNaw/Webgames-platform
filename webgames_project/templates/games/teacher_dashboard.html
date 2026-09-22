@@ -4,16 +4,32 @@
 {% block title %}Teacher Dashboard · Webgames{% endblock %}
 
 {% block content %}
-<section class="app-dashboard">
-  <section class="app-dashboard-hero">
-    <span class="app-kicker">Teacher Control Panel</span>
+<section class="app-dashboard-hero">
 
-    <h1>Webgames Dashboard</h1>
+  <div class="app-ludora-brand">
+    <img
+      src="{% static 'img/ludora-logo.png' %}"
+      alt="Ludora - Classroom Adventures"
+    >
+  </div>
+
+  <span class="app-kicker">
+    Teacher Control Panel
+  </span>
+
+  <h1>Ludora Dashboard</h1>
 
     <p>
       Create classroom game sessions, invite students with a join code,
       and manage live activities from one place.
     </p>
+
+    <a
+    class="app-btn app-btn-secondary"
+    href="{% url 'creator:dashboard' %}"
+>
+    Creator Studio
+</a>
   </section>
 
   <section class="app-panel">
@@ -25,113 +41,150 @@
     {% if games %}
       <div class="app-game-card-grid">
         {% for game in games %}
-          {% if game.code == "FANTASY_ROLES" %}
-            <article class="app-game-card app-game-card-guildbound {% if not game.is_active %}is-disabled{% endif %}">
-              <div class="app-game-card-guildbound-logo-wrap">
-                <img
-                  class="app-game-card-guildbound-logo"
-                  src="{% static 'fantasy_roles/img/guildbound-logo.png' %}"
-                  alt="Guildbound: Trial of the Realms"
-                >
-              </div>
 
-              <div class="app-game-card-guildbound-footer">
-                <span class="app-kicker">
-                  {% if game.is_active %}
-                    Ready to Play
-                  {% else %}
-                    Coming Soon
-                  {% endif %}
-                </span>
+  <article
+    class="
+      app-game-card
+      app-game-card-branded
 
-                {% if game.is_active %}
-                  <a
-                    class="app-btn app-btn-gold"
-                    href="{% url 'sessions:create_session' game.id %}"
-                  >
-                    Create Session
-                  </a>
-                {% else %}
-                  <button class="app-btn" type="button" disabled>
-                    Not Available Yet
-                  </button>
-                {% endif %}
-              </div>
-            </article>
-          {% else %}
-            <article class="app-game-card {% if not game.is_active %}is-disabled{% endif %}">
-              <div class="app-game-card-icon">
-                {% if game.code == "CHOOSE_ADVENTURE" %}
-                  ✉
-                {% elif game.code == "TREASURE_HUNT" %}
-                  ◆
-                {% elif game.code == "ROLE_PLAY" %}
-                  🎭
-                {% else %}
-                  ✦
-                {% endif %}
-              </div>
+      {% if game.code == 'FANTASY_ROLES' %}
+        app-game-card-guildbound
 
-              <div class="app-game-card-body">
-                <span class="app-kicker">
-                  {% if game.is_active %}
-                    Ready to Play
-                  {% else %}
-                    Coming Soon
-                  {% endif %}
-                </span>
+      {% elif game.code == 'CHOOSE_ADVENTURE' %}
+        app-game-card-fatepath
 
-                <h2>{{ game.title }}</h2>
+      {% elif game.code == 'ROLE_PLAY' %}
+        app-game-card-rolecall
 
-                {% if game.description %}
-                  <p>{{ game.description }}</p>
-                {% else %}
-                  <p>
-                    Classroom game mode for interactive learning sessions.
-                  </p>
-                {% endif %}
+      {% elif game.code == 'TREASURE_HUNT' %}
+        app-game-card-cluebound
+      {% endif %}
 
-                <div class="app-game-card-actions">
+      {% if not game.is_active %}
+        is-disabled
+      {% endif %}
+    "
+  >
 
-                  {% if game.is_active %}
+    <!-- ===================================== -->
+    <!-- GAME LOGO -->
+    <!-- ===================================== -->
 
-                    {% if game.code == "CHOOSE_ADVENTURE" %}
+    <div class="app-game-card-logo-wrap">
 
-                      <a
-                        class="app-btn app-btn-primary"
-                        href="{% url 'choose_adventure:story_setup' %}"
-                      >
-                        Choose Story
-                      </a>
+      {% if game.code == "FANTASY_ROLES" %}
 
-                    {% else %}
+        <img
+          class="app-game-card-logo"
+          src="{% static 'fantasy_roles/img/guildbound-logo.png' %}"
+          alt="Guildbound"
+        >
 
-                      <a
-                        class="app-btn app-btn-primary"
-                        href="{% url 'sessions:create_session' game.id %}"
-                      >
-                        Create Session
-                      </a>
+      {% elif game.code == "CHOOSE_ADVENTURE" %}
 
-                    {% endif %}
+        <img
+          class="app-game-card-logo"
+          src="{% static 'choose_adventure/img/fatepath-logo.png' %}"
+          alt="Fatepath: Paths of Choice"
+        >
 
-                  {% else %}
+      {% elif game.code == "ROLE_PLAY" %}
 
-                    <button
-                      class="app-btn"
-                      type="button"
-                      disabled
-                    >
-                      Not Available Yet
-                    </button>
+        <img
+          class="app-game-card-logo"
+          src="{% static 'roleplay/img/rolecall-logo.png' %}"
+          alt="Rolecall: Take Your Part"
+        >
 
-                  {% endif %}
+      {% elif game.code == "TREASURE_HUNT" %}
 
-                </div>
-              </div>
-            </article>
-          {% endif %}
-        {% endfor %}
+        <img
+          class="app-game-card-logo"
+          src="{% static 'treasure_hunt/img/cluebound-logo.png' %}"
+          alt="Cluebound: Follow the Trail"
+        >
+
+      {% else %}
+
+        <h2>{{ game.title }}</h2>
+
+      {% endif %}
+
+    </div>
+
+
+    <!-- ===================================== -->
+    <!-- FOOTER -->
+    <!-- ===================================== -->
+
+    <div class="app-game-card-branded-footer">
+
+      <span class="app-kicker">
+        {% if game.is_active %}
+          Ready to Play
+        {% else %}
+          Coming Soon
+        {% endif %}
+      </span>
+
+
+      {% if game.is_active %}
+
+        {% if game.code == "CHOOSE_ADVENTURE" %}
+
+          <a
+            class="app-btn app-btn-game app-btn-fatepath"
+            href="{% url 'choose_adventure:story_setup' %}"
+          >
+            Choose Story
+          </a>
+
+        {% elif game.code == "ROLE_PLAY" %}
+
+          <a
+            class="app-btn app-btn-game app-btn-rolecall"
+            href="{% url 'sessions:create_session' game.id %}"
+          >
+            Choose Situation
+          </a>
+
+        {% elif game.code == "TREASURE_HUNT" %}
+
+          <a
+            class="app-btn app-btn-game app-btn-cluebound"
+            href="{% url 'sessions:create_session' game.id %}"
+          >
+            Create Session
+          </a>
+
+        {% else %}
+
+          <a
+            class="app-btn app-btn-game app-btn-gold"
+            href="{% url 'sessions:create_session' game.id %}"
+          >
+            Create Session
+          </a>
+
+        {% endif %}
+
+      {% else %}
+
+        <button
+          class="app-btn"
+          type="button"
+          disabled
+        >
+          Not Available Yet
+        </button>
+
+      {% endif %}
+
+    </div>
+
+  </article>
+
+{% endfor %}
       </div>
     {% else %}
       <p class="app-muted-text">

@@ -341,13 +341,26 @@ input[type="submit"].app-btn {
     font-size: 1.45rem;
   }
 
-  .app-game-card-guildbound {
-    grid-template-columns: 1fr;
-  }
+  .app-game-card-branded {
+  grid-template-columns: 1fr;
+}
 
-  .app-game-card-guildbound-footer {
-    display: grid;
-  }
+.app-game-card-branded-footer {
+  display: grid;
+  width: 100%;
+}
+
+.app-game-card-branded-footer .app-btn {
+  width: 100%;
+}
+
+.app-game-card-logo-wrap {
+  min-height: 105px;
+}
+
+.app-game-card-logo {
+  max-height: 100px;
+}
 }
 
 .app-dashboard {
@@ -1115,3 +1128,233 @@ a.session-btn {
   }
 }
 
+/* ============================================================
+   BRANDED GAME CARDS
+   ============================================================ */
+
+.app-game-card-branded {
+  grid-template-columns: 1fr;
+  min-height: 220px;
+  position: relative;
+  overflow: hidden;
+}
+
+.app-game-card-branded::before {
+  content: "";
+  position: absolute;
+  inset: 8px;
+  border-radius: 14px;
+  pointer-events: none;
+}
+
+.app-game-card-logo-wrap,
+.app-game-card-branded-footer {
+  position: relative;
+  z-index: 1;
+}
+
+.app-game-card-logo-wrap {
+  display: grid;
+  place-items: center;
+  min-height: 135px;
+  padding: 0.35rem 0.75rem;
+}
+
+.app-game-card-logo {
+  width: min(100%, 520px);
+  max-height: 125px;
+  object-fit: contain;
+}
+
+.app-game-card-branded-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  margin-top: auto;
+}
+
+.app-game-card-fatepath {
+  border-color: rgba(178, 139, 255, 0.32);
+
+  background:
+    radial-gradient(
+      circle at top center,
+      rgba(134, 91, 255, 0.18),
+      transparent 20rem
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(243, 196, 91, 0.08),
+      transparent 22rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(24, 17, 50, 0.98),
+      rgba(8, 7, 22, 0.99)
+    );
+
+  box-shadow:
+    0 0 24px rgba(140, 100, 255, 0.10),
+    0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.app-game-card-fatepath::before {
+  border: 1px solid rgba(178, 139, 255, 0.18);
+}
+
+.app-game-card-fatepath .app-game-card-logo {
+  filter:
+    drop-shadow(0 0 14px rgba(178, 139, 255, 0.18))
+    drop-shadow(0 0 24px rgba(70, 50, 150, 0.18));
+}
+
+.app-game-card-rolecall {
+  border-color: rgba(205, 118, 118, 0.32);
+
+  background:
+    radial-gradient(
+      circle at top center,
+      rgba(145, 35, 55, 0.22),
+      transparent 20rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(48, 12, 24, 0.98),
+      rgba(14, 5, 10, 0.99)
+    );
+
+  box-shadow:
+    0 0 24px rgba(180, 50, 70, 0.10),
+    0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.app-game-card-rolecall::before {
+  border: 1px solid rgba(230, 170, 110, 0.17);
+}
+
+.app-game-card-rolecall .app-game-card-logo {
+  filter:
+    drop-shadow(0 0 14px rgba(210, 80, 80, 0.18))
+    drop-shadow(0 0 26px rgba(130, 20, 40, 0.18));
+}
+
+.app-game-card-cluebound {
+  border-color: rgba(83, 183, 178, 0.30);
+
+  background:
+    radial-gradient(
+      circle at top left,
+      rgba(44, 130, 128, 0.18),
+      transparent 22rem
+    ),
+    radial-gradient(
+      circle at bottom right,
+      rgba(178, 130, 62, 0.12),
+      transparent 20rem
+    ),
+    linear-gradient(
+      180deg,
+      rgba(8, 31, 34, 0.98),
+      rgba(4, 14, 16, 0.99)
+    );
+
+  box-shadow:
+    0 0 24px rgba(65, 170, 165, 0.08),
+    0 18px 44px rgba(0, 0, 0, 0.3);
+}
+
+.app-game-card-cluebound::before {
+  border: 1px solid rgba(83, 183, 178, 0.16);
+}
+
+.app-game-card-cluebound .app-game-card-logo {
+  filter:
+    drop-shadow(0 0 14px rgba(70, 180, 175, 0.14))
+    drop-shadow(0 0 24px rgba(150, 110, 50, 0.10));
+}
+
+/* ============================================================
+   GAME-SPECIFIC BUTTONS
+   ============================================================ */
+
+.app-btn-game {
+  min-width: 142px;
+}
+
+
+/* Fatepath */
+
+.app-btn-fatepath {
+  border-color: rgba(177, 140, 255, 0.70);
+
+  color: #f4ebff;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(91, 63, 160, 0.78),
+      rgba(36, 24, 76, 0.92)
+    );
+
+  box-shadow:
+    0 0 20px rgba(140, 100, 255, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+
+/* Rolecall */
+
+.app-btn-rolecall {
+  border-color: rgba(222, 142, 124, 0.70);
+
+  color: #fff0e8;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(145, 45, 58, 0.82),
+      rgba(64, 17, 28, 0.94)
+    );
+
+  box-shadow:
+    0 0 20px rgba(180, 55, 75, 0.16),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+
+/* Cluebound */
+
+.app-btn-cluebound {
+  border-color: rgba(92, 190, 180, 0.70);
+
+  color: #e6fffb;
+
+  background:
+    linear-gradient(
+      180deg,
+      rgba(33, 112, 109, 0.84),
+      rgba(12, 55, 55, 0.94)
+    );
+
+  box-shadow:
+    0 0 20px rgba(65, 170, 165, 0.14),
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+
+.app-ludora-brand {
+  display: flex;
+  justify-content: center;
+  margin: 0 auto 1rem;
+}
+
+.app-ludora-brand img {
+  width: min(100%, 520px);
+  max-height: 150px;
+  object-fit: contain;
+
+  filter:
+    drop-shadow(0 0 18px rgba(47, 128, 237, 0.16))
+    drop-shadow(0 0 28px rgba(243, 196, 91, 0.10));
+}
