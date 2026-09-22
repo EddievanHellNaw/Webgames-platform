@@ -1,59 +1,39 @@
 {% extends "base.html" %}
 {% load static %}
 
-{% block game_theme_css %}
-  {% if session.game_template.code == "FANTASY_ROLES" %}
-    <link rel="stylesheet" href="{% static 'fantasy_roles/css/fantasy-theme.css' %}">
-  {% endif %}
-{% endblock %}
 {% block title %}Waiting Room · {{ session.title }}{% endblock %}
 
 {% block content %}
-<section class="fr-waiting-page">
-  <section class="fr-waiting-hero">
-    <div class="fr-waiting-orb">
-      <span>◆</span>
-    </div>
-
-    <span class="fr-kicker">You Have Joined</span>
-
+<section class="session-shell session-waiting-page">
+  <header class="session-hero session-hero-centered">
+    <div class="session-waiting-orb" aria-hidden="true">◆</div>
+    <span class="session-kicker">You Have Joined</span>
     <h1>Waiting Room</h1>
-
-    <p>
+    <p class="session-lead">
       Welcome, <strong>{{ participant.display_name }}</strong>.
-      Stay on this screen. Your teacher will start the session soon.
+      Keep this page open while your teacher prepares the activity.
     </p>
 
-    <div class="fr-status-row">
-      <span class="fr-status-pill">
-        {{ session.game_template.title }}
-      </span>
-
-      <span class="fr-status-pill">
-        Code: {{ session.join_code }}
-      </span>
-
-      <span class="fr-status-pill">
+    <div class="session-chip-row session-chip-row-centered">
+      <span class="session-chip">{{ session.game_template.title }}</span>
+      <span class="session-chip">Code: {{ session.join_code }}</span>
+      <span class="session-chip session-chip-status session-chip-status-{{ session.status|lower }}">
         {{ session.get_status_display }}
       </span>
     </div>
-  </section>
+  </header>
 
-  <section class="fr-waiting-grid">
-    <article class="fr-panel fr-waiting-status-card">
-      <div class="fr-panel-heading">
-        <span class="fr-kicker">Current Status</span>
-        <strong>Preparing Adventure</strong>
+  <div class="session-waiting-grid">
+    <article class="session-panel session-waiting-status-card">
+      <span class="session-kicker">Current Status</span>
+      <h2>Preparing Activity</h2>
+
+      <div class="session-loading-dots" aria-label="Waiting for the session to start">
+        <span></span><span></span><span></span>
       </div>
 
-      <div class="fr-loading-runes" aria-hidden="true">
-        <span></span>
-        <span></span>
-        <span></span>
-      </div>
-
-      <p class="fr-muted-text">
-        The portal will open automatically when your teacher starts the game.
+      <p class="session-muted">
+        This page will move you into the activity automatically when the teacher starts the session.
       </p>
 
       <div
@@ -64,29 +44,20 @@
       ></div>
     </article>
 
-    <article class="fr-panel fr-waiting-player-card">
-      <div class="fr-panel-heading">
-        <span class="fr-kicker">Player</span>
-        <strong>Your Entry</strong>
-      </div>
-
-      <div class="fr-waiting-player-mark">
+    <article class="session-panel session-waiting-player-card">
+      <span class="session-kicker">Player</span>
+      <div class="session-waiting-player-mark" aria-hidden="true">
         {{ participant.display_name|slice:":1" }}
       </div>
-
       <h2>{{ participant.display_name }}</h2>
 
       {% if participant.student_id %}
-        <p class="fr-muted-text">
-          Student ID: {{ participant.student_id }}
-        </p>
+        <p class="session-muted">Student ID: {{ participant.student_id }}</p>
       {% else %}
-        <p class="fr-muted-text">
-          No student ID was provided.
-        </p>
+        <p class="session-muted">No student ID was provided.</p>
       {% endif %}
     </article>
-  </section>
+  </div>
 </section>
 
 <script>

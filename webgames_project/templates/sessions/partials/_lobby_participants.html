@@ -1,19 +1,21 @@
-<div class="fr-panel-heading">
-  <span class="fr-kicker">Joined Students</span>
-  <strong>{{ participants|length }} joined</strong>
+<div class="session-panel-heading">
+  <div>
+    <span class="session-kicker">Joined Students</span>
+    <h2>Participants</h2>
+  </div>
+  <strong class="session-count-badge">{{ participants|length }} joined</strong>
 </div>
 
 {% if participants %}
-  <div class="fr-lobby-participant-list">
+  <div class="session-participant-list">
     {% for participant in participants %}
-      <article class="fr-lobby-participant">
-        <div class="fr-lobby-participant-mark">
+      <article class="session-participant">
+        <div class="session-participant-mark" aria-hidden="true">
           {{ participant.display_name|slice:":1" }}
         </div>
 
-        <div>
+        <div class="session-participant-copy">
           <strong>{{ participant.display_name }}</strong>
-
           {% if participant.student_id %}
             <small>ID: {{ participant.student_id }}</small>
           {% else %}
@@ -24,7 +26,9 @@
     {% endfor %}
   </div>
 {% else %}
-  <p class="fr-muted-text">
-    No students have joined yet. Share the QR code or join code.
-  </p>
+  <div class="session-empty-state">
+    <span aria-hidden="true">⌁</span>
+    <p>No students have joined yet.</p>
+    <small>Share the QR code or join code.</small>
+  </div>
 {% endif %}

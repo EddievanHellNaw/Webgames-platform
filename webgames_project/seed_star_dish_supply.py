@@ -6,36 +6,30 @@ situation, situation_created = RolePlaySituation.objects.update_or_create(
     defaults={
         "title": "The Star Dish Supply Mission",
         "summary": (
-            "Restaurant teams visit the University Ingredient Market to find "
-            "products for their star dishes. Every student represents a "
-            "restaurant and also manages a supplier stall with private "
-            "inventory, quantities, prices, and availability."
+            "Restaurant teams shop for ingredients for their star dish. "
+            "Each student is a customer and a supplier."
         ),
         "student_briefing": (
-            "Your restaurant team is preparing its star dish. Bring your "
-            "ingredient list to the University Ingredient Market. Talk to "
-            "different suppliers and find the products your team needs. "
-            "Ask about quantities, containers, and prices. You also manage "
-            "a supplier stall, so answer questions using the private "
-            "information on your role card. Do not show your card to anyone."
+            "Your team has a restaurant and a star dish. You need "
+            "ingredients for your dish. Talk to different suppliers. "
+            "Ask about products, quantities, and prices. Buy at least "
+            "two ingredients. You also have a market stall. Use your "
+            "role card to answer questions. Do not show your card."
         ),
         "teacher_notes": (
-            "Use this activity after teams choose their restaurant and star "
-            "dish, but before they complete the final shopping list. Give "
-            "students 3–5 minutes to review their team list and role card. "
-            "Model one customer-supplier conversation before starting. "
-            "Allow 10–15 minutes for the market interaction. Every student "
-            "should speak to at least two classmates, ask two quantity "
-            "questions, make one polite request, and answer questions about "
-            "their own inventory. If an ingredient is unavailable, students "
-            "should ask for or offer a substitute. Provide shopping lists "
-            "and role information as accessible plain text when required."
+            "Use this activity after teams choose their restaurant and "
+            "star dish. Give students time to read their ingredient list "
+            "and role card. Model one short customer-supplier conversation. "
+            "Students should talk to at least two classmates. They should "
+            "ask about quantities and prices and use I'd like. Help students "
+            "record their purchases. Provide the role information as plain "
+            "text when needed."
         ),
         "language_target": (
             "Countable and uncountable nouns; there is and there are; "
             "some, any, much, many, a few, and a little; How much? and "
             "How many?; containers and measurements; prices; polite "
-            "requests with I’d like"
+            "requests with I'd like"
         ),
         "is_active": True,
     },
@@ -43,20 +37,30 @@ situation, situation_created = RolePlaySituation.objects.update_or_create(
 
 
 shared_objective = (
-    "Find at least two ingredients for your team’s star dish. Speak to at "
-    "least two classmates. Ask about quantities and prices, make a polite "
-    "request, and record what is available or unavailable. When another "
-    "student visits your stall, use your private inventory to answer them. "
-    "If nobody has an ingredient, choose a possible substitute."
+    "• Find 2 ingredients for your star dish.\n"
+    "• You have $100 MXN.\n"
+    "• Buy the 2 ingredients.\n"
+    "• Use the Useful Language section.\n"
+    "• Do not show your role card."
 )
 
+
 shared_language = (
-    "Can I help you? | Do you have any...? | Is there any...? | "
-    "How much ... is there? | How many ... are there? | "
-    "There is some... | There is a little... | "
-    "There are a few... | There isn’t any... | "
-    "There aren’t any... | I’d like... | "
-    "How much is it? | How much are they? | "
+    "Can I help you? | "
+    "Do you have any...? | "
+    "Yes, I do. | "
+    "No, I don't. | "
+    "How many ... do you have? | "
+    "How much ... do you have? | "
+    "There is some... | "
+    "There is a little... | "
+    "There are a few... | "
+    "There isn't any... | "
+    "There aren't any... | "
+    "How much is it? | "
+    "How much are they? | "
+    "I'd like... | "
+    "Here you are. | "
     "Would you like ... instead?"
 )
 
@@ -64,158 +68,182 @@ shared_language = (
 roles = [
     (
         "The Fresh Produce Supplier",
-        "You supply fresh fruit and vegetables to local restaurants.",
+        "You sell fresh vegetables.",
         (
-            "Your stall has 12 tomatoes at $5 MXN each, 8 onions at "
-            "$6 each, 6 bell peppers at $12 each, and 4 cucumbers at "
-            "$10 each."
+            "Your stall has:\n"
+            "• 12 tomatoes: $5 MXN each\n"
+            "• 8 onions: $6 MXN each\n"
+            "• 6 bell peppers: $12 MXN each\n"
+            "• 4 cucumbers: $10 MXN each"
         ),
         (
-            "There isn’t any lettuce today. You can offer cabbage for "
-            "$18 MXN instead."
+            "There isn't any lettuce today.\n"
+            "You have cabbage: $18 MXN each."
         ),
     ),
     (
         "The Dairy Supplier",
-        "You supply milk, cheese, butter, and other dairy products.",
+        "You sell milk, cheese, butter, and yogurt.",
         (
-            "Your stall has 4 cartons of milk at $28 MXN each, "
-            "500 grams of cheese at $70, 500 grams of butter at $65, "
-            "and 8 cups of yogurt at $15 each."
+            "Your stall has:\n"
+            "• 4 cartons of milk: $28 MXN each\n"
+            "• 500 grams of cheese: $70 MXN\n"
+            "• 500 grams of butter: $65 MXN\n"
+            "• 8 cups of yogurt: $15 MXN each"
         ),
         (
-            "There is only a little cheese left. One customer can buy "
-            "a maximum of 250 grams."
+            "There is only a little cheese left.\n"
+            "One customer can buy 250 grams."
         ),
     ),
     (
         "The Bakery Supplier",
-        "You supply bread and baking products to restaurants.",
+        "You sell bread and baking products.",
         (
-            "Your stall has 10 loaves of bread at $35 MXN each, "
-            "24 tortillas at $2 each, 4 bags of flour at $25 each, "
-            "and 6 boxes of cookies at $30 each."
+            "Your stall has:\n"
+            "• 10 loaves of bread: $35 MXN each\n"
+            "• 24 tortillas: $2 MXN each\n"
+            "• 4 bags of flour: $25 MXN each\n"
+            "• 6 boxes of cookies: $30 MXN each"
         ),
         (
-            "There aren’t any hamburger buns. You can offer sliced "
-            "bread instead."
+            "There aren't any hamburger buns.\n"
+            "You can offer sliced bread instead."
         ),
     ),
     (
         "The Meat Supplier",
-        "You supply meat and protein products.",
+        "You sell meat and other protein products.",
         (
-            "Your stall has 1 kilogram of chicken at $110 MXN, "
-            "2 kilograms of beef at $180 per kilogram, 12 sausages "
-            "at $10 each, and 6 cans of tuna at $25 each."
+            "Your stall has:\n"
+            "• 1 kilogram of chicken: $110 MXN\n"
+            "• 2 kilograms of beef: $180 MXN per kilogram\n"
+            "• 12 sausages: $10 MXN each\n"
+            "• 6 cans of tuna: $25 MXN each"
         ),
         (
-            "There is only a little chicken left. You cannot sell more "
-            "than one kilogram."
+            "There is only a little chicken left.\n"
+            "One customer can buy 1 kilogram."
         ),
     ),
     (
         "The Pantry Supplier",
-        "You supply basic cooking ingredients and dry food.",
+        "You sell basic cooking ingredients.",
         (
-            "Your stall has 5 bottles of oil at $45 MXN each, "
-            "4 bags of rice at $30 each, 3 boxes of pasta at $25 each, "
-            "and 6 jars of mayonnaise at $35 each."
+            "Your stall has:\n"
+            "• 5 bottles of oil: $45 MXN each\n"
+            "• 4 bags of rice: $30 MXN each\n"
+            "• 3 boxes of pasta: $25 MXN each\n"
+            "• 6 jars of mayonnaise: $35 MXN each"
         ),
         (
-            "There isn’t any pasta sauce. You can offer two cans of "
-            "tomatoes for $22 MXN each."
+            "There isn't any pasta sauce.\n"
+            "You have 2 cans of tomatoes: $22 MXN each."
         ),
     ),
     (
         "The Fruit Market Supplier",
-        "You supply fresh fruit for drinks, desserts, and salads.",
+        "You sell fresh fruit.",
         (
-            "Your stall has 10 apples at $8 MXN each, 12 bananas at "
-            "$6 each, 500 grams of strawberries at $45, and 6 oranges "
-            "at $7 each."
+            "Your stall has:\n"
+            "• 10 apples: $8 MXN each\n"
+            "• 12 bananas: $6 MXN each\n"
+            "• 500 grams of strawberries: $45 MXN\n"
+            "• 6 oranges: $7 MXN each"
         ),
         (
-            "There are only a few strawberries left. You cannot sell "
-            "more than 250 grams to one customer."
+            "There are only a few strawberries left.\n"
+            "One customer can buy 250 grams."
         ),
     ),
     (
         "The Canned Goods Supplier",
-        "You supply canned and preserved ingredients.",
+        "You sell food in cans and jars.",
         (
-            "Your stall has 8 cans of beans at $22 MXN each, "
-            "6 cans of corn at $20 each, 4 jars of salsa at $32 each, "
-            "and 5 cans of tomatoes at $22 each."
+            "Your stall has:\n"
+            "• 8 cans of beans: $22 MXN each\n"
+            "• 6 cans of corn: $20 MXN each\n"
+            "• 4 jars of salsa: $32 MXN each\n"
+            "• 5 cans of tomatoes: $22 MXN each"
         ),
         (
-            "There isn’t any tuna today. You can offer beans or corn "
-            "as an alternative."
+            "There isn't any tuna today.\n"
+            "You can offer beans or corn instead."
         ),
     ),
     (
         "The Beverage Supplier",
-        "You supply drinks and beverage ingredients.",
+        "You sell drinks.",
         (
-            "Your stall has 10 bottles of water at $15 MXN each, "
-            "8 cans of soda at $20 each, 4 cartons of apple juice at "
-            "$38 each, and 2 bags of coffee at $120 each."
+            "Your stall has:\n"
+            "• 10 bottles of water: $15 MXN each\n"
+            "• 8 cans of soda: $20 MXN each\n"
+            "• 4 cartons of apple juice: $38 MXN each\n"
+            "• 2 bags of coffee: $120 MXN each"
         ),
         (
-            "There isn’t any orange juice. You can offer apple juice "
-            "instead."
+            "There isn't any orange juice.\n"
+            "You can offer apple juice instead."
         ),
     ),
     (
         "The Breakfast Supplier",
-        "You supply products commonly used for breakfast dishes.",
+        "You sell breakfast food.",
         (
-            "Your stall has 6 eggs at $4 MXN each, 4 boxes of cereal "
-            "at $65 each, 3 jars of jam at $55 each, and 2 bottles of "
-            "honey at $80 each."
+            "Your stall has:\n"
+            "• 6 eggs: $4 MXN each\n"
+            "• 4 boxes of cereal: $65 MXN each\n"
+            "• 3 jars of jam: $55 MXN each\n"
+            "• 2 bottles of honey: $80 MXN each"
         ),
         (
-            "There are only a few eggs left. You cannot sell more than "
-            "four eggs to one customer."
+            "There are only a few eggs left.\n"
+            "One customer can buy 4 eggs."
         ),
     ),
     (
         "The Seasoning Supplier",
-        "You supply seasonings, sauces, and cooking essentials.",
+        "You sell salt, sugar, herbs, and sauces.",
         (
-            "Your stall has 4 bags of salt at $18 MXN each, "
-            "3 bags of sugar at $32 each, 6 jars of herbs at $25 each, "
-            "and 5 bottles of hot sauce at $28 each."
+            "Your stall has:\n"
+            "• 4 bags of salt: $18 MXN each\n"
+            "• 3 bags of sugar: $32 MXN each\n"
+            "• 6 jars of herbs: $25 MXN each\n"
+            "• 5 bottles of hot sauce: $28 MXN each"
         ),
         (
-            "There isn’t any black pepper. You can offer chili powder "
-            "instead."
+            "There isn't any black pepper.\n"
+            "You can offer chili powder instead."
         ),
     ),
     (
         "The International Food Supplier",
-        "You supply ingredients used in international dishes.",
+        "You sell food from different countries.",
         (
-            "Your stall has 6 packages of noodles at $22 MXN each, "
-            "20 tortillas at $2 each, 4 cans of coconut milk at "
-            "$35 each, and 2 jars of curry sauce at $48 each."
+            "Your stall has:\n"
+            "• 6 packages of noodles: $22 MXN each\n"
+            "• 20 tortillas: $2 MXN each\n"
+            "• 4 cans of coconut milk: $35 MXN each\n"
+            "• 2 jars of curry sauce: $48 MXN each"
         ),
         (
-            "There are only two jars of curry sauce left. There isn’t "
-            "enough for every restaurant."
+            "There are only 2 jars of curry sauce.\n"
+            "There isn't enough for every restaurant."
         ),
     ),
     (
         "The Dessert Supplier",
-        "You supply ingredients for cakes and desserts.",
+        "You sell ingredients for cakes and desserts.",
         (
-            "Your stall has 2 kilograms of flour at $25 MXN per "
-            "kilogram, 1 kilogram of sugar at $32, 12 eggs at $4 each, "
-            "and 6 cartons of cream at $30 each."
+            "Your stall has:\n"
+            "• 2 kilograms of flour: $25 MXN per kilogram\n"
+            "• 1 kilogram of sugar: $32 MXN\n"
+            "• 12 eggs: $4 MXN each\n"
+            "• 6 cartons of cream: $30 MXN each"
         ),
         (
-            "There isn’t any chocolate. You can offer cocoa powder for "
-            "$40 MXN per bag."
+            "There isn't any chocolate.\n"
+            "You have cocoa powder: $40 MXN per bag."
         ),
     ),
 ]

@@ -18,4 +18,9 @@ urlpatterns = [
         views.teacher_lobby_participants,
         name="teacher_lobby_participants",
     ),
+    path(
+        "qr/<str:join_code>/",
+        views.session_qr_code,
+        name="session_qr_code",
+    ),
 ]
